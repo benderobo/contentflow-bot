@@ -1,4 +1,6 @@
 - [IN_SITE Studio stack](insite-studio-stack.md) — host /root: AI agents (n8n+Gemini) build client sites; /build endpoint + @benderobo_bot control added 2026-06-02
+- [Full-cycle check rule](feedback-full-cycle-check.md) — при изменении функций проверять весь цикл процессов и видимость визуализации
+- [kill_error.md log](feedback-kill-error-log.md) — все ошибки/решения писать в kill_error.md; читать его перед правкой бага или написанием функции
 - [3x-ui panel @ 167.17.180.42](3x-ui-panel-91-149-238-201.md) — панель 3x-ui на 167.17.180.42:34443 (старый IP 91.149.238.201); URL входа со слешем; cert на IP (SAN)
 
 # Task Group: Parrot workstation audit, DNS automation, and Btrfs swap repair on /home/bender
