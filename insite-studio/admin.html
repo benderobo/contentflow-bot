@@ -371,19 +371,6 @@
 </div>
 
 <!-- ── Login ── -->
-<div id="loginScreen">
-  <div class="login-box">
-    <div class="login-logo">IN_SITE</div>
-    <div class="login-sub">Административная панель</div>
-    <label>Логин</label>
-    <input type="text" id="loginUser" placeholder="root" autocomplete="username">
-    <label>Пароль</label>
-    <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
-    <button class="login-btn" id="loginBtn">Войти</button>
-    <div class="login-err" id="loginErr">Неверный логин или пароль</div>
-  </div>
-</div>
-
 <!-- ── App ── -->
 <div id="app">
   <header>
@@ -443,43 +430,18 @@ function showDetail() {
   }
 }
 
-// ── Auth ──
+// ── Auth — nginx Basic Auth is the gate, in-page form removed ──
 const CREDS = { user: 'root', pass: 'S1h2i3s4h5@!' };
-const SESSION_KEY = 'insite_admin_auth';
-const API_BASE    = 'https://bendernostur.duckdns.org:88/insite/api';
-const REVS_KEY    = 'insite_revisions';
+const API_BASE = 'https://bendernostur.duckdns.org:88/insite/api';
+const REVS_KEY = 'insite_revisions';
 
-function checkAuth() {
-  return sessionStorage.getItem(SESSION_KEY) === '1';
-}
-function showApp() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  renderInbox();
-}
-
-if (checkAuth()) showApp();
-
-document.getElementById('loginBtn').addEventListener('click', doLogin);
-document.getElementById('loginUser').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-
-function doLogin() {
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPass').value;
-  if (u === CREDS.user && p === CREDS.pass) {
-    sessionStorage.setItem(SESSION_KEY, '1');
-    showApp();
-  } else {
-    const err = document.getElementById('loginErr');
-    err.style.display = 'block';
-    setTimeout(() => err.style.display = 'none', 3000);
-  }
-}
+// nginx already authenticated the user — show app immediately
+document.getElementById('app').style.display = 'flex';
+renderInbox();
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
-  sessionStorage.removeItem(SESSION_KEY);
-  location.reload();
+  // Clear HTTP Basic Auth by navigating to a logout URL trick
+  location.href = 'https://logout:logout@bendernostur.duckdns.org:88/insite/admin.html';
 });
 
 // ── Labels ──
@@ -921,9 +883,9 @@ function renderDetail(order) {
       `Сделай другую цветовую гамму, другую типографику и другую компоновку секций.`,
     ].filter(Boolean).join('\n');
     try {
-      const res = await fetch(\`\${API_BASE}/build\`, {
+      const res = await fetch(`${API_BASE}/build`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(\`root:\${CREDS.pass}\`) },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
         body: JSON.stringify({ order_id: order.id + '_r' + Date.now().toString(36), brief, link_to: order.id }),
       });
       const d = await res.json();

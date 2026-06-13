@@ -92,7 +92,6 @@
     border-right: 1px solid var(--border);
     background: var(--surface);
     display: flex; flex-direction: column; overflow: hidden;
-    grid-column: 1;
   }
   .panel-header {
     padding: 14px 20px 10px;
@@ -165,9 +164,9 @@
   .template-card.selected .selected-check { display: flex; }
 
   /* ── Preview ── */
-  .preview-panel { display: none !important; }
-  .preview-panel-HIDDEN {
-    display: flex; flex-direction: column; overflow: hidden; background: var(--bg);
+  .preview-panel {
+    display: none !important;
+    flex-direction: column; overflow: hidden; background: var(--bg);
   }
   .preview-toolbar {
     padding: 12px 24px; border-bottom: 1px solid var(--border);
@@ -190,6 +189,40 @@
     overflow: auto; padding: 32px;
   }
   .preview-empty { text-align: center; color: var(--muted); }
+
+  /* Palette strip inside preview panel */
+  .preview-palette-strip {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: none;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .preview-palette-strip.visible { display: flex; }
+  .preview-palette-strip .strip-label {
+    font-size: 9px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted);
+    white-space: nowrap; margin-right: 2px;
+  }
+  .pp-swatch {
+    width: 22px; height: 22px; border-radius: 50%;
+    cursor: pointer; border: 2px solid transparent;
+    transition: all .2s; flex-shrink: 0;
+  }
+  .pp-swatch:hover { transform: scale(1.2); }
+  .pp-swatch.active { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(167,139,250,.35); }
+  .pp-swatch-reset {
+    width: 22px; height: 22px; border-radius: 50%;
+    cursor: pointer; border: 1px dashed var(--border);
+    background: var(--surface2); display: flex;
+    align-items: center; justify-content: center;
+    font-size: 10px; color: var(--muted);
+    transition: all .2s; flex-shrink: 0;
+  }
+  .pp-swatch-reset:hover { border-color: var(--accent); color: var(--accent); }
   .preview-empty .icon { font-size: 48px; margin-bottom: 16px; opacity: .4; }
   .preview-empty p { font-size: 14px; }
 
@@ -573,12 +606,12 @@
     .gallery-panel,
     .preview-panel,
     .form-panel {
-      display: none;
+      display: none !important;
       height: calc(100vh - 105px);
-      border: none;
+      border: none !important;
     }
     .gallery-panel.tab-active,
-    .form-panel.tab-active { display: flex; }
+    .form-panel.tab-active  { display: flex !important; }
     .preview-panel.tab-active { display: flex !important; }
 
     /* form panel scrolls naturally on mobile */
@@ -937,6 +970,113 @@
     }
   }
 
+  /* ── Cabinet Drawer ── */
+  .cab-btn {
+    display: none; align-items: center; gap: 7px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 12px 5px 6px;
+    cursor: pointer; transition: all .2s; font-family: var(--font-ui);
+    font-size: 12px; color: var(--text); flex-shrink: 0;
+  }
+  .cab-btn.visible { display: flex; }
+  .cab-btn:hover { border-color: var(--accent); color: var(--accent2); }
+  .cab-avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+  .cab-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 360px;
+    background: var(--surface); border-left: 1px solid var(--border);
+    z-index: 4000; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1);
+    box-shadow: -8px 0 40px rgba(0,0,0,.3);
+  }
+  .cab-drawer.open { transform: translateX(0); }
+  .cab-overlay { position: fixed; inset: 0; z-index: 3999; background: rgba(0,0,0,.4); display: none; }
+  .cab-overlay.open { display: block; }
+  .cab-head {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  }
+  .cab-head-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: white; flex-shrink: 0;
+  }
+  .cab-head-name { font-size: 15px; font-weight: 600; }
+  .cab-head-email { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .cab-close {
+    margin-left: auto; width: 28px; height: 28px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface2);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--muted); transition: all .2s; flex-shrink: 0;
+  }
+  .cab-close:hover { border-color: var(--accent); color: var(--text); }
+  .cab-body { flex: 1; overflow-y: auto; padding: 16px; }
+  .cab-section-title {
+    font-size: 9px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 10px; font-family: var(--font-ui);
+  }
+  .cab-order-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .cab-order-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .cab-order-tpl { font-size: 13px; font-weight: 500; }
+  .cab-order-status {
+    font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 20px;
+  }
+  .cab-status-pending  { background: rgba(245,158,11,.15); color: #d97706; }
+  .cab-status-progress { background: rgba(124,106,247,.15); color: var(--accent2); }
+  .cab-status-done     { background: rgba(34,197,94,.15);  color: #16a34a; }
+  .cab-order-date { font-size: 10px; color: var(--muted); }
+  .cab-order-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 8px; font-size: 11px; color: var(--accent2);
+    text-decoration: none; border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 9px; background: var(--surface);
+    transition: border-color .2s;
+  }
+  .cab-order-link:hover { border-color: var(--accent2); }
+  .cab-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 32px 0; }
+  .cab-logout {
+    padding: 14px 20px; border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  .cab-logout-btn {
+    width: 100%; padding: 9px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--surface2);
+    color: var(--muted); font-size: 12px; cursor: pointer;
+    transition: all .2s; font-family: var(--font-ui);
+  }
+  .cab-logout-btn:hover { border-color: #ef4444; color: #ef4444; }
+  /* ── Font Picker ── */
+  .font-picker { display: flex; flex-direction: column; gap: 8px; }
+  .font-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .font-card {
+    padding: 6px 10px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface2);
+    transition: all .2s; text-align: center;
+  }
+  .font-card:hover { border-color: var(--accent); }
+  .font-card.active { border-color: var(--accent2); background: rgba(124,106,247,.12); }
+  .font-card-name { font-size: 13px; font-weight: 600; }
+  .font-card-style { font-size: 9px; color: var(--muted); letter-spacing: .5px; margin-top: 1px; }
+  .font-size-row { display: flex; gap: 6px; align-items: center; }
+  .font-size-label { font-size: 10px; color: var(--muted); letter-spacing: .5px; text-transform: uppercase; margin-right: 2px; }
+  .font-size-btn {
+    width: 30px; height: 30px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface2);
+    font-weight: 700; font-size: 12px; color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+  }
+  .font-size-btn.active { border-color: var(--accent2); color: var(--accent2); background: rgba(124,106,247,.12); }
+  .font-size-btn:hover { border-color: var(--accent); color: var(--text); }
 </style>
 </head>
 <body>
@@ -985,8 +1125,8 @@
 <div id="regModal">
   <div class="reg-box">
     <div class="reg-brand">IN_SITE</div>
-    <div class="reg-title">Начнём знакомство</div>
-    <div class="reg-sub">Пара секунд — и вы в рабочем кабинете</div>
+    <div class="reg-title" id="regTitle">Заявка готова!</div>
+    <div class="reg-sub" id="regSubtitle">Укажите контакт — передадим сайт в работу</div>
     <div class="reg-field">
       <label>Ваше имя</label>
       <input type="text" id="regName" placeholder="Как вас зовут?">
@@ -995,7 +1135,7 @@
       <label>Email</label>
       <input type="email" id="regEmail" placeholder="your@email.com">
     </div>
-    <div class="reg-field">
+    <div class="reg-field" id="regTypeField" style="display:none">
       <label>Тип проекта</label>
       <div class="reg-types" id="regTypes">
         <div class="reg-type active" data-sec="wedding">💍 Свадьба</div>
@@ -1004,7 +1144,7 @@
         <div class="reg-type" data-sec="events">🎪 Мероприятие</div>
       </div>
     </div>
-    <button class="reg-submit" id="regSubmit">Продолжить →</button>
+    <button class="reg-submit" id="regSubmit">Отправить заявку →</button>
   </div>
 </div>
 
@@ -1051,6 +1191,10 @@
       <div class="step-line" id="sl2"></div>
       <div class="step" id="s3">3</div>
     </div>
+    <button class="cab-btn" id="cabBtn" title="Личный кабинет">
+      <div class="cab-avatar" id="cabAvatar">?</div>
+      <span id="cabName">Профиль</span>
+    </button>
     <button class="theme-toggle" id="themeToggle" title="Сменить тему">🌙</button>
   </div>
 </header>
@@ -1101,6 +1245,11 @@
         <div class="icon">💍</div>
         <p>Выберите макет из галереи<br>для предпросмотра</p>
       </div>
+    </div>
+
+    <div class="preview-palette-strip" id="previewPaletteStrip">
+      <span class="strip-label">Цвет</span>
+      <div class="pp-swatch-reset" id="ppSwatchReset" title="Сброс — цвет шаблона">×</div>
     </div>
 
   </div>
@@ -1281,6 +1430,15 @@
         </div>
       </div>
 
+      <div class="form-group font-picker">
+        <label>Шрифт сайта</label>
+        <div class="font-grid" id="fontGrid"></div>
+        <div class="font-size-row">
+          <span class="font-size-label">Размер</span>
+          <div id="fontSizeRow"></div>
+        </div>
+      </div>
+
       <div class="form-group intro-group">
         <label>Интро при входе на сайт</label>
         <div class="intro-grid" id="introGrid"></div>
@@ -1445,15 +1603,12 @@
 })();
 
 
-// ── Welcome / Registration flow (desktop only) ──
+// ── Welcome / Registration flow ──
+// Registration is now deferred to "Send order" button — no upfront blocking
 (function() {
-  if (window.innerWidth <= 767) return;
-  if (localStorage.getItem('insite_reg_email')) return;
-
+  // Keep welcome screen hidden; it's only shown programmatically now
   const welcome  = document.getElementById('welcomeScreen');
   const regModal = document.getElementById('regModal');
-
-  welcome.style.display = 'flex';
 
   // ── Animated code panels ──
   const HTML_SNIPPETS = [
@@ -1485,7 +1640,9 @@
   buildCodeTrack(document.getElementById('codeLeft'),  HTML_SNIPPETS);
   buildCodeTrack(document.getElementById('codeRight'), CSS_SNIPPETS);
 
-  document.getElementById('wlcBtn').addEventListener('click', () => {
+  // wlcBtn is kept for backwards compat but welcome is not shown on load
+  const wlcBtnEl = document.getElementById('wlcBtn');
+  if (wlcBtnEl) wlcBtnEl.addEventListener('click', () => {
     regModal.classList.add('open');
     setTimeout(() => document.getElementById('regName').focus(), 50);
   });
@@ -1502,7 +1659,7 @@
     const emailEl = document.getElementById('regEmail');
     const name    = nameEl.value.trim();
     const email   = emailEl.value.trim();
-    const sec     = document.querySelector('.reg-type.active')?.dataset.sec || 'wedding';
+    const sec     = document.querySelector('.reg-type.active')?.dataset.sec || (typeof activeSection !== 'undefined' ? activeSection : 'wedding');
 
     nameEl.classList.remove('invalid');
     emailEl.classList.remove('invalid');
@@ -1512,18 +1669,25 @@
     localStorage.setItem('insite_reg_email', email);
     localStorage.setItem('insite_reg_name',  name);
     localStorage.setItem('insite_reg_sec',   sec);
-    closeWelcome();
+    regModal.classList.remove('open');
 
-    setTimeout(() => {
-      if (typeof switchSection === 'function') switchSection(sec);
-      prefillRegFields(name, email, sec);
-    }, 50);
+    prefillRegFields(name, email, sec);
+    if (typeof initCabinet === 'function') initCabinet();
+
+    // Execute deferred submit if registration was triggered by send button
+    if (typeof window._pendingSubmit === 'function') {
+      const fn = window._pendingSubmit;
+      window._pendingSubmit = null;
+      setTimeout(fn, 50);
+    }
   });
 
   function closeWelcome() {
-    welcome.style.transition = 'opacity .3s';
-    welcome.style.opacity = '0';
-    setTimeout(() => { welcome.style.display = 'none'; }, 320);
+    if (welcome) {
+      welcome.style.transition = 'opacity .3s';
+      welcome.style.opacity = '0';
+      setTimeout(() => { welcome.style.display = 'none'; }, 320);
+    }
     regModal.classList.remove('open');
   }
 
@@ -1824,7 +1988,8 @@ function miniPageHTML(tpl, scale) {
   <div style="
     width:${scaledW}px;
     background:${s.bg};
-    font-family:Georgia,serif;
+    font-family:${(tpl.font && tpl.font.css) || 'Georgia,serif'};
+    font-size:${(tpl.font && tpl.font.size === 'sm') ? '87%' : (tpl.font && tpl.font.size === 'lg') ? '115%' : '100%'};
     transform:scale(${scale});
     transform-origin:top left;
     position:absolute; top:0; left:0;
@@ -2106,6 +2271,21 @@ let activeSection = 'wedding';
 let selectedTemplate = null;
 let selectedPalette = null;
 let selectedIntro = 'none';
+let selectedFont = { family: 'Georgia, serif', label: 'Georgia', size: 'md' };
+
+const FONTS = [
+  { id:'georgia',     label:'Georgia',          css:'Georgia, serif',                       style:'Классика' },
+  { id:'playfair',    label:'Playfair Display',  css:"'Playfair Display', Georgia, serif",   style:'Люкс' },
+  { id:'cormorant',   label:'Cormorant',         css:"'Cormorant Garamond', Georgia, serif", style:'Редакция' },
+  { id:'inter',       label:'Inter',             css:"'Inter', sans-serif",                  style:'Модерн' },
+  { id:'montserrat',  label:'Montserrat',        css:"'Montserrat', sans-serif",             style:'Чистота' },
+  { id:'lora',        label:'Lora',              css:"'Lora', serif",                        style:'Тепло' },
+];
+const FONT_SIZES = [
+  { id:'sm', label:'S', scale: 0.85 },
+  { id:'md', label:'M', scale: 1.0  },
+  { id:'lg', label:'L', scale: 1.2  },
+];
 
 // ─── Build gallery ────────────────────────────────────────────────────────
 const gallery = document.getElementById('gallery');
@@ -2275,6 +2455,39 @@ const INTROS = [
 
 // selectedIntro declared above
 
+// ─── Font Picker ──────────────────────────────────────────────────────────
+(function() {
+  const fg = document.getElementById('fontGrid');
+  const fsr = document.getElementById('fontSizeRow');
+  if (!fg) return;
+  FONTS.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'font-card' + (f.css === selectedFont.css ? ' active' : '');
+    card.dataset.id = f.id;
+    card.innerHTML = '<div class="font-card-name" style="font-family:' + f.css + '">' + f.label + '</div><div class="font-card-style">' + f.style + '</div>';
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.font-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      selectedFont = { ...selectedFont, family: f.label, css: f.css };
+      if (selectedTemplate) refreshPreview();
+    });
+    fg.appendChild(card);
+  });
+  if (!fsr) return;
+  FONT_SIZES.forEach(sz => {
+    const btn = document.createElement('button');
+    btn.className = 'font-size-btn' + (sz.id === selectedFont.size ? ' active' : '');
+    btn.textContent = sz.label;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.font-size-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedFont = { ...selectedFont, size: sz.id };
+      if (selectedTemplate) refreshPreview();
+    });
+    fsr.appendChild(btn);
+  });
+})();
+
 // Рендер интро-сетки
 const introGrid = document.getElementById('introGrid');
 INTROS.forEach(intro => {
@@ -2311,10 +2524,47 @@ PALETTES.forEach(pal => {
     document.querySelectorAll('.palette-swatch').forEach(s => s.classList.remove('active'));
     sw.classList.add('active');
     selectedPalette = pal;
+    document.querySelectorAll('.pp-swatch').forEach(s => s.classList.toggle('active', s.dataset.id === pal.id));
     if (selectedTemplate) refreshPreview();
   });
   paletteRow.appendChild(sw);
 });
+
+// ─── Preview panel palette strip ──────────────────────────────────────────
+const ppStrip = document.getElementById('previewPaletteStrip');
+PALETTES.forEach(pal => {
+  const dot = document.createElement('div');
+  dot.className = 'pp-swatch';
+  dot.title = pal.name;
+  dot.style.background = pal.grad;
+  dot.dataset.id = pal.id;
+  dot.addEventListener('click', () => {
+    document.querySelectorAll('.pp-swatch').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.palette-swatch').forEach(s => s.classList.remove('active'));
+    dot.classList.add('active');
+    // sync form palette swatch
+    const formSwatch = document.querySelector(`.palette-swatch[data-id="${pal.id}"]`);
+    if (formSwatch) formSwatch.classList.add('active');
+    selectedPalette = pal;
+    refreshPreview();
+  });
+  ppStrip.insertBefore(dot, document.getElementById('ppSwatchReset'));
+});
+
+document.getElementById('ppSwatchReset').addEventListener('click', () => {
+  document.querySelectorAll('.pp-swatch').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.palette-swatch').forEach(s => s.classList.remove('active'));
+  selectedPalette = null;
+  refreshPreview();
+});
+
+function syncPpStrip() {
+  ppStrip.classList.toggle('visible', !!selectedTemplate);
+  if (selectedPalette) {
+    document.querySelectorAll('.pp-swatch').forEach(s =>
+      s.classList.toggle('active', s.dataset.id === selectedPalette.id));
+  }
+}
 
 // ─── Select & Preview ─────────────────────────────────────────────────────
 // selectedTemplate declared above
@@ -2402,7 +2652,7 @@ function formOverlay() {
 
 function refreshPreview() {
   if (!selectedTemplate) return;
-  const tpl = { ...selectedTemplate, scheme: effectiveScheme(), ...formOverlay() };
+  const tpl = { ...selectedTemplate, scheme: effectiveScheme(), ...formOverlay(), font: selectedFont };
   const s = tpl.scheme;
   const isDark = s.bg.startsWith('#0') || s.bg.startsWith('#1') || s.bg.startsWith('#2');
   const wmColor = isDark ? 'rgba(255,255,255,0.11)' : 'rgba(0,0,0,0.08)';
@@ -2422,6 +2672,19 @@ function refreshPreview() {
       </div>
     </div>
   `;
+
+  // ── Update visible palette preview in form panel ──
+  const fp = document.getElementById('formTplPreview');
+  if (fp && fp.className === 'selected-tpl-box') {
+    const nameEl = fp.querySelector('[data-role="tpl-name"]');
+    const vibeEl = fp.querySelector('[data-role="tpl-vibe"]');
+    const heroEl = fp.querySelector('[data-role="tpl-hero"]');
+    const btnEl  = fp.querySelector('[data-role="tpl-btn"]');
+    if (heroEl) heroEl.style.background = s.hero;
+    if (nameEl) nameEl.style.color = s.text;
+    if (vibeEl) vibeEl.style.color = s.muted;
+    if (btnEl)  btnEl.style.background = s.btn;
+  }
 }
 
 function selectTemplate(tpl, card) {
@@ -2434,47 +2697,29 @@ function selectTemplate(tpl, card) {
   const tip = document.getElementById('paletteTip');
   if (tip) tip.style.display = 'none';
   updateSteps();
+  syncPpStrip();
   if (window.innerWidth < 768) switchTab('preview');
 
   document.getElementById('previewTitle').textContent = tpl.name;
   document.getElementById('previewSub').textContent = tpl.tag + ' · ' + tpl.vibe;
 
+  // Set form preview swatch BEFORE refreshPreview so it can update it on palette changes
   const s = tpl.scheme;
-  const isDark = s.bg.startsWith('#0') || s.bg.startsWith('#1') || s.bg.startsWith('#2');
-  const wmColor = isDark ? 'rgba(255,255,255,0.11)' : 'rgba(0,0,0,0.08)';
-  const PREVIEW_SCALE = 0.55;
-  const pw = 360;
-  const scaledW = Math.round(pw / PREVIEW_SCALE);
-
-  document.getElementById('previewCanvas').innerHTML = `
-    <div class="phone-frame" id="previewFrame" style="transform:scale(${zoom}); width:${pw}px;">
-      <div class="phone-notch"></div>
-      <div class="phone-screen" style="background:${s.bg};">
-        <!-- sticky watermark -->
-        <div style="position:sticky;top:50%;z-index:50;pointer-events:none;display:flex;justify-content:center;height:0;overflow:visible;">
-          <span style="font-size:13px;font-weight:900;letter-spacing:3px;color:${wmColor};transform:rotate(-30deg) translateY(-8px);white-space:nowrap;">© IN_SITE — PREVIEW</span>
-        </div>
-        <div style="width:${scaledW}px; transform:scale(${PREVIEW_SCALE}); transform-origin:top left; position:relative;">
-          ${miniPageHTML(tpl, 1)}
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Form preview swatch
   const fp = document.getElementById('formTplPreview');
   fp.className = 'selected-tpl-box';
   fp.innerHTML = `
-    <div style="background:${s.hero};padding:12px 14px;display:flex;align-items:center;gap:12px;border-radius:8px;border:1px solid ${s.line};">
-      <div style="width:36px;height:36px;border-radius:50%;background:${s.btn};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
+    <div data-role="tpl-hero" style="background:${s.hero};padding:12px 14px;display:flex;align-items:center;gap:12px;border-radius:8px;border:1px solid ${s.line};">
+      <div data-role="tpl-btn" style="width:36px;height:36px;border-radius:50%;background:${s.btn};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
         ${ ({inv:'💍',album:'📷',health:'🏥',psych:'🧠',law:'⚖️',auto:'🔧',beauty:'✂️',food:'🍽',sport:'💪',agency:'🚀',photo:'📷',realty:'🏠',design:'🎨',dev:'💻',arch:'🏛',art:'🖌',model:'💃',music:'🎵',birthday:'🎂',corp:'🏢',kids:'🎈',conf:'🎤',party:'🎉',grad:'🎓'})[tpl.cat] || '🖥' }
       </div>
       <div>
-        <div style="font-size:13px;font-weight:700;color:${s.text};">${tpl.name}</div>
-        <div style="font-size:11px;color:${s.muted};margin-top:1px;">${tpl.vibe}</div>
+        <div data-role="tpl-name" style="font-size:13px;font-weight:700;color:${s.text};">${tpl.name}</div>
+        <div data-role="tpl-vibe" style="font-size:11px;color:${s.muted};margin-top:1px;">${tpl.vibe}</div>
       </div>
     </div>
   `;
+
+  refreshPreview();
 }
 
 // ─── Zoom ────────────────────────────────────────────────────────────────
@@ -2570,7 +2815,7 @@ function updateSteps() {
 });
 
 // Send
-document.getElementById('sendBtn').addEventListener('click', async () => {
+async function doSend() {
   const validMsg = document.getElementById('validMsg');
   const btn = document.getElementById('sendBtn');
 
@@ -2598,6 +2843,7 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
       extra_notes:     document.getElementById('extraNotes').value,
       references:      references.map(r => ({ name: r.name, data: r.dataUrl })),
       submitted_at:    new Date().toISOString(),
+      font:            selectedFont,
     };
   } else if (activeSection === 'tilda') {
     const name  = document.getElementById('tildaName').value.trim();
@@ -2679,6 +2925,26 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
     showToast('✕ Ошибка. Попробуйте позже или напишите напрямую.', 'error');
     btn.disabled = false; btn.classList.remove('loading'); btn.textContent = 'Отправить заявку →';
   }
+}
+
+// Gate: show registration modal first if not yet registered
+document.getElementById('sendBtn').addEventListener('click', () => {
+  if (!localStorage.getItem('insite_reg_email')) {
+    // Store doSend as pending callback
+    window._pendingSubmit = doSend;
+    // Update modal context
+    const titleEl = document.getElementById('regTitle');
+    const subEl   = document.getElementById('regSubtitle');
+    const typeField = document.getElementById('regTypeField');
+    if (titleEl)    titleEl.textContent = 'Заявка готова!';
+    if (subEl)      subEl.textContent   = 'Укажите контакт — передадим сайт в работу';
+    if (typeField)  typeField.style.display = 'none';
+    const regModal = document.getElementById('regModal');
+    regModal.classList.add('open');
+    setTimeout(() => document.getElementById('regName').focus(), 50);
+    return;
+  }
+  doSend();
 });
 
 function showToast(msg, type) {
@@ -2699,6 +2965,106 @@ function switchTab(tab) {
   });
 }
 
+// ── Personal Cabinet ──────────────────────────────────────────────────────
+const API_BASE = '/insite/api';
+
+function initCabinet() {
+  const email = localStorage.getItem('insite_reg_email');
+  const name  = localStorage.getItem('insite_reg_name') || 'Профиль';
+  const btn   = document.getElementById('cabBtn');
+  if (!btn) return;
+
+  if (email) {
+    const initials = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('cabAvatar').textContent = initials;
+    document.getElementById('cabName').textContent   = name.split(' ')[0];
+    document.getElementById('cabHeadAvatar').textContent = initials;
+    document.getElementById('cabHeadName').textContent   = name;
+    document.getElementById('cabHeadEmail').textContent  = email;
+    btn.classList.add('visible');
+  } else {
+    btn.classList.remove('visible');
+  }
+}
+
+function openCabinet() {
+  document.getElementById('cabDrawer').classList.add('open');
+  document.getElementById('cabOverlay').classList.add('open');
+  loadCabinetOrders();
+}
+
+function closeCabinet() {
+  document.getElementById('cabDrawer').classList.remove('open');
+  document.getElementById('cabOverlay').classList.remove('open');
+}
+
+async function loadCabinetOrders() {
+  const email = localStorage.getItem('insite_reg_email');
+  const box   = document.getElementById('cabOrders');
+  if (!email) { box.innerHTML = '<div class="cab-empty">Нет данных</div>'; return; }
+
+  box.innerHTML = '<div class="cab-empty">Загрузка…</div>';
+  try {
+    const res = await fetch(API_BASE + '/orders/mine?email=' + encodeURIComponent(email));
+    const orders = await res.json();
+    if (!Array.isArray(orders) || orders.length === 0) {
+      box.innerHTML = '<div class="cab-empty">Проектов пока нет.<br>Отправьте заявку — здесь появится статус.</div>';
+      return;
+    }
+    const statusLabel = { pending: 'Ожидает', progress: 'В работе', done: 'Готово' };
+    const statusClass = { pending: 'cab-status-pending', progress: 'cab-status-progress', done: 'cab-status-done' };
+    box.innerHTML = orders.slice().reverse().map(o => {
+      const tpl  = o.template?.name || o.section || 'Проект';
+      const date = o.submitted_at ? new Date(o.submitted_at).toLocaleDateString('ru-RU', {day:'numeric',month:'long',year:'numeric'}) : '';
+      const st   = o.status || 'pending';
+      const siteLink = o.site_url ? `<a class="cab-order-link" href="${o.site_url}" target="_blank">↗ Открыть сайт</a>` : '';
+      return `<div class="cab-order-card">
+        <div class="cab-order-head">
+          <div class="cab-order-tpl">${tpl}</div>
+          <span class="cab-order-status ${statusClass[st] || 'cab-status-pending'}">${statusLabel[st] || st}</span>
+        </div>
+        <div class="cab-order-date">${date}</div>
+        ${siteLink}
+      </div>`;
+    }).join('');
+  } catch {
+    box.innerHTML = '<div class="cab-empty">Не удалось загрузить проекты</div>';
+  }
+}
+
+document.getElementById('cabBtn')?.addEventListener('click', openCabinet);
+document.getElementById('cabClose')?.addEventListener('click', closeCabinet);
+document.getElementById('cabOverlay')?.addEventListener('click', closeCabinet);
+document.getElementById('cabLogout')?.addEventListener('click', () => {
+  ['insite_reg_email','insite_reg_name','insite_reg_sec'].forEach(k => localStorage.removeItem(k));
+  closeCabinet();
+  initCabinet();
+  showToast('Вы вышли из аккаунта', 'success');
+});
+
+// Init on load + after registration
+initCabinet();
+
 </script>
+
+<!-- ── Cabinet Drawer ── -->
+<div class="cab-overlay" id="cabOverlay"></div>
+<div class="cab-drawer" id="cabDrawer">
+  <div class="cab-head">
+    <div class="cab-head-avatar" id="cabHeadAvatar">?</div>
+    <div>
+      <div class="cab-head-name" id="cabHeadName">—</div>
+      <div class="cab-head-email" id="cabHeadEmail">—</div>
+    </div>
+    <button class="cab-close" id="cabClose">✕</button>
+  </div>
+  <div class="cab-body" id="cabBody">
+    <p class="cab-section-title">Мои проекты</p>
+    <div id="cabOrders"><div class="cab-empty">Загрузка…</div></div>
+  </div>
+  <div class="cab-logout">
+    <button class="cab-logout-btn" id="cabLogout">Выйти из аккаунта</button>
+  </div>
+</div>
 </body>
 </html>
