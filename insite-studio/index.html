@@ -1,0 +1,2704 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IN_SITE — Создать сайт</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+  :root {
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-ui: 'Inter', system-ui, sans-serif;
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #22222f;
+    --border: #2e2e3e;
+    --accent: #7c6af7;
+    --accent2: #a78bfa;
+    --text: #e8e8f0;
+    --muted: #6b6b85;
+    --success: #34d399;
+    --danger: #f87171;
+  }
+  [data-theme="light"] {
+    --bg: #f0eff5; --surface: #ffffff; --surface2: #e8e7f0;
+    --border: #d0cfe0; --text: #1a1828; --muted: #6b6b85;
+    --accent: #7c6af7; --accent2: #6355d4;
+    --success: #059669; --danger: #dc2626;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 100;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .logo { font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--accent2); flex-shrink: 0; font-family: var(--font-display); text-transform: uppercase; }
+  .logo span { color: var(--muted); font-weight: 400; font-size: 10px; margin-left: 8px; letter-spacing: 1.5px; font-family: var(--font-ui); text-transform: uppercase; }
+
+  .section-nav {
+    display: flex; gap: 4px; background: var(--bg);
+    border-radius: 10px; padding: 4px; border: 1px solid var(--border);
+    flex: 1; max-width: 520px; overflow-x: auto;
+  }
+  .section-nav::-webkit-scrollbar { display: none; }
+  .sec-btn {
+    flex: 1; white-space: nowrap; padding: 7px 14px; border-radius: 7px;
+    border: none; background: none; color: var(--muted);
+    font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-family: var(--font-ui);
+    cursor: pointer; transition: all .2s; min-width: max-content;
+  }
+  .sec-btn:hover { color: var(--text); background: var(--surface2); }
+  .sec-btn.active { background: var(--accent); color: #fff; }
+  .step-indicator { display: flex; gap: 8px; align-items: center; }
+  .step {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+    border: 2px solid var(--border); color: var(--muted); transition: all .3s;
+  }
+  .step.active { border-color: var(--accent); color: var(--accent2); background: rgba(124,106,247,.15); }
+  .step.done   { border-color: var(--success); color: var(--success); background: rgba(52,211,153,.1); }
+  .step-line { width: 32px; height: 2px; background: var(--border); border-radius: 2px; transition: background .3s; }
+  .step-line.done { background: var(--success); }
+
+  .workspace {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    flex: 1;
+    height: calc(100vh - 65px);
+  }
+
+  /* ── Gallery ── */
+  .gallery-panel {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex; flex-direction: column; overflow: hidden;
+    grid-column: 1;
+  }
+  .panel-header {
+    padding: 14px 20px 10px;
+    font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); border-bottom: 1px solid var(--border); flex-shrink: 0;
+    font-family: var(--font-ui);
+  }
+  .gallery-scroll {
+    overflow-y: auto; flex: 1; padding: 14px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .gallery-scroll::-webkit-scrollbar { width: 4px; }
+  .gallery-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .cat-label {
+    font-size: 9px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); padding: 6px 2px 4px;
+    border-bottom: 1px solid var(--border); margin-bottom: 2px; margin-top: 6px;
+    font-family: var(--font-ui);
+  }
+  .cat-label:first-child { margin-top: 0; }
+
+  .template-card {
+    border-radius: 10px; overflow: hidden; cursor: pointer;
+    border: 2px solid transparent; transition: all .22s; position: relative;
+    background: var(--surface2);
+  }
+  .template-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .template-card.selected { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(124,106,247,.2); }
+
+  .template-thumb {
+    width: 100%; aspect-ratio: 9/16;
+    position: relative; overflow: hidden;
+  }
+
+  /* Mini page inside thumb — scaled */
+  .mini-page {
+    position: absolute; top: 0; left: 0;
+    transform-origin: top left;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* Watermark */
+  .wm-overlay {
+    position: absolute; top: 0; left: 0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none; z-index: 10;
+  }
+  .wm-text {
+    font-size: 11px; font-weight: 900; letter-spacing: 2px;
+    transform: rotate(-30deg); white-space: nowrap; opacity: .18;
+  }
+
+  .template-info {
+    padding: 9px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .template-name { font-size: 13px; font-weight: 500; font-family: var(--font-ui); letter-spacing: .2px; }
+  .template-tag {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    background: rgba(124,106,247,.2); color: var(--accent2); font-weight: 600;
+  }
+  .selected-check {
+    position: absolute; top: 8px; right: 8px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent); display: none;
+    align-items: center; justify-content: center; font-size: 11px; color: white;
+  }
+  .template-card.selected .selected-check { display: flex; }
+
+  /* ── Preview ── */
+  .preview-panel { display: none !important; }
+  .preview-panel-HIDDEN {
+    display: flex; flex-direction: column; overflow: hidden; background: var(--bg);
+  }
+  .preview-toolbar {
+    padding: 12px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0; background: var(--surface);
+  }
+  .preview-title   { font-size: 16px; font-weight: 600; flex: 1; font-family: var(--font-display); letter-spacing: .5px; }
+  .preview-subtitle { font-size: 11px; color: var(--muted); letter-spacing: .5px; font-family: var(--font-ui); }
+  .zoom-btn {
+    width: 30px; height: 30px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; transition: all .2s;
+  }
+  .zoom-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+  .preview-canvas {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    overflow: auto; padding: 32px;
+  }
+  .preview-empty { text-align: center; color: var(--muted); }
+  .preview-empty .icon { font-size: 48px; margin-bottom: 16px; opacity: .4; }
+  .preview-empty p { font-size: 14px; }
+
+  /* Phone frame для preview */
+  .phone-frame {
+    width: 320px;
+    border-radius: 36px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 0 8px #1a1a24, 0 0 0 10px #2e2e3e, 0 24px 60px rgba(0,0,0,.6);
+    transform-origin: center; transition: transform .3s;
+    flex-shrink: 0;
+  }
+  .phone-frame .phone-notch {
+    position: absolute; top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100px; height: 22px;
+    background: #1a1a24; border-radius: 0 0 16px 16px;
+    z-index: 20;
+  }
+  .phone-screen {
+    width: 100%; height: 580px;
+    overflow-y: auto; overflow-x: hidden;
+    position: relative;
+  }
+  .phone-screen::-webkit-scrollbar { display: none; }
+
+  /* Watermark на превью */
+  .preview-wm {
+    position: fixed; /* внутри phone-screen — sticky */
+    pointer-events: none; z-index: 50;
+    display: flex; align-items: center; justify-content: center;
+    width: 100%;
+  }
+  .preview-wm-text {
+    font-size: 16px; font-weight: 900; letter-spacing: 3px;
+    transform: rotate(-30deg); white-space: nowrap;
+    opacity: .12;
+  }
+
+  /* References strip */
+  .refs-strip {
+    border-top: 1px solid var(--border); padding: 12px 24px;
+    background: var(--surface); flex-shrink: 0;
+  }
+  .refs-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .refs-row {
+    display: flex; gap: 10px; align-items: center;
+    overflow-x: auto; padding-bottom: 4px;
+  }
+  .refs-row::-webkit-scrollbar { height: 3px; }
+  .refs-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .ref-thumb {
+    width: 56px; height: 56px; border-radius: 8px; overflow: hidden;
+    flex-shrink: 0; position: relative; border: 1px solid var(--border);
+    cursor: pointer; transition: transform .2s;
+  }
+  .ref-thumb:hover { transform: scale(1.05); }
+  .ref-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .ref-thumb .remove-ref {
+    position: absolute; top: 2px; right: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(248,113,113,.9); color: white; font-size: 9px;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity .2s;
+  }
+  .ref-thumb:hover .remove-ref { opacity: 1; }
+
+  .add-ref-btn {
+    width: 56px; height: 56px; border-radius: 8px;
+    border: 2px dashed var(--border); background: var(--surface2);
+    color: var(--muted); font-size: 26px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s; flex-shrink: 0;
+  }
+  .add-ref-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(124,106,247,.1); }
+
+  /* ── Form ── */
+  .form-panel {
+    border-left: 1px solid var(--border); background: var(--surface);
+    display: flex; flex-direction: column; overflow: hidden;
+    position: sticky; top: 58px; height: calc(100vh - 58px);
+  }
+  .form-scroll {
+    flex: 1; overflow-y: auto; padding: 18px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .form-scroll::-webkit-scrollbar { width: 4px; }
+  .form-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label {
+    font-size: 11px; font-weight: 600; letter-spacing: .8px;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px;
+    color: var(--text); font-size: 14px; font-family: inherit;
+    outline: none; transition: border-color .2s; resize: none;
+  }
+  .form-group input:focus,
+  .form-group textarea:focus,
+  .form-group select:focus { border-color: var(--accent); }
+  .form-group textarea { min-height: 80px; }
+  .form-group select option,
+  .form-group select optgroup { background: var(--surface2); }
+
+  .budget-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .budget-option {
+    padding: 8px 6px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface2);
+    cursor: pointer; text-align: center; font-size: 11px;
+    color: var(--muted); transition: all .2s;
+  }
+  .budget-option:hover { border-color: var(--accent); color: var(--text); }
+  .budget-option.selected { border-color: var(--accent2); background: rgba(124,106,247,.15); color: var(--accent2); font-weight: 600; }
+
+  .selected-tpl-box { border-radius: 8px; overflow: hidden; }
+  .no-tpl-msg {
+    padding: 14px; border-radius: 8px; border: 1px dashed var(--border);
+    text-align: center; font-size: 12px; color: var(--muted);
+  }
+
+  .form-footer { padding: 14px 18px; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .send-btn {
+    width: 100%; padding: 13px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, var(--accent), #9f7aea);
+    color: white; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .25s; letter-spacing: 1.5px; text-transform: uppercase; font-family: var(--font-ui);
+    position: relative; overflow: hidden;
+  }
+  .send-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,106,247,.4); }
+  .send-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .send-btn.loading::after {
+    content: ''; position: absolute; top: 0; left: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+    animation: shimmer 1.2s infinite;
+  }
+  @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+  .validation-msg { font-size: 11px; color: var(--danger); margin-top: 6px; display: none; }
+
+  .toast {
+    position: fixed; bottom: 32px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 24px; font-size: 14px; font-weight: 500;
+    transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+    z-index: 999; min-width: 280px; text-align: center;
+  }
+  .toast.show    { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--success); color: var(--success); }
+  .toast.error   { border-color: var(--danger);  color: var(--danger); }
+
+  .drag-overlay {
+    position: fixed; inset: 0; background: rgba(124,106,247,.12);
+    border: 3px dashed var(--accent); z-index: 200;
+    display: none; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; color: var(--accent2);
+    letter-spacing: 2px; pointer-events: none;
+  }
+  .drag-overlay.active { display: flex; }
+
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,.85);
+    z-index: 300; display: none; align-items: center; justify-content: center;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+  .lightbox-close {
+    position: absolute; top: 24px; right: 32px;
+    font-size: 28px; cursor: pointer; color: white; opacity: .7;
+  }
+  .lightbox-close:hover { opacity: 1; }
+
+  input[type=file] { display: none; }
+
+  /* ── Color Palette Strip ── */
+  .palette-strip {
+    border-top: 1px solid var(--border); padding: 12px 14px;
+    background: var(--surface); flex-shrink: 0;
+  }
+  .palette-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .palette-row {
+    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+  }
+  .palette-row::-webkit-scrollbar { height: 3px; }
+  .palette-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .palette-swatch {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer; flex-shrink: 0; transition: transform .2s;
+  }
+  .palette-swatch:hover { transform: translateY(-2px); }
+  .swatch-dot {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid transparent; transition: border-color .2s;
+    position: relative; overflow: hidden;
+  }
+  .palette-swatch.active .swatch-dot { border-color: var(--accent2); }
+  .palette-swatch.active .swatch-dot::after {
+    content: '✓'; position: absolute; top: 0; left: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: white; text-shadow: 0 1px 3px rgba(0,0,0,.5);
+  }
+  .swatch-name { font-size: 9px; color: var(--muted); text-align: center; max-width: 40px; }
+
+  /* ── Intro Section ── */
+  .intro-group { display: flex; flex-direction: column; gap: 8px; }
+  .intro-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+  }
+  .intro-card {
+    border-radius: 10px; border: 2px solid var(--border);
+    background: var(--surface2); cursor: pointer;
+    transition: all .22s; overflow: hidden; position: relative;
+    aspect-ratio: 9/7;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .intro-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .intro-card.selected { border-color: var(--accent2); background: rgba(124,106,247,.12); }
+  .intro-preview {
+    width: 100%; height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px; padding: 6px;
+  }
+  .intro-icon { font-size: 22px; line-height: 1; }
+  .intro-card-name { font-size: 10px; font-weight: 700; color: var(--text); text-align: center; }
+  .intro-card-desc { font-size: 9px; color: var(--muted); text-align: center; line-height: 1.3; }
+  .intro-card.selected .intro-card-name { color: var(--accent2); }
+  .intro-check {
+    position: absolute; top: 5px; right: 5px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); color: white; font-size: 9px;
+    display: none; align-items: center; justify-content: center;
+  }
+  .intro-card.selected .intro-check { display: flex; }
+
+  /* Анимации в mini-превью карточек интро */
+  @keyframes fadeIn   { from { opacity:0 } to { opacity:1 } }
+  @keyframes slideUp  { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
+  @keyframes typeAnim { from { width:0 } to { width:100% } }
+  @keyframes petal    { 0%{transform:translateY(-10px) rotate(0deg);opacity:1} 100%{transform:translateY(30px) rotate(180deg);opacity:0} }
+  @keyframes curtainL { from{transform:scaleX(1)} to{transform:scaleX(0)} }
+  @keyframes curtainR { from{transform:scaleX(1)} to{transform:scaleX(0)} }
+  @keyframes countNum { 0%{content:'3'} 33%{content:'2'} 66%{content:'1'} 100%{content:'✦'} }
+  .anim-fade    { animation: fadeIn 1.5s ease-in-out infinite alternate; }
+  .anim-slide   { animation: slideUp 1.2s ease infinite alternate; }
+  .anim-petal1  { animation: petal 2s ease-in infinite; }
+  .anim-petal2  { animation: petal 2s ease-in .6s infinite; }
+  .anim-petal3  { animation: petal 2s ease-in 1.2s infinite; }
+
+  /* ── Template Preview Overlay ── */
+  .tpl-overlay {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+    transition: background .35s ease;
+  }
+  .tpl-overlay.open {
+    background: rgba(0,0,0,.82);
+    pointer-events: all;
+  }
+  .tpl-overlay-inner {
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+    opacity: 0; transform: scale(.88) translateY(24px);
+    transition: opacity .35s cubic-bezier(.34,1.2,.64,1), transform .35s cubic-bezier(.34,1.2,.64,1);
+    max-height: 95vh;
+  }
+  .tpl-overlay.open .tpl-overlay-inner {
+    opacity: 1; transform: scale(1) translateY(0);
+  }
+  .tpl-overlay-header {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 340px; flex-shrink: 0;
+  }
+  .tpl-overlay-name { font-size: 18px; font-weight: 700; color: #fff; }
+  .tpl-overlay-tag  { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px; }
+  .tpl-overlay-close {
+    width: 38px; height: 38px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,.12);
+    color: white; font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s; flex-shrink: 0;
+  }
+  .tpl-overlay-close:hover { background: rgba(255,255,255,.22); }
+
+  .tpl-overlay-phone {
+    width: 300px; border-radius: 40px; overflow: hidden; flex-shrink: 0;
+    box-shadow: 0 0 0 8px #1a1a24, 0 0 0 10px #3a3a5a, 0 30px 80px rgba(0,0,0,.8);
+    position: relative; max-height: calc(95vh - 140px);
+  }
+  .tpl-overlay-phone .phone-notch {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 90px; height: 20px; background: #0f0f13;
+    border-radius: 0 0 14px 14px; z-index: 20;
+  }
+  .tpl-overlay-screen {
+    width: 100%; max-height: calc(95vh - 160px);
+    overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tpl-overlay-screen::-webkit-scrollbar { display: none; }
+  .tpl-overlay-wm {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%) rotate(-25deg);
+    font-size: 16px; font-weight: 900; letter-spacing: 3px;
+    white-space: nowrap; pointer-events: none; z-index: 15; opacity: .15;
+  }
+
+  .tpl-overlay-actions {
+    display: flex; gap: 12px; flex-shrink: 0;
+  }
+  .tpl-select-btn {
+    padding: 12px 28px; border: none; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), #9f7aea);
+    color: white; font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: all .22s; letter-spacing: .3px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tpl-select-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,106,247,.5); }
+  .tpl-select-btn.already-selected {
+    background: rgba(52,211,153,.2); color: var(--success); border: 1px solid var(--success);
+  }
+
+  .theme-toggle {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--surface2);
+    cursor: pointer; font-size: 16px; display: flex;
+    align-items: center; justify-content: center; transition: all .2s;
+    flex-shrink: 0;
+  }
+  .theme-toggle:hover { border-color: var(--accent); }
+
+  /* ── Mobile tabs nav ── */
+  .mobile-tabs {
+    display: none;
+    position: sticky; top: 57px; z-index: 90;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .mobile-tabs button {
+    flex: 1; padding: 10px 4px; background: none; border: none;
+    color: var(--muted); font-size: 11px; font-weight: 600;
+    letter-spacing: .5px; text-transform: uppercase; cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all .2s;
+  }
+  .mobile-tabs button.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+
+  /* ── Tablet (768–1024px): 2-row layout ── */
+  @media (max-width: 1024px) {
+    .workspace {
+      grid-template-columns: 1fr 320px;
+      height: calc(100vh - 58px);
+    }
+    .form-scroll { overflow-y: auto; }
+  }
+
+  /* ── Mobile (<768px): single column with tabs ── */
+  @media (max-width: 767px) {
+    header { padding: 8px 12px; }
+    .logo  { font-size: 14px; }
+    .logo span { display: none; }
+    .section-nav { max-width: 100%; }
+
+    .mobile-tabs { display: flex; }
+
+    .workspace {
+      display: block;
+      height: auto;
+      min-height: calc(100vh - 105px);
+    }
+    .gallery-panel,
+    .preview-panel,
+    .form-panel {
+      display: none;
+      height: calc(100vh - 105px);
+      border: none;
+    }
+    .gallery-panel.tab-active,
+    .form-panel.tab-active { display: flex; }
+    .preview-panel.tab-active { display: flex !important; }
+
+    /* form panel scrolls naturally on mobile */
+    .form-panel.tab-active { height: auto; min-height: calc(100vh - 105px); overflow: visible; }
+    .form-scroll { overflow: visible; max-height: none; }
+
+    /* phone frame: scale down on small screens */
+    .preview-canvas { padding: 16px 8px; }
+    .phone-frame { width: 260px; max-width: calc(100vw - 32px); }
+    .phone-frame .phone-screen { height: 470px; overflow-x: hidden; }
+
+    /* overlay phone: smaller */
+    .tpl-overlay-phone { width: 260px; height: 500px; }
+    .tpl-overlay-screen { height: 460px; }
+
+    /* palette row: allow wrap */
+    .palette-row { flex-wrap: wrap; }
+
+    /* budget grid full width */
+    .budget-grid { grid-template-columns: 1fr 1fr; }
+
+    /* toast full-width */
+    .toast { min-width: calc(100vw - 32px); bottom: 16px; }
+
+    /* step indicator compact */
+    .step-line { width: 20px; }
+    .step { width: 24px; height: 24px; font-size: 11px; }
+  }
+
+  /* ── Welcome Screen (desktop only) ── */
+  #welcomeScreen {
+    position: fixed; inset: 0; z-index: 1000;
+    background: #080810;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 40px;
+    overflow: hidden;
+    font-family: 'Google Sans', 'Segoe UI', system-ui, sans-serif;
+  }
+
+  /* Animated gradient blobs */
+  .wlc-blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(80px); pointer-events: none;
+    animation: blobFloat 12s ease-in-out infinite;
+  }
+  .wlc-blob-1 {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(100,80,240,.28) 0%, transparent 70%);
+    top: -200px; left: -100px;
+    animation-duration: 14s;
+  }
+  .wlc-blob-2 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(0,180,200,.18) 0%, transparent 70%);
+    bottom: -150px; right: -80px;
+    animation-duration: 10s; animation-delay: -4s;
+  }
+  .wlc-blob-3 {
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, rgba(200,80,180,.14) 0%, transparent 70%);
+    top: 40%; left: 55%;
+    animation-duration: 16s; animation-delay: -7s;
+  }
+  @keyframes blobFloat {
+    0%,100% { transform: translate(0,0) scale(1); }
+    33%      { transform: translate(30px,-40px) scale(1.05); }
+    66%      { transform: translate(-20px,25px) scale(.95); }
+  }
+
+  /* Subtle grid overlay — фишечка */
+  #welcomeScreen::after {
+    content: '';
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 100%);
+  }
+
+  .wlc-inner {
+    position: relative; z-index: 1;
+    width: 75%; max-width: 1100px;
+    text-align: center;
+  }
+
+  /* Gemini-style badge */
+  .wlc-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 30px; margin-bottom: 44px;
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.05);
+    font-size: 12px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.5);
+  }
+  .wlc-badge-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: linear-gradient(135deg, #8b7ff7, #4fc8d0);
+    box-shadow: 0 0 8px rgba(139,127,247,.8);
+    animation: dotPulse 2s ease-in-out infinite;
+  }
+  @keyframes dotPulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: .6; transform: scale(1.3); }
+  }
+
+  /* Big headline — gradient text */
+  .wlc-title {
+    font-size: clamp(38px, 5.5vw, 64px);
+    font-weight: 700; line-height: 1.08;
+    letter-spacing: -.03em;
+    margin-bottom: 24px;
+    background: linear-gradient(
+      135deg,
+      #ffffff 0%,
+      #c8c0ff 35%,
+      #80d8e8 65%,
+      #ffffff 100%
+    );
+    background-size: 200% 200%;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 6s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0%,100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+  }
+
+  .wlc-sub {
+    font-size: 17px; line-height: 1.7;
+    color: rgba(255,255,255,.45);
+    max-width: 560px; margin: 0 auto 48px;
+  }
+
+  /* Feature pills */
+  .wlc-features {
+    display: flex; gap: 10px; justify-content: center;
+    flex-wrap: wrap; margin-bottom: 56px;
+  }
+  .wlc-feat {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 20px; border-radius: 30px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.04);
+    font-size: 13px; color: rgba(255,255,255,.55);
+    transition: all .25s;
+  }
+  .wlc-feat:hover {
+    border-color: rgba(139,127,247,.4);
+    background: rgba(139,127,247,.1);
+    color: rgba(255,255,255,.8);
+  }
+  .wlc-feat-icon { font-size: 14px; }
+
+  /* CTA button — Gemini-style gradient border */
+  .wlc-btn-wrap {
+    display: inline-block;
+    padding: 2px; border-radius: 14px;
+    background: linear-gradient(135deg, #8b7ff7, #4fc8d0, #c278d0);
+    background-size: 200% 200%;
+    animation: borderSpin 4s linear infinite;
+    box-shadow: 0 0 40px rgba(139,127,247,.25);
+    transition: box-shadow .3s;
+  }
+  .wlc-btn-wrap:hover {
+    box-shadow: 0 0 60px rgba(139,127,247,.45);
+  }
+  @keyframes borderSpin {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+  .wlc-btn {
+    display: block;
+    padding: 16px 52px; border-radius: 12px;
+    background: #0e0e1a; border: none;
+    color: #fff; font-size: 16px; font-weight: 600;
+    cursor: pointer; letter-spacing: .01em;
+    transition: background .25s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .wlc-btn:hover { background: #13132a; }
+
+  /* ── Code side panels ── */
+  .wlc-code-side {
+    position: absolute; top: 0; bottom: 0;
+    width: calc(12.5% - 20px);
+    overflow: hidden; pointer-events: none;
+    display: flex; flex-direction: column; gap: 0;
+  }
+  .wlc-code-side.left  { left: 0; }
+  .wlc-code-side.right { right: 0; }
+
+  .wlc-code-track {
+    display: flex; flex-direction: column; gap: 18px;
+    animation: codeScroll 28s linear infinite;
+    padding: 0 12px;
+  }
+  .wlc-code-side.right .wlc-code-track {
+    animation-duration: 22s;
+    animation-direction: reverse;
+  }
+  @keyframes codeScroll {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-50%); }
+  }
+
+  .wlc-code-block {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 9.5px;
+    line-height: 1.6;
+    white-space: pre;
+    color: rgba(255,255,255,.2);
+    flex-shrink: 0;
+  }
+  /* Syntax colors */
+  .tok-tag   { color: rgba(139,127,247,.5); }
+  .tok-attr  { color: rgba(80,200,220,.45); }
+  .tok-val   { color: rgba(180,220,120,.4); }
+  .tok-prop  { color: rgba(80,200,220,.45); }
+  .tok-num   { color: rgba(249,168,212,.45); }
+  .tok-sel   { color: rgba(139,127,247,.5); }
+  .tok-com   { color: rgba(255,255,255,.15); font-style: italic; }
+
+  @media (max-width: 767px) { #welcomeScreen { display: none !important; } }
+
+  /* ── Registration Modal ── */
+  #regModal {
+    position: fixed; inset: 0; z-index: 1001;
+    display: none; align-items: center; justify-content: center;
+    padding: 24px;
+    background: rgba(0,0,0,.55); backdrop-filter: blur(5px);
+  }
+  #regModal.open { display: flex; }
+  .reg-box {
+    background: rgba(14,14,28,.92);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 24px; padding: 40px 36px;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 40px 100px rgba(0,0,0,.8);
+    backdrop-filter: blur(20px);
+  }
+  .reg-brand { font-size: 11px; font-weight: 700; letter-spacing: 4px; color: rgba(139,127,247,.8); text-transform: uppercase; margin-bottom: 20px; }
+  .reg-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .reg-sub   { font-size: 13px; color: rgba(255,255,255,.4); margin-bottom: 28px; }
+  .reg-field { margin-bottom: 18px; }
+  .reg-field label {
+    display: block; font-size: 11px; font-weight: 600;
+    letter-spacing: .8px; text-transform: uppercase;
+    color: rgba(255,255,255,.35); margin-bottom: 7px;
+  }
+  .reg-field input {
+    width: 100%; background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
+    padding: 12px 14px; color: #fff;
+    font-size: 14px; font-family: inherit;
+    outline: none; transition: border-color .2s;
+  }
+  .reg-field input::placeholder { color: rgba(255,255,255,.25); }
+  .reg-field input:focus { border-color: rgba(139,127,247,.6); background: rgba(139,127,247,.08); }
+  .reg-field input.invalid { border-color: rgba(248,113,113,.7); }
+  .reg-types {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .reg-type {
+    padding: 11px 8px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.04);
+    font-size: 13px; color: rgba(255,255,255,.45);
+    cursor: pointer; text-align: center; transition: all .2s;
+  }
+  .reg-type:hover {
+    border-color: rgba(139,127,247,.4);
+    color: rgba(255,255,255,.8);
+  }
+  .reg-type.active {
+    border-color: rgba(139,127,247,.6);
+    background: rgba(139,127,247,.15);
+    color: #c8c0ff; font-weight: 600;
+  }
+  .reg-submit {
+    width: 100%; margin-top: 24px;
+    padding: 14px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #6e63f0, #5b9fd4);
+    color: #fff; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: opacity .2s, transform .15s;
+    font-family: inherit; letter-spacing: .01em;
+  }
+  .reg-submit:hover { opacity: .9; transform: translateY(-1px); }
+
+  /* ── Parallax background ── */
+  .parallax-bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+  }
+  .orb {
+    position: absolute; border-radius: 50%; filter: blur(90px); opacity: .15;
+  }
+  #orb1 { width: 700px; height: 700px; background: radial-gradient(circle, #8b5cf6, transparent 70%); top: -150px; left: -150px; }
+  #orb2 { width: 550px; height: 550px; background: radial-gradient(circle, #4f46e5, transparent 70%); bottom: -100px; right: -100px; }
+  #orb3 { width: 450px; height: 450px; background: radial-gradient(circle, #7c3aed, transparent 70%); top: 40%; left: 40%; }
+
+  /* Position body content above parallax */
+  #welcomeOverlay, #regModal, .drag-overlay, .lightbox, .tpl-overlay, .toast { z-index: 500; }
+  #welcomeOverlay { z-index: 9000 !important; }
+  #regModal { z-index: 8900 !important; }
+  header { z-index: 100; position: relative; }
+  .workspace { position: relative; z-index: 1; }
+
+  /* ── Gallery 2-col grid ── */
+  #gallery {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  /* Cat labels span full width */
+  #gallery .cat-label {
+    grid-column: 1 / -1;
+  }
+
+  /* Bigger template thumbnails */
+  .template-card { border-radius: 14px; }
+  .template-thumb { aspect-ratio: 9/16 !important; }
+
+
+  /* Preview button on card */
+  .card-preview-btn {
+    position: absolute;
+    bottom: 52px; left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    padding: 6px 16px; border-radius: 20px; border: none;
+    background: rgba(139,92,246,.9);
+    color: #fff; font-size: 11px; font-weight: 700;
+    cursor: pointer; opacity: 0;
+    transition: opacity .2s, transform .2s;
+    white-space: nowrap; backdrop-filter: blur(4px);
+    font-family: inherit; letter-spacing: .3px;
+    pointer-events: none;
+  }
+  .template-card:hover .card-preview-btn {
+    opacity: 1; transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+  }
+  /* Always show on touch devices */
+  @media (hover: none) {
+    .card-preview-btn {
+      opacity: 1; transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+      background: rgba(139,92,246,.8);
+    }
+  }
+
+</style>
+</head>
+<body>
+<div class="parallax-bg">
+  <div class="orb" id="orb1"></div>
+  <div class="orb" id="orb2"></div>
+  <div class="orb" id="orb3"></div>
+</div>
+
+
+<!-- ── Welcome Screen (desktop only) ── -->
+<div id="welcomeScreen">
+  <div class="wlc-blob wlc-blob-1"></div>
+  <div class="wlc-blob wlc-blob-2"></div>
+  <div class="wlc-blob wlc-blob-3"></div>
+
+  <!-- Left code panel: HTML snippets -->
+  <div class="wlc-code-side left">
+    <div class="wlc-code-track" id="codeLeft"></div>
+  </div>
+
+  <!-- Right code panel: CSS snippets -->
+  <div class="wlc-code-side right">
+    <div class="wlc-code-track" id="codeRight"></div>
+  </div>
+
+  <div class="wlc-inner">
+    <div class="wlc-badge">
+      <div class="wlc-badge-dot"></div>
+      IN_SITE Studio
+    </div>
+    <h1 class="wlc-title">Ваш сайт —<br>за один бриф</h1>
+    <p class="wlc-sub">Опишите проект, выберите стиль — AI-команда соберёт готовый лендинг. Свадьбы, бизнес, портфолио, мероприятия.</p>
+    <div class="wlc-features">
+      <div class="wlc-feat"><span class="wlc-feat-icon">🎨</span> 20+ готовых макетов</div>
+      <div class="wlc-feat"><span class="wlc-feat-icon">⚡</span> Генерация за минуту</div>
+      <div class="wlc-feat"><span class="wlc-feat-icon">💬</span> Правки через чат</div>
+    </div>
+    <div class="wlc-btn-wrap">
+      <button class="wlc-btn" id="wlcBtn">Начать новую страницу</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Registration Modal ── -->
+<div id="regModal">
+  <div class="reg-box">
+    <div class="reg-brand">IN_SITE</div>
+    <div class="reg-title">Начнём знакомство</div>
+    <div class="reg-sub">Пара секунд — и вы в рабочем кабинете</div>
+    <div class="reg-field">
+      <label>Ваше имя</label>
+      <input type="text" id="regName" placeholder="Как вас зовут?">
+    </div>
+    <div class="reg-field">
+      <label>Email</label>
+      <input type="email" id="regEmail" placeholder="your@email.com">
+    </div>
+    <div class="reg-field">
+      <label>Тип проекта</label>
+      <div class="reg-types" id="regTypes">
+        <div class="reg-type active" data-sec="wedding">💍 Свадьба</div>
+        <div class="reg-type" data-sec="tilda">🏢 Бизнес</div>
+        <div class="reg-type" data-sec="portfolio">🎨 Портфолио</div>
+        <div class="reg-type" data-sec="events">🎪 Мероприятие</div>
+      </div>
+    </div>
+    <button class="reg-submit" id="regSubmit">Продолжить →</button>
+  </div>
+</div>
+
+<input type="file" id="refInput" accept="image/*" multiple>
+<!-- Template Preview Overlay -->
+<div class="tpl-overlay" id="tplOverlay">
+  <div class="tpl-overlay-inner">
+    <div class="tpl-overlay-header">
+      <div>
+        <div class="tpl-overlay-name" id="overlayName">—</div>
+        <div class="tpl-overlay-tag"  id="overlayTag">—</div>
+      </div>
+      <button class="tpl-overlay-close" id="overlayClose">✕</button>
+    </div>
+    <div class="tpl-overlay-phone">
+      <div class="phone-notch"></div>
+      <div class="tpl-overlay-screen" id="overlayScreen"></div>
+      <div class="tpl-overlay-wm" id="overlayWm">© IN_SITE</div>
+    </div>
+    <div class="tpl-overlay-actions">
+      <button class="tpl-select-btn" id="overlaySelectBtn">
+        <span id="overlaySelectIcon">✓</span>
+        <span id="overlaySelectLabel">Выбрать этот шаблон</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="drag-overlay" id="dragOverlay">+ Добавить референс</div>
+<div class="lightbox" id="lightbox">
+  <span class="lightbox-close" id="lightboxClose">✕</span>
+  <img id="lightboxImg" src="" alt="">
+</div>
+<div class="toast" id="toast"></div>
+
+<header>
+  <div class="logo">IN_SITE <span>клиентская панель</span></div>
+  <nav class="section-nav" id="sectionNav"></nav>
+  <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+    <div class="step-indicator">
+      <div class="step active" id="s1">1</div>
+      <div class="step-line" id="sl1"></div>
+      <div class="step" id="s2">2</div>
+      <div class="step-line" id="sl2"></div>
+      <div class="step" id="s3">3</div>
+    </div>
+    <button class="theme-toggle" id="themeToggle" title="Сменить тему">🌙</button>
+  </div>
+</header>
+
+<div class="mobile-tabs" id="mobileTabs">
+  <button class="active" data-tab="gallery" onclick="switchTab('gallery')">Макеты</button>
+  <button data-tab="preview" onclick="switchTab('preview')">Превью</button>
+  <button data-tab="form" onclick="switchTab('form')">Заявка</button>
+</div>
+
+<div class="workspace">
+
+  <!-- LEFT -->
+  <div class="gallery-panel tab-active" id="panelGallery">
+    <div class="panel-header">Готовые макеты</div>
+    <div class="gallery-scroll" id="gallery"></div>
+    <div class="palette-strip">
+      <div class="palette-label">
+        Цветовая схема
+        <span id="paletteTip" style="color:var(--muted);font-size:9px;text-transform:none;letter-spacing:0;font-weight:400;margin-left:4px;">← выберите макет выше</span>
+      </div>
+      <div class="palette-row" id="paletteRow"></div>
+    </div>
+    <div class="refs-strip">
+      <div class="refs-label">
+        Референсы
+        <span style="color:var(--accent2);font-size:10px;text-transform:none;letter-spacing:0;">перетащите или нажмите +</span>
+      </div>
+      <div class="refs-row" id="refsRow">
+        <button class="add-ref-btn" id="addRefBtn">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="preview-panel" id="panelPreview">
+    <div class="preview-toolbar">
+      <div style="flex:1">
+        <div class="preview-title" id="previewTitle">Выберите макет</div>
+        <div class="preview-subtitle" id="previewSub">Кликните на шаблон слева</div>
+      </div>
+      <button class="zoom-btn" id="zoomOut">−</button>
+      <button class="zoom-btn" id="zoomIn">+</button>
+    </div>
+
+    <div class="preview-canvas" id="previewCanvas">
+      <div class="preview-empty">
+        <div class="icon">💍</div>
+        <p>Выберите макет из галереи<br>для предпросмотра</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div class="form-panel" id="panelForm">
+    <div class="panel-header" id="formPanelHeader">Детали проекта</div>
+    <div class="form-scroll">
+
+      <div class="form-group">
+        <label>Выбранный макет</label>
+        <div id="formTplPreview" class="no-tpl-msg">Макет не выбран</div>
+      </div>
+
+      <!-- WEDDING fields -->
+      <div id="fields-wedding">
+        <div class="form-group">
+          <label>Имена молодожёнов *</label>
+          <input type="text" id="coupleNames" placeholder="Анна & Дмитрий">
+        </div>
+
+        <div class="form-group">
+          <label>Дата свадьбы *</label>
+          <input type="date" id="weddingDate">
+        </div>
+
+        <div class="form-group">
+          <label>Email для связи *</label>
+          <input type="email" id="clientEmail" placeholder="client@example.com">
+        </div>
+
+        <div class="form-group">
+          <label>Телефон / Telegram</label>
+          <input type="text" id="clientPhone" placeholder="+7 900 000-00-00 / @username">
+        </div>
+
+        <div class="form-group">
+          <label>Тип сайта</label>
+          <select id="projectType">
+            <option value="">— выберите —</option>
+            <optgroup label="Приглашения">
+              <option>Свадебное приглашение</option>
+              <option>Love Story сайт</option>
+              <option>Save the Date</option>
+            </optgroup>
+            <optgroup label="Фотоальбомы">
+              <option>Свадебный фотоальбом</option>
+              <option>Галерея + история</option>
+            </optgroup>
+            <optgroup label="Другое">
+              <option>Полный свадебный сайт</option>
+              <option>Другое</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Место проведения</label>
+          <input type="text" id="venue" placeholder="ROYAL BEACH, Южная дорога 14">
+        </div>
+
+        <div class="form-group">
+          <label>Пожелания по стилю</label>
+          <textarea id="taskDesc" placeholder="Цвета, шрифты, настроение, примеры нравящихся сайтов..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Бюджет</label>
+          <div class="budget-grid" id="budgetGrid">
+            <div class="budget-option" data-val="до 30к">до 30 000 ₽</div>
+            <div class="budget-option" data-val="30-60к">30 – 60 000 ₽</div>
+            <div class="budget-option" data-val="60-120к">60 – 120 000 ₽</div>
+            <div class="budget-option" data-val="120к+">120 000+ ₽</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Дресс-код</label>
+          <input type="text" id="dresscode" placeholder="Чёрный и белый / Пастельные тона / Любой">
+        </div>
+
+        <div class="form-group">
+          <label>Кол-во гостей (ориентировочно)</label>
+          <input type="number" id="guestCount" placeholder="30" min="1">
+        </div>
+      </div>
+
+      <!-- TILDA fields -->
+      <div id="fields-tilda" style="display:none; flex-direction:column; gap:16px;">
+        <div class="form-group">
+          <label>Название бизнеса / специалиста *</label>
+          <input type="text" id="tildaName" placeholder="Иванова Мария — психолог">
+        </div>
+
+        <div class="form-group">
+          <label>Ниша / направление *</label>
+          <select id="tildaNiche">
+            <option value="">— выберите —</option>
+            <optgroup label="Специалисты">
+              <option value="Врач / медицина">Врач / медицина</option>
+              <option value="Психолог">Психолог</option>
+              <option value="Адвокат / юрист">Адвокат / юрист</option>
+              <option value="Нотариус">Нотариус</option>
+              <option value="Бухгалтер">Бухгалтер</option>
+              <option value="Репетитор / коуч">Репетитор / коуч</option>
+              <option value="Фитнес-тренер">Фитнес-тренер</option>
+              <option value="Нутрициолог / диетолог">Нутрициолог / диетолог</option>
+            </optgroup>
+            <optgroup label="Бизнес">
+              <option value="Автосервис">Автосервис</option>
+              <option value="Автосалон">Автосалон</option>
+              <option value="Ресторан / кафе / бар">Ресторан / кафе / бар</option>
+              <option value="Beauty-салон / барбершоп">Beauty-салон / барбершоп</option>
+              <option value="Стоматология / клиника">Стоматология / клиника</option>
+              <option value="Агентство недвижимости">Агентство недвижимости</option>
+              <option value="Строительство / ремонт">Строительство / ремонт</option>
+              <option value="Маркетинговое агентство">Маркетинговое агентство</option>
+            </optgroup>
+            <optgroup label="Instagram / визитка">
+              <option value="Личный бренд / блогер">Личный бренд / блогер</option>
+              <option value="Фотограф / видеограф">Фотограф / видеограф</option>
+              <option value="Дизайнер / художник">Дизайнер / художник</option>
+              <option value="Мастер маникюра / бровист">Мастер маникюра / бровист</option>
+              <option value="Другое">Другое</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Email для связи *</label>
+          <input type="email" id="tildaEmail" placeholder="client@example.com">
+        </div>
+
+        <div class="form-group">
+          <label>Телефон / Telegram</label>
+          <input type="text" id="tildaPhone" placeholder="+7 900 000-00-00 / @username">
+        </div>
+
+        <div class="form-group">
+          <label>Ключевая задача сайта</label>
+          <select id="tildaGoal">
+            <option value="">— выберите —</option>
+            <option>Запись / лид-форма</option>
+            <option>Портфолио / кейсы</option>
+            <option>Каталог услуг + цены</option>
+            <option>Личный бренд + соцсети</option>
+            <option>Одностраничная визитка</option>
+            <option>Лендинг под рекламу</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Тон / стиль</label>
+          <select id="tildaTone">
+            <option value="">— выберите —</option>
+            <option>Строгий, профессиональный</option>
+            <option>Тёплый, доверительный</option>
+            <option>Яркий, энергичный</option>
+            <option>Минималистичный, чистый</option>
+            <option>Люксовый, премиум</option>
+            <option>Молодёжный, трендовый</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Бюджет</label>
+          <div class="budget-grid" id="tildaBudgetGrid">
+            <div class="budget-option" data-val="до 20к">до 20 000 ₽</div>
+            <div class="budget-option" data-val="20-50к">20 – 50 000 ₽</div>
+            <div class="budget-option" data-val="50-100к">50 – 100 000 ₽</div>
+            <div class="budget-option" data-val="100к+">100 000+ ₽</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Пожелания / примеры сайтов</label>
+          <textarea id="tildaNotes" placeholder="Цвета, референсы, что нравится / не нравится..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-group intro-group">
+        <label>Интро при входе на сайт</label>
+        <div class="intro-grid" id="introGrid"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Дополнительно</label>
+        <textarea id="extraNotes" placeholder="Пожелания, RSVP-анкета, на��итки, особые блоки..." style="min-height:60px;"></textarea>
+      </div>
+
+      <!-- PORTFOLIO fields -->
+      <div id="fields-portfolio" style="display:none; flex-direction:column; gap:16px;">
+        <div class="form-group">
+          <label>Имя / псевдоним *</label>
+          <input type="text" id="portName" placeholder="Анна Соколова / ANYA.DESIGN">
+        </div>
+        <div class="form-group">
+          <label>Специализация *</label>
+          <select id="portSpec">
+            <option value="">— выберите —</option>
+            <optgroup label="Творческие">
+              <option>UI/UX дизайнер</option>
+              <option>Графический дизайнер</option>
+              <option>Иллюстратор / художник</option>
+              <option>Фотограф / видео��раф</option>
+              <option>Модель / актёр</option>
+              <option>Музыкант / DJ / продюсер</option>
+            </optgroup>
+            <optgroup label="Технические">
+              <option>Frontend-разработчик</option>
+              <option>Fullstack-разработчик</option>
+              <option>Архитектор / дизайнер интерьеров</option>
+              <option>Motion-дизайнер</option>
+              <option>Другое</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" id="portEmail" placeholder="client@example.com">
+        </div>
+        <div class="form-group">
+          <label>Телефон / Telegram</label>
+          <input type="text" id="portPhone" placeholder="+7 900 000-00-00 / @username">
+        </div>
+        <div class="form-group">
+          <label>Цель портфолио</label>
+          <select id="portGoal">
+            <option value="">— выберите —</option>
+            <option>Привлечь клиентов на фриланс</option>
+            <option>Устроиться в студию / компан��ю</option>
+            <option>Показать работы / арт-галерея</option>
+            <option>Личный бренд + соцсети</option>
+            <option>Продажа услуг / принтов</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Бюджет</label>
+          <div class="budget-grid" id="portBudgetGrid">
+            <div class="budget-option" data-val="до 15к">до 15 000 ₽</div>
+            <div class="budget-option" data-val="15-40к">15 – 40 000 ₽</div>
+            <div class="budget-option" data-val="40-80к">40 – 80 000 ₽</div>
+            <div class="budget-option" data-val="80к+">80 000+ ₽</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Пожелания</label>
+          <textarea id="portNotes" placeholder="Ссылки на референсы, стиль, разделы сайта..."></textarea>
+        </div>
+      </div>
+
+      <!-- EVENTS fields -->
+      <div id="fields-events" style="display:none; flex-direction:column; gap:16px;">
+        <div class="form-group">
+          <label>Название мероприятия *</label>
+          <input type="text" id="evtName" placeholder="День рождения Александра / TECH SUMMIT 2026">
+        </div>
+        <div class="form-group">
+          <label>Тип мероприятия</label>
+          <select id="evtType">
+            <option value="">— выберите —</option>
+            <optgroup label="Частные">
+              <option>День рождения</option>
+              <option>Детский пра��дник</option>
+              <option>Выпускной</option>
+              <option>Вечеринка / концерт</option>
+              <option>Юбилей</option>
+            </optgroup>
+            <optgroup label="Деловые">
+              <option>Корпоратив</option>
+              <option>Конференция / форум</option>
+              <option>Презентация продукта</option>
+              <option>Тимбилдинг</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Дата мероприятия</label>
+          <input type="date" id="evtDate">
+        </div>
+        <div class="form-group">
+          <label>Место проведения</label>
+          <input type="text" id="evtVenue" placeholder="Банкетный зал «Атриум», Москва">
+        </div>
+        <div class="form-group">
+          <label>Кол-во гостей</label>
+          <input type="number" id="evtGuests" placeholder="50" min="1">
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" id="evtEmail" placeholder="client@example.com">
+        </div>
+        <div class="form-group">
+          <label>Телефон / Telegram</label>
+          <input type="text" id="evtPhone" placeholder="+7 900 000-00-00 / @username">
+        </div>
+        <div class="form-group">
+          <label>Бюджет</label>
+          <div class="budget-grid" id="evtBudgetGrid">
+            <div class="budget-option" data-val="до 20к">до 20 000 ₽</div>
+            <div class="budget-option" data-val="20-50к">20 – 50 000 ₽</div>
+            <div class="budget-option" data-val="50-100к">50 ��� 100 000 ₽</div>
+            <div class="budget-option" data-val="100к+">100 000+ ₽</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Пожелания</label>
+          <textarea id="evtNotes" placeholder="Стиль, программа, особые блоки (фотогалерея, RSVP, таймер...)"></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="form-footer">
+      <div class="validation-msg" id="validMsg">Заполните обязательные поля и выберите макет</div>
+      <button class="send-btn" id="sendBtn">Отправить заявку →</button>
+    </div>
+  </div>
+
+</div>
+
+
+<script>
+
+// ── Parallax ──
+(function() {
+  var mx = window.innerWidth/2, my = window.innerHeight/2, cx = mx, cy = my;
+  document.addEventListener('mousemove', function(e) { mx = e.clientX; my = e.clientY; });
+  function animOrbs() {
+    cx += (mx - cx) * 0.05;
+    cy += (my - cy) * 0.05;
+    var x = cx / window.innerWidth - 0.5;
+    var y = cy / window.innerHeight - 0.5;
+    var o1 = document.getElementById('orb1');
+    var o2 = document.getElementById('orb2');
+    var o3 = document.getElementById('orb3');
+    if (o1) o1.style.transform = 'translate(' + (x*80) + 'px,' + (y*60) + 'px)';
+    if (o2) o2.style.transform = 'translate(' + (-x*120) + 'px,' + (-y*90) + 'px)';
+    if (o3) o3.style.transform = 'translate(' + (x*50) + 'px,' + (-y*70) + 'px)';
+    requestAnimationFrame(animOrbs);
+  }
+  animOrbs();
+})();
+
+
+// ── Welcome / Registration flow (desktop only) ──
+(function() {
+  if (window.innerWidth <= 767) return;
+  if (localStorage.getItem('insite_reg_email')) return;
+
+  const welcome  = document.getElementById('welcomeScreen');
+  const regModal = document.getElementById('regModal');
+
+  welcome.style.display = 'flex';
+
+  // ── Animated code panels ──
+  const HTML_SNIPPETS = [
+    `<span class="tok-tag">&lt;section</span> <span class="tok-attr">class</span>=<span class="tok-val">"hero"</span><span class="tok-tag">&gt;</span>\n  <span class="tok-tag">&lt;h1&gt;</span>Anna & Dmitry<span class="tok-tag">&lt;/h1&gt;</span>\n  <span class="tok-tag">&lt;p</span> <span class="tok-attr">class</span>=<span class="tok-val">"date"</span><span class="tok-tag">&gt;</span>14 June 2026<span class="tok-tag">&lt;/p&gt;</span>\n<span class="tok-tag">&lt;/section&gt;</span>`,
+    `<span class="tok-tag">&lt;nav</span> <span class="tok-attr">class</span>=<span class="tok-val">"menu"</span><span class="tok-tag">&gt;</span>\n  <span class="tok-tag">&lt;a</span> <span class="tok-attr">href</span>=<span class="tok-val">"#about"</span><span class="tok-tag">&gt;</span>О нас<span class="tok-tag">&lt;/a&gt;</span>\n  <span class="tok-tag">&lt;a</span> <span class="tok-attr">href</span>=<span class="tok-val">"#services"</span><span class="tok-tag">&gt;</span>Услуги<span class="tok-tag">&lt;/a&gt;</span>\n<span class="tok-tag">&lt;/nav&gt;</span>`,
+    `<span class="tok-tag">&lt;div</span> <span class="tok-attr">class</span>=<span class="tok-val">"card"</span><span class="tok-tag">&gt;</span>\n  <span class="tok-tag">&lt;img</span> <span class="tok-attr">src</span>=<span class="tok-val">"photo.jpg"</span>\n       <span class="tok-attr">alt</span>=<span class="tok-val">"gallery"</span><span class="tok-tag">&gt;</span>\n  <span class="tok-tag">&lt;span</span> <span class="tok-attr">class</span>=<span class="tok-val">"label"</span><span class="tok-tag">&gt;</span>Photo<span class="tok-tag">&lt;/span&gt;</span>\n<span class="tok-tag">&lt;/div&gt;</span>`,
+    `<span class="tok-com">&lt;!-- RSVP Form --&gt;</span>\n<span class="tok-tag">&lt;form</span> <span class="tok-attr">method</span>=<span class="tok-val">"POST"</span><span class="tok-tag">&gt;</span>\n  <span class="tok-tag">&lt;input</span> <span class="tok-attr">type</span>=<span class="tok-val">"text"</span>\n         <span class="tok-attr">placeholder</span>=<span class="tok-val">"Ваше имя"</span><span class="tok-tag">&gt;</span>\n  <span class="tok-tag">&lt;button&gt;</span>Подтвердить<span class="tok-tag">&lt;/button&gt;</span>\n<span class="tok-tag">&lt;/form&gt;</span>`,
+    `<span class="tok-tag">&lt;footer</span> <span class="tok-attr">class</span>=<span class="tok-val">"site-footer"</span><span class="tok-tag">&gt;</span>\n  <span class="tok-tag">&lt;p&gt;</span>Made by <span class="tok-tag">&lt;b&gt;</span>IN_SITE<span class="tok-tag">&lt;/b&gt;&lt;/p&gt;</span>\n  <span class="tok-tag">&lt;a</span> <span class="tok-attr">href</span>=<span class="tok-val">"#top"</span><span class="tok-tag">&gt;</span>↑ Наверх<span class="tok-tag">&lt;/a&gt;</span>\n<span class="tok-tag">&lt;/footer&gt;</span>`,
+    `<span class="tok-tag">&lt;div</span> <span class="tok-attr">class</span>=<span class="tok-val">"timer"</span><span class="tok-tag">&gt;</span>\n  <span class="tok-tag">&lt;span</span> <span class="tok-attr">id</span>=<span class="tok-val">"days"</span><span class="tok-tag">&gt;</span>42<span class="tok-tag">&lt;/span&gt;</span>\n  <span class="tok-tag">&lt;span</span> <span class="tok-attr">id</span>=<span class="tok-val">"hrs"</span><span class="tok-tag">&gt;</span>08<span class="tok-tag">&lt;/span&gt;</span>\n  <span class="tok-tag">&lt;span</span> <span class="tok-attr">id</span>=<span class="tok-val">"min"</span><span class="tok-tag">&gt;</span>15<span class="tok-tag">&lt;/span&gt;</span>\n<span class="tok-tag">&lt;/div&gt;</span>`,
+  ];
+  const CSS_SNIPPETS = [
+    `<span class="tok-sel">.hero</span> {\n  <span class="tok-prop">background</span>: <span class="tok-val">linear-gradient(\n    180deg,\n    #0d0b08 0%,\n    #1a1408 100%\n  )</span>;\n  <span class="tok-prop">min-height</span>: <span class="tok-num">100vh</span>;\n}`,
+    `<span class="tok-sel">h1</span> {\n  <span class="tok-prop">font-size</span>: <span class="tok-num">clamp(32px,5vw,64px)</span>;\n  <span class="tok-prop">font-weight</span>: <span class="tok-num">700</span>;\n  <span class="tok-prop">letter-spacing</span>: <span class="tok-num">-.02em</span>;\n  <span class="tok-prop">color</span>: <span class="tok-val">#f0d080</span>;\n}`,
+    `<span class="tok-sel">@keyframes fadeIn</span> {\n  <span class="tok-sel">from</span> {\n    <span class="tok-prop">opacity</span>: <span class="tok-num">0</span>;\n    <span class="tok-prop">transform</span>: <span class="tok-val">translateY(20px)</span>;\n  }\n  <span class="tok-sel">to</span> { <span class="tok-prop">opacity</span>: <span class="tok-num">1</span>; }\n}`,
+    `<span class="tok-sel">.card</span> {\n  <span class="tok-prop">border-radius</span>: <span class="tok-num">16px</span>;\n  <span class="tok-prop">overflow</span>: <span class="tok-val">hidden</span>;\n  <span class="tok-prop">box-shadow</span>: <span class="tok-val">0 24px 60px\n    rgba(0,0,0,.4)</span>;\n  <span class="tok-prop">transition</span>: <span class="tok-val">transform .3s</span>;\n}`,
+    `<span class="tok-sel">.menu a</span> {\n  <span class="tok-prop">color</span>: <span class="tok-val">inherit</span>;\n  <span class="tok-prop">text-decoration</span>: <span class="tok-val">none</span>;\n  <span class="tok-prop">padding</span>: <span class="tok-num">8px 16px</span>;\n  <span class="tok-prop">border-radius</span>: <span class="tok-num">8px</span>;\n}`,
+    `<span class="tok-sel">.timer span</span> {\n  <span class="tok-prop">font-size</span>: <span class="tok-num">48px</span>;\n  <span class="tok-prop">font-weight</span>: <span class="tok-num">300</span>;\n  <span class="tok-prop">color</span>: <span class="tok-val">#c9a84c</span>;\n  <span class="tok-prop">font-variant-numeric</span>:\n    <span class="tok-val">tabular-nums</span>;\n}`,
+  ];
+
+  function buildCodeTrack(el, snippets) {
+    // duplicate for seamless loop
+    [...snippets, ...snippets].forEach(html => {
+      const block = document.createElement('div');
+      block.className = 'wlc-code-block';
+      block.innerHTML = html;
+      el.appendChild(block);
+    });
+  }
+  buildCodeTrack(document.getElementById('codeLeft'),  HTML_SNIPPETS);
+  buildCodeTrack(document.getElementById('codeRight'), CSS_SNIPPETS);
+
+  document.getElementById('wlcBtn').addEventListener('click', () => {
+    regModal.classList.add('open');
+    setTimeout(() => document.getElementById('regName').focus(), 50);
+  });
+
+  document.getElementById('regTypes').addEventListener('click', e => {
+    const t = e.target.closest('.reg-type');
+    if (!t) return;
+    document.querySelectorAll('.reg-type').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+  });
+
+  document.getElementById('regSubmit').addEventListener('click', () => {
+    const nameEl  = document.getElementById('regName');
+    const emailEl = document.getElementById('regEmail');
+    const name    = nameEl.value.trim();
+    const email   = emailEl.value.trim();
+    const sec     = document.querySelector('.reg-type.active')?.dataset.sec || 'wedding';
+
+    nameEl.classList.remove('invalid');
+    emailEl.classList.remove('invalid');
+    if (!name)                         { nameEl.classList.add('invalid');  nameEl.focus();  return; }
+    if (!email || !email.includes('@')){ emailEl.classList.add('invalid'); emailEl.focus(); return; }
+
+    localStorage.setItem('insite_reg_email', email);
+    localStorage.setItem('insite_reg_name',  name);
+    localStorage.setItem('insite_reg_sec',   sec);
+    closeWelcome();
+
+    setTimeout(() => {
+      if (typeof switchSection === 'function') switchSection(sec);
+      prefillRegFields(name, email, sec);
+    }, 50);
+  });
+
+  function closeWelcome() {
+    welcome.style.transition = 'opacity .3s';
+    welcome.style.opacity = '0';
+    setTimeout(() => { welcome.style.display = 'none'; }, 320);
+    regModal.classList.remove('open');
+  }
+
+  function prefillRegFields(name, email, sec) {
+    const map = {
+      wedding:   { name: 'coupleNames', email: 'clientEmail' },
+      tilda:     { name: 'tildaName',   email: 'tildaEmail'  },
+      portfolio: { name: 'portName',    email: 'portEmail'   },
+      events:    { name: 'evtName',     email: 'evtEmail'    },
+    };
+    const ids = map[sec];
+    if (!ids) return;
+    const nEl = document.getElementById(ids.name);
+    const eEl = document.getElementById(ids.email);
+    if (nEl && !nEl.value) nEl.value = name;
+    if (eEl && !eEl.value) eEl.value = email;
+  }
+})();
+
+// ── Theme ──
+const THEME_KEY = 'insite_theme';
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = t === 'light' ? '☀️' : '🌙';
+}
+const systemTheme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+const savedTheme = localStorage.getItem(THEME_KEY) || systemTheme;
+applyTheme(savedTheme);
+
+window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', e => {
+  if (!localStorage.getItem(THEME_KEY)) applyTheme(e.matches ? 'light' : 'dark');
+});
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+});
+
+// ─── Template definitions ───────────────────────────────────────────────────
+// bg, text, accent, secondary, muted — цветовая схема для mini-page
+const TEMPLATES = [
+  // ── Приглашения ──
+  {
+    id: 'pure-white',
+    name: 'Pure White',
+    tag: 'Приглашение',
+    cat: 'inv',
+    scheme: {
+      bg: '#ffffff',
+      text: '#111111',
+      accent: '#1a1a1a',
+      line: '#e0e0e0',
+      btn: '#111111',
+      btnText: '#ffffff',
+      muted: '#888888',
+      hero: 'linear-gradient(180deg,#fff 0%,#f8f8f8 100%)',
+    },
+    names: 'Denis & Ksenia',
+    date: '10 | 09 | 2026',
+    place: 'Royal Beach',
+    vibe: 'Минимализм, чистота, современность',
+  },
+  {
+    id: 'dark-romance',
+    name: 'Dark Romance',
+    tag: 'Приглашение',
+    cat: 'inv',
+    scheme: {
+      bg: '#0d0b08',
+      text: '#f0e8d8',
+      accent: '#c9a84c',
+      line: '#2a2418',
+      btn: '#c9a84c',
+      btnText: '#0d0b08',
+      muted: '#8a7a5a',
+      hero: 'linear-gradient(180deg,#0d0b08 0%,#1a1408 100%)',
+    },
+    names: 'Артём & Полина',
+    date: '24 | 05 | 2026',
+    place: 'Château Blanc',
+    vibe: 'Роскошь, золото, вечер',
+  },
+  {
+    id: 'blush-pink',
+    name: 'Blush Pink',
+    tag: 'Приглашение',
+    cat: 'inv',
+    scheme: {
+      bg: '#fdf0f0',
+      text: '#4a1a1a',
+      accent: '#b05070',
+      line: '#f0c8c8',
+      btn: '#b05070',
+      btnText: '#ffffff',
+      muted: '#a07080',
+      hero: 'linear-gradient(180deg,#fdf0f0 0%,#f8e0e0 100%)',
+    },
+    names: 'Мария & Иван',
+    date: '14 | 06 | 2026',
+    place: 'Villa Rosa',
+    vibe: 'Романтика, розы, нежность',
+  },
+  {
+    id: 'forest-night',
+    name: 'Forest Night',
+    tag: 'Приглашение',
+    cat: 'inv',
+    scheme: {
+      bg: '#0b1610',
+      text: '#c8e0d0',
+      accent: '#6ab090',
+      line: '#1a3028',
+      btn: '#6ab090',
+      btnText: '#0b1610',
+      muted: '#4a7060',
+      hero: 'linear-gradient(180deg,#0b1610 0%,#0f2018 100%)',
+    },
+    names: 'Света & Никита',
+    date: '07 | 09 | 2026',
+    place: 'Лесная Поляна',
+    vibe: 'Природа, ботаника, зелень',
+  },
+  {
+    id: 'lavender-dream',
+    name: 'Lavender Dream',
+    tag: 'Приглашение',
+    cat: 'inv',
+    scheme: {
+      bg: '#f3f0fa',
+      text: '#2d1a4a',
+      accent: '#7c4db8',
+      line: '#d8c8f0',
+      btn: '#7c4db8',
+      btnText: '#ffffff',
+      muted: '#8060a8',
+      hero: 'linear-gradient(180deg,#f3f0fa 0%,#e8e0f5 100%)',
+    },
+    names: 'Алина & Егор',
+    date: '21 | 08 | 2026',
+    place: 'Сиреневый Сад',
+    vibe: 'Сирень, мечта, волшебство',
+  },
+  {
+    id: 'retro-cream',
+    name: 'Retro Cream',
+    tag: 'Приглашение',
+    cat: 'inv',
+    scheme: {
+      bg: '#faf5eb',
+      text: '#3a2810',
+      accent: '#8a6030',
+      line: '#e8d8b8',
+      btn: '#8a6030',
+      btnText: '#faf5eb',
+      muted: '#9a7850',
+      hero: 'linear-gradient(180deg,#faf5eb 0%,#f0e8d0 100%)',
+    },
+    names: 'Катя & Олег',
+    date: '03 | 10 | 2026',
+    place: 'Усадьба Дворяново',
+    vibe: 'Винтаж, ретро, ностальгия',
+  },
+  // ── Фотоальбомы ──
+  {
+    id: 'cinema-dark',
+    name: 'Cinema Dark',
+    tag: 'Фотоальбом',
+    cat: 'album',
+    scheme: {
+      bg: '#080808',
+      text: '#e8e8e8',
+      accent: '#e8c060',
+      line: '#222222',
+      btn: '#e8c060',
+      btnText: '#080808',
+      muted: '#606060',
+      hero: 'linear-gradient(180deg,#080808 0%,#121212 100%)',
+    },
+    names: 'Denis & Ksenia',
+    date: '10 | 09 | 2026',
+    place: 'Наша история',
+    vibe: 'Кино, драма, монохром',
+  },
+  {
+    id: 'light-airy',
+    name: 'Light & Airy',
+    tag: 'Фотоальбом',
+    cat: 'album',
+    scheme: {
+      bg: '#f9f8f6',
+      text: '#1a1a1a',
+      accent: '#333333',
+      line: '#e0ddd8',
+      btn: '#1a1a1a',
+      btnText: '#f9f8f6',
+      muted: '#888880',
+      hero: 'linear-gradient(180deg,#f9f8f6 0%,#f0ede8 100%)',
+    },
+    names: 'Артём & Полина',
+    date: '24 | 05 | 2026',
+    place: 'Галерея воспоминаний',
+    vibe: 'Воздух, свет, минимализм',
+  },
+];
+
+// ─── Mini-page HTML generator ─────────────────────────────────────────────
+function miniPageTildaHTML(tpl, scale, s, scaledW) {
+  const [line1, line2] = (tpl.names || '').split('\n');
+  const services = {
+    health:  ['Консультация', 'УЗИ-диагностика', 'Анализы', 'Онлайн-приём'],
+    psych:   ['Индивидуальная сессия', 'Групповая работа', 'EMDR-терапия', 'Консультация'],
+    law:     ['Уголовное право', 'Гражданские дела', 'Арбитраж', 'Консультация'],
+    auto:    ['Диагностика', 'Кузовной ремонт', 'Замена масла', 'Шиномонтаж'],
+    beauty:  ['Стрижка', 'Окрашивание', 'Маникюр', 'Макияж'],
+    food:    ['Завтраки', 'Бизнес-ланч', 'Ужин', 'Банкет'],
+    sport:   ['Персональная программа', 'Онлайн-тренировки', 'Консультация по питанию', 'Чек-ап'],
+    agency:  ['SEO / контекст', 'SMM / таргет', 'Сайты и лендинги', 'Брендинг'],
+    photo:    ['Портретная съёмка', 'Репортаж', 'Коммерческая съёмка', 'Видеограф'],
+    realty:   ['Продажа', 'Аренда', 'Коммерческая', 'Консультация'],
+    design:   ['Веб-дизайн', 'Брендинг', 'UX-аудит', 'UI-kit'],
+    dev:      ['Frontend', 'Backend / API', 'Мобильные приложения', 'Консультация'],
+    arch:     ['Жилые проекты', 'Интерьеры', 'Коммерческие объекты', 'Визуализация'],
+    art:      ['Иллюстрация', 'Персонаж', 'Принты / мерч', 'Обложки'],
+    model:    ['Коммерческая съёмка', 'Fashion', 'Актёрская работа', 'Корпоративные мероприятия'],
+    music:    ['DJ-сет', 'Живые выступления', 'Продюсирование', 'Запись трека'],
+    birthday: ['Украшение зала', 'Фотозона', 'Аниматор', 'Торт на заказ'],
+    corp:     ['Программа вечера', 'Ведущий', 'Фотограф', 'Кейтеринг'],
+    kids:     ['Аниматоры', 'Воздушные шары', 'Квест', 'Торт'],
+    conf:     ['Регистрация участников', 'Спикеры', 'Нетворкинг', 'Трансляция'],
+    party:    ['Лайн-ап артистов', 'Световое шоу', 'Фотозона', 'Бар'],
+    grad:     ['Банкетный зал', 'Ведущий', 'Фото/видео', 'Фуршет'],
+  };
+  const svc = services[tpl.cat] || ['Услуга 1','Услуга 2','Услуга 3','Услуга 4'];
+  return `
+  <div style="width:${scaledW}px;background:${s.bg};font-family:'Segoe UI',sans-serif;transform:scale(${scale});transform-origin:top left;position:absolute;top:0;left:0;">
+    <!-- HERO -->
+    <div style="background:${s.hero};padding:30px 20px 24px;text-align:center;border-bottom:1px solid ${s.line};">
+      <div style="width:44px;height:44px;border-radius:50%;background:${s.btn};margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:18px;">
+        ${{health:'🏥',psych:'🧠',law:'⚖️',auto:'🔧',beauty:'✂️',food:'🍽',sport:'💪',agency:'🚀',photo:'📷',realty:'🏠',design:'🎨',dev:'💻',arch:'🏛',art:'🖌',model:'💃',music:'🎵',birthday:'🎂',corp:'🏢',kids:'🎈',conf:'🎤',party:'🎉',grad:'🎓'}[tpl.cat]||'🖥'}
+      </div>
+      <div style="font-size:13px;font-weight:700;color:${s.text};line-height:1.3;">${line1||tpl.name}</div>
+      ${line2 ? `<div style="font-size:8px;letter-spacing:2px;color:${s.accent};margin-top:4px;text-transform:uppercase;">${line2}</div>` : ''}
+      <div style="margin:10px auto 0;font-size:8px;color:${s.muted};">${tpl.date}</div>
+    </div>
+    <!-- ABOUT -->
+    <div style="padding:14px 20px;border-bottom:1px solid ${s.line};">
+      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:6px;">Обо мне / О нас</div>
+      <div style="font-size:8px;color:${s.muted};line-height:1.6;">Профессиональный подход, индивидуальное решение каждой задачи. Более 5 лет опыта, сотни довольных клиентов.</div>
+    </div>
+    <!-- SERVICES -->
+    <div style="padding:14px 20px;border-bottom:1px solid ${s.line};">
+      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:8px;">Услуги</div>
+      ${svc.map((sv,i) => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <div style="width:4px;height:4px;border-radius:50%;background:${s.accent};flex-shrink:0;"></div>
+        <div style="font-size:8px;color:${s.text};flex:1;">${sv}</div>
+        <div style="font-size:7px;color:${s.muted};">${['от 2 000 ₽','от 4 000 ₽','от 1 500 ₽','Бесплатно'][i]}</div>
+      </div>`).join('')}
+    </div>
+    <!-- CTA -->
+    <div style="padding:14px 20px;border-bottom:1px solid ${s.line};text-align:center;">
+      <div style="font-size:7px;color:${s.muted};margin-bottom:8px;">Готовы начать?</div>
+      <div style="display:inline-block;padding:7px 22px;background:${s.btn};color:${s.btnText};font-size:8px;letter-spacing:1px;border-radius:4px;font-family:sans-serif;">ЗАПИСАТЬСЯ</div>
+    </div>
+    <!-- REVIEWS -->
+    <div style="padding:14px 20px;border-bottom:1px solid ${s.line};">
+      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:8px;">Отзывы</div>
+      ${[['Анна К.','Всё прошло отлично, рекомендую!'],['Михаил Д.','Профессионализм на высоте']].map(([name,text])=>`
+      <div style="background:${s.bg};border:1px solid ${s.line};border-radius:4px;padding:8px;margin-bottom:6px;">
+        <div style="font-size:7px;font-weight:700;color:${s.accent};">★★★★★ ${name}</div>
+        <div style="font-size:7px;color:${s.muted};margin-top:2px;">${text}</div>
+      </div>`).join('')}
+    </div>
+    <!-- CONTACTS -->
+    <div style="padding:14px 20px 24px;">
+      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:8px;">Контакты</div>
+      <div style="height:16px;border:1px solid ${s.line};border-radius:3px;margin-bottom:5px;display:flex;align-items:center;padding:0 6px;"><span style="font-size:7px;color:${s.muted};">Ваше имя</span></div>
+      <div style="height:16px;border:1px solid ${s.line};border-radius:3px;margin-bottom:8px;display:flex;align-items:center;padding:0 6px;"><span style="font-size:7px;color:${s.muted};">Телефон / Telegram</span></div>
+      <div style="text-align:center;"><div style="display:inline-block;padding:6px 20px;background:${s.btn};color:${s.btnText};font-size:7px;letter-spacing:1px;border-radius:3px;">ОТПРАВИТЬ</div></div>
+    </div>
+  </div>`;
+}
+
+function miniPageHTML(tpl, scale) {
+  const s = tpl.scheme;
+  const W = 390;
+  const scaledW = Math.round(W / scale);
+
+  if (tpl.section && tpl.section !== 'wedding') return miniPageTildaHTML(tpl, scale, s, scaledW);
+
+  const isAlbum = tpl.cat === 'album';
+  const wmColor = s.bg.startsWith('#f') || s.bg === '#ffffff' || s.bg === '#faf5eb' || s.bg === '#f9f8f6' || s.bg === '#fdf0f0' || s.bg === '#f3f0fa'
+    ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.13)';
+
+  return `
+  <div style="
+    width:${scaledW}px;
+    background:${s.bg};
+    font-family:Georgia,serif;
+    transform:scale(${scale});
+    transform-origin:top left;
+    position:absolute; top:0; left:0;
+  ">
+    <!-- HERO -->
+    <div style="background:${s.hero};padding:28px 20px 22px;text-align:center;border-bottom:1px solid ${s.line};">
+      <div style="font-size:9px;letter-spacing:3px;color:${s.muted};margin-bottom:6px;text-transform:uppercase;">${isAlbum ? 'ФОТОАЛЬБОМ' : 'СВАДЬБА'}</div>
+      <div style="font-size:19px;font-weight:700;color:${s.accent};line-height:1.2;margin-bottom:4px;">${tpl.names}</div>
+      <div style="width:30px;height:1px;background:${s.accent};margin:8px auto;opacity:.6;"></div>
+      <div style="font-size:11px;letter-spacing:2px;color:${s.muted};">${tpl.date}</div>
+    </div>
+
+    <!-- INVITE TEXT / ОПИСАНИЕ -->
+    <div style="padding:16px 20px 14px;border-bottom:1px solid ${s.line};">
+      <div style="font-size:8px;color:${s.muted};line-height:1.6;">
+        ${isAlbum
+          ? 'Воспоминания о самом&nbsp;важном дне нашей жизни...'
+          : 'Дорогие родные и близкие! Мы приглашаем вас разделить радость нашего торжества.'
+        }
+      </div>
+    </div>
+
+    <!-- МЕСТО -->
+    <div style="padding:14px 20px;border-bottom:1px solid ${s.line};">
+      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:6px;">Место</div>
+      <div style="font-size:11px;font-weight:700;color:${s.text};margin-bottom:8px;">${tpl.place}</div>
+      <div style="display:inline-block;padding:5px 14px;background:${s.btn};color:${s.btnText};font-size:8px;letter-spacing:1px;border-radius:2px;font-family:sans-serif;">
+        ${isAlbum ? 'СМОТРЕТЬ' : 'ОТПРАВИТЬСЯ'}
+      </div>
+    </div>
+
+    <!-- ПРОГРАММА / ХРОНОЛОГИЯ -->
+    <div style="padding:14px 20px;border-bottom:1px solid ${s.line};">
+      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:10px;">${isAlbum ? 'Хронология' : 'Программа'}</div>
+      ${(['14:00','14:30','16:00','19:00']).map((t,i) => `
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+        <div style="font-size:7px;color:${s.accent};min-width:28px;padding-top:1px;font-family:sans-serif;">${t}</div>
+        <div style="flex:1;border-top:1px solid ${s.line};padding-top:4px;">
+          <div style="font-size:8px;font-weight:700;color:${s.text};">${['Сбор гостей','Фуршет','Фотосессия','Банкет'][i]}</div>
+          <div style="font-size:7px;color:${s.muted};margin-top:1px;">${['Встреча и знакомство','Угощения и общение','Памятные кадры','Торжество'][i]}</div>
+        </div>
+      </div>`).join('')}
+    </div>
+
+    <!-- ТАЙМЕР -->
+    <div style="padding:14px 20px;border-bottom:1px solid ${s.line};text-align:center;">
+      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:6px;">Осталось до дня</div>
+      <div style="display:flex;justify-content:center;gap:12px;">
+        ${['101','20','46'].map((v,i) => `
+        <div>
+          <div style="font-size:18px;font-weight:700;color:${s.accent};line-height:1;font-family:sans-serif;">${v}</div>
+          <div style="font-size:6px;color:${s.muted};margin-top:2px;">${['ДНЕЙ','ЧАСОВ','МИН'][i]}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- ПОЖЕЛАНИЯ -->
+    <div style="padding:14px 20px;border-bottom:1px solid ${s.line};">
+      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:8px;">Пожелания</div>
+      <div style="font-size:8px;color:${s.muted};line-height:1.6;font-style:italic;">
+        Будем благодарны за тёплые слова и добрые пожелания...
+      </div>
+      <div style="margin-top:8px;font-size:8px;color:${s.muted};line-height:1.6;font-style:italic;">
+        Не ломайте голову над подарком — ваши пожелания в конвертах помогут осуществить мечту.
+      </div>
+    </div>
+
+    <!-- ДРЕСС-КОД -->
+    <div style="padding:14px 20px;border-bottom:1px solid ${s.line};text-align:center;">
+      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:8px;">Дресс-код</div>
+      <div style="display:inline-flex;gap:6px;margin-bottom:8px;">
+        <div style="width:20px;height:20px;border-radius:50%;background:#111;border:1px solid ${s.line};"></div>
+        <div style="width:20px;height:20px;border-radius:50%;background:#fff;border:1px solid ${s.line};"></div>
+      </div>
+      <div style="font-size:8px;color:${s.muted};line-height:1.5;">
+        Чёрный и белый цвет —<br>особый стиль и элегантность
+      </div>
+    </div>
+
+    <!-- АНКЕТА (RSVP) -->
+    <div style="padding:14px 20px 28px;">
+      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:10px;">Анкета гостя</div>
+      <!-- Имя -->
+      <div style="height:18px;border:1px solid ${s.line};border-radius:3px;margin-bottom:7px;display:flex;align-items:center;padding:0 6px;">
+        <span style="font-size:7px;color:${s.muted};">Ваше имя</span>
+      </div>
+      <!-- Придёте? -->
+      <div style="font-size:7px;color:${s.muted};margin-bottom:4px;">Вы придёте?</div>
+      <div style="display:flex;gap:4px;margin-bottom:8px;">
+        ${['Да','Нет','Не знаю'].map((v,i) => `
+        <div style="flex:1;text-align:center;padding:3px 0;border:1px solid ${i===0 ? s.accent : s.line};border-radius:3px;font-size:6px;color:${i===0 ? s.accent : s.muted};">${v}</div>`).join('')}
+      </div>
+      <!-- Напитки -->
+      <div style="font-size:7px;color:${s.muted};margin-bottom:4px;">Предпочтения в напитках</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">
+        ${['Красное вино','Белое вино','Шампанское','Виски','Не пью'].map(v => `
+        <div style="padding:2px 6px;border:1px solid ${s.line};border-radius:20px;font-size:6px;color:${s.muted};">${v}</div>`).join('')}
+      </div>
+      <!-- Кнопка -->
+      <div style="text-align:center;">
+        <div style="display:inline-block;padding:6px 20px;background:${s.btn};color:${s.btnText};font-size:7px;letter-spacing:1px;border-radius:2px;font-family:sans-serif;">ОТПРАВИТЬ</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── TILDA templates ──────────────────────────────────────────────────────
+const TILDA_TEMPLATES = [
+  {
+    id:'doctor', name:'Медицина', tag:'Врач / клиника', cat:'health', section:'tilda',
+    niche:'Врач / медицина',
+    names:'Иванова Мария\nГинеколог', date:'Стаж 12 лет',
+    vibe:'Чистота, доверие, профессионализм',
+    scheme:{ bg:'#f7fbff', hero:'linear-gradient(160deg,#e8f4ff 0%,#cce8ff 100%)', text:'#0d2a40', muted:'rgba(13,42,64,.45)', accent:'#1e7bbe', line:'rgba(30,123,190,.18)', btn:'#1e7bbe', btnText:'#fff', timer:'#1e7bbe' }
+  },
+  {
+    id:'lawyer', name:'Адвокат', tag:'Юрист / адвокат', cat:'law', section:'tilda',
+    niche:'Адвокат / юрист',
+    names:'Смирнов А.В.\nАдвокат', date:'Защита ваших прав',
+    vibe:'Строгость, надёжность, авторитет',
+    scheme:{ bg:'#0e0e14', hero:'linear-gradient(160deg,#0e0e14 0%,#1a1a28 100%)', text:'#e8e8f0', muted:'rgba(232,232,240,.45)', accent:'#c8a96a', line:'rgba(200,169,106,.2)', btn:'#c8a96a', btnText:'#0e0e14', timer:'#c8a96a' }
+  },
+  {
+    id:'psychologist', name:'Психолог', tag:'Психолог / коуч', cat:'psych', section:'tilda',
+    niche:'Психолог',
+    names:'Кузнецова Анна\nПсихолог', date:'Онлайн и офлайн',
+    vibe:'Тепло, принятие, безопасность',
+    scheme:{ bg:'#fdf8f2', hero:'linear-gradient(160deg,#fdf8f2 0%,#f3e8d8 100%)', text:'#3a2818', muted:'rgba(58,40,24,.45)', accent:'#c0784a', line:'rgba(192,120,74,.2)', btn:'#c0784a', btnText:'#fff', timer:'#c0784a' }
+  },
+  {
+    id:'autoservice', name:'Автосервис', tag:'СТО / автосервис', cat:'auto', section:'tilda',
+    niche:'Автосервис',
+    names:'АвтоМастер\nСервис', date:'Запись онлайн 24/7',
+    vibe:'Надёжность, технологичность, мощь',
+    scheme:{ bg:'#0d0f14', hero:'linear-gradient(160deg,#0d0f14 0%,#141820 100%)', text:'#dde0e8', muted:'rgba(221,224,232,.42)', accent:'#f59e0b', line:'rgba(245,158,11,.2)', btn:'#f59e0b', btnText:'#0d0f14', timer:'#f59e0b' }
+  },
+  {
+    id:'beauty', name:'Beauty / Барбер', tag:'Салон красоты', cat:'beauty', section:'tilda',
+    niche:'Beauty-салон / барбершоп',
+    names:'NOIR Beauty\nСалон', date:'Записаться →',
+    vibe:'Стиль, элегантность, трендовость',
+    scheme:{ bg:'#0f0a12', hero:'linear-gradient(160deg,#0f0a12 0%,#1a1020 100%)', text:'#f0d8f4', muted:'rgba(240,216,244,.42)', accent:'#d46ed0', line:'rgba(212,110,208,.2)', btn:'#d46ed0', btnText:'#0f0a12', timer:'#d46ed0' }
+  },
+  {
+    id:'restaurant', name:'Ресторан', tag:'Ресторан / кафе', cat:'food', section:'tilda',
+    niche:'Ресторан / кафе / бар',
+    names:'PRIMO\nRistorante', date:'Бронь столика →',
+    vibe:'Вкус, уют, гастрономия',
+    scheme:{ bg:'#160e08', hero:'linear-gradient(160deg,#160e08 0%,#221408 100%)', text:'#f0e0c0', muted:'rgba(240,224,192,.45)', accent:'#e8a040', line:'rgba(232,160,64,.2)', btn:'#e8a040', btnText:'#160e08', timer:'#e8a040' }
+  },
+  {
+    id:'trainer', name:'Фитнес-тренер', tag:'Фитнес / спорт', cat:'sport', section:'tilda',
+    niche:'Фитнес-тренер',
+    names:'Алексей Волков\nПерсональный тренер', date:'Первое занятие free',
+    vibe:'Энергия, результат, движение',
+    scheme:{ bg:'#070c0a', hero:'linear-gradient(160deg,#070c0a 0%,#0d1810 100%)', text:'#d0f0d8', muted:'rgba(208,240,216,.42)', accent:'#22c55e', line:'rgba(34,197,94,.2)', btn:'#22c55e', btnText:'#070c0a', timer:'#22c55e' }
+  },
+  {
+    id:'agency', name:'Агентство', tag:'Маркетинг / digital', cat:'agency', section:'tilda',
+    niche:'Маркетинговое агентство',
+    names:'ORBIT\nDigital Agency', date:'Кейсы → Заявка',
+    vibe:'Инновации, результат, технологии',
+    scheme:{ bg:'#080810', hero:'linear-gradient(160deg,#080810 0%,#0d0d1e 100%)', text:'#c8d0ff', muted:'rgba(200,208,255,.42)', accent:'#6e6ef0', line:'rgba(110,110,240,.2)', btn:'#6e6ef0', btnText:'#fff', timer:'#6e6ef0' }
+  },
+  {
+    id:'photographer', name:'Фотограф', tag:'Фото / видео', cat:'photo', section:'tilda',
+    niche:'Фотограф / видеограф',
+    names:'Ivan Petrov\nPhotography', date:'Портфолио / Booking',
+    vibe:'Искусство, свет, эмоция',
+    scheme:{ bg:'#f5f4f0', hero:'linear-gradient(160deg,#f5f4f0 0%,#e8e4dc 100%)', text:'#1a1810', muted:'rgba(26,24,16,.42)', accent:'#6a5a40', line:'rgba(106,90,64,.2)', btn:'#6a5a40', btnText:'#fff', timer:'#6a5a40' }
+  },
+  {
+    id:'realty', name:'Недвижимость', tag:'Агентство / риелтор', cat:'realty', section:'tilda',
+    niche:'Агентство недвижимости',
+    names:'PRIME\nEstate', date:'Подобрать объект →',
+    vibe:'Надёжность, статус, экспертность',
+    scheme:{ bg:'#f8f6f0', hero:'linear-gradient(160deg,#f8f6f0 0%,#e8e0cc 100%)', text:'#2a2010', muted:'rgba(42,32,16,.42)', accent:'#8a6020', line:'rgba(138,96,32,.2)', btn:'#8a6020', btnText:'#fff', timer:'#8a6020' }
+  },
+];
+
+// ─── Sections config ──────────────────────────────────────────────────────
+// ─── Portfolio templates ──────────────────────────────────────────────────
+const PORTFOLIO_TEMPLATES = [
+  {
+    id:'portfolio-designer', name:'Дизайнер', tag:'UI/UX · Графика', cat:'design', section:'portfolio',
+    names:'Анна Соколова\nUI/UX Designer', date:'Портфолио · Заказать',
+    vibe:'Минимализм, типографика, идеи',
+    scheme:{ bg:'#0c0c10', hero:'linear-gradient(160deg,#0c0c10 0%,#16161e 100%)', text:'#e8e4ff', muted:'rgba(232,228,255,.42)', accent:'#a78bfa', line:'rgba(167,139,250,.18)', btn:'#7c3aed', btnText:'#fff', timer:'#a78bfa' }
+  },
+  {
+    id:'portfolio-dev', name:'Разработчик', tag:'Frontend · Backend', cat:'dev', section:'portfolio',
+    names:'Иван Петров\nFullstack Dev', date:'GitHub · Резюме · Заказ',
+    vibe:'Технологичность, код, чёткость',
+    scheme:{ bg:'#060a0f', hero:'linear-gradient(160deg,#060a0f 0%,#0a1020 100%)', text:'#b8f0b0', muted:'rgba(184,240,176,.38)', accent:'#22c55e', line:'rgba(34,197,94,.18)', btn:'#16a34a', btnText:'#fff', timer:'#22c55e' }
+  },
+  {
+    id:'portfolio-arch', name:'Архитектор', tag:'Архитектура · Интерьер', cat:'arch', section:'portfolio',
+    names:'Бюро Линия\nАрхитектура', date:'Проекты · Контакт',
+    vibe:'Пространство, форма, материал',
+    scheme:{ bg:'#f6f4f0', hero:'linear-gradient(160deg,#f6f4f0 0%,#eae6de 100%)', text:'#1c1810', muted:'rgba(28,24,16,.4)', accent:'#5a4a30', line:'rgba(90,74,48,.18)', btn:'#3a2e1a', btnText:'#f6f4f0', timer:'#5a4a30' }
+  },
+  {
+    id:'portfolio-artist', name:'Художник', tag:'Иллюстрация · Арт', cat:'art', section:'portfolio',
+    names:'Мария Л.\nАртист · Иллюстратор', date:'Галерея · Заказать принт',
+    vibe:'Творчество, цвет, экспрессия',
+    scheme:{ bg:'#fffaf5', hero:'linear-gradient(160deg,#fffaf5 0%,#ffeedd 100%)', text:'#2a1808', muted:'rgba(42,24,8,.42)', accent:'#e05a20', line:'rgba(224,90,32,.18)', btn:'#c04010', btnText:'#fff', timer:'#e05a20' }
+  },
+  {
+    id:'portfolio-model', name:'Модель / актёр', tag:'Модель · Актёр · Talent', cat:'model', section:'portfolio',
+    names:'Алина Волк\nModel & Actress', date:'Booking · Showreel',
+    vibe:'Образ, харизма, стиль',
+    scheme:{ bg:'#0a0a0a', hero:'linear-gradient(160deg,#0a0a0a 0%,#181818 100%)', text:'#f0f0f0', muted:'rgba(240,240,240,.4)', accent:'#e8c87a', line:'rgba(232,200,122,.18)', btn:'#c8a84a', btnText:'#0a0a0a', timer:'#e8c87a' }
+  },
+  {
+    id:'portfolio-music', name:'Музыкант', tag:'Музыкант · DJ · Продюсер', cat:'music', section:'portfolio',
+    names:'DJ NOVA\nArtist · Producer', date:'Booking · Слушать',
+    vibe:'Звук, ритм, атмосфера',
+    scheme:{ bg:'#08060e', hero:'linear-gradient(160deg,#08060e 0%,#100820 100%)', text:'#e0d0ff', muted:'rgba(224,208,255,.4)', accent:'#c060f0', line:'rgba(192,96,240,.18)', btn:'#9020c0', btnText:'#fff', timer:'#c060f0' }
+  },
+];
+
+// ─── Events templates ─────────────────────────────────────────────────────
+const EVENTS_TEMPLATES = [
+  {
+    id:'event-birthday', name:'День рождения', tag:'Праздник · ДР', cat:'birthday', section:'events',
+    names:'Александру — 30!\nВечеринка', date:'15 июля · 19:00',
+    vibe:'Радость, яркость, веселье',
+    scheme:{ bg:'#fff5f0', hero:'linear-gradient(160deg,#fff5f0 0%,#ffe0d0 100%)', text:'#3a1008', muted:'rgba(58,16,8,.42)', accent:'#f05030', line:'rgba(240,80,48,.18)', btn:'#e03020', btnText:'#fff', timer:'#f05030' }
+  },
+  {
+    id:'event-corporate', name:'Корпоратив', tag:'Корпоратив · Офис', cat:'corp', section:'events',
+    names:'NOVA CORP\nКорпоративный вечер', date:'20 декабря · Банкетный зал',
+    vibe:'Статус, команда, праздник',
+    scheme:{ bg:'#060810', hero:'linear-gradient(160deg,#060810 0%,#0c1020 100%)', text:'#d8e4ff', muted:'rgba(216,228,255,.4)', accent:'#4080e0', line:'rgba(64,128,224,.18)', btn:'#2060c0', btnText:'#fff', timer:'#4080e0' }
+  },
+  {
+    id:'event-kids', name:'Детский праздник', tag:'Детский праздник', cat:'kids', section:'events',
+    names:'Маше 5 лет! 🎈\nДень рождения', date:'Суббота · 12:00',
+    vibe:'Сказка, яркость, волшебство',
+    scheme:{ bg:'#f0faff', hero:'linear-gradient(160deg,#f0faff 0%,#d8f0ff 100%)', text:'#08304a', muted:'rgba(8,48,74,.4)', accent:'#20a0e0', line:'rgba(32,160,224,.18)', btn:'#0870b0', btnText:'#fff', timer:'#20a0e0' }
+  },
+  {
+    id:'event-conference', name:'Конференция', tag:'Форум · Конференция', cat:'conf', section:'events',
+    names:'TECH SUMMIT\n2026', date:'10–12 сентября · Москва',
+    vibe:'Экспертность, нетворкинг, идеи',
+    scheme:{ bg:'#08080e', hero:'linear-gradient(160deg,#08080e 0%,#10101e 100%)', text:'#e0e8ff', muted:'rgba(224,232,255,.4)', accent:'#6080f0', line:'rgba(96,128,240,.18)', btn:'#4060d0', btnText:'#fff', timer:'#6080f0' }
+  },
+  {
+    id:'event-party', name:'Вечеринка / концерт', tag:'Вечеринка · Концерт', cat:'party', section:'events',
+    names:'AFTERPARTY\nNight Festival', date:'Суббота · 22:00 — ∞',
+    vibe:'Энергия, ночь, музыка',
+    scheme:{ bg:'#060408', hero:'linear-gradient(160deg,#060408 0%,#100618 100%)', text:'#f8d0ff', muted:'rgba(248,208,255,.38)', accent:'#e040f0', line:'rgba(224,64,240,.18)', btn:'#b020c0', btnText:'#fff', timer:'#e040f0' }
+  },
+  {
+    id:'event-graduation', name:'Выпускной', tag:'Выпускной · Школа · ВУЗ', cat:'grad', section:'events',
+    names:'Выпуск 2026\n11 класс · Школа №14', date:'28 июня · 18:00',
+    vibe:'Память, переход, торжество',
+    scheme:{ bg:'#f8f6ff', hero:'linear-gradient(160deg,#f8f6ff 0%,#eee8ff 100%)', text:'#1a1040', muted:'rgba(26,16,64,.42)', accent:'#7c50d0', line:'rgba(124,80,208,.18)', btn:'#6030b0', btnText:'#fff', timer:'#7c50d0' }
+  },
+];
+
+const SECTIONS = [
+  { id:'wedding',   label:'WEDDING',    icon:'💍', templates: TEMPLATES,            cats:[{label:'Свадебные приглашения',cat:'inv'},{label:'Фотоальбомы',cat:'album'}] },
+  { id:'tilda',     label:'TILDA/INST', icon:'🖥', templates: TILDA_TEMPLATES,       cats:[
+    {label:'Специалисты', cat:['health','psych','law','sport']},
+    {label:'Бизнес', cat:['auto','food','beauty','agency','realty']},
+    {label:'Личный бренд', cat:['photo']},
+  ]},
+  { id:'portfolio', label:'ПОРТФОЛИО',  icon:'🎨', templates: PORTFOLIO_TEMPLATES,   cats:[
+    {label:'Творческие', cat:['design','art','model','music']},
+    {label:'Технические', cat:['dev','arch']},
+  ]},
+  { id:'events',    label:'МЕРОПРИЯТИЯ',icon:'🎉', templates: EVENTS_TEMPLATES,      cats:[
+    {label:'Частные', cat:['birthday','kids','grad','party']},
+    {label:'Деловые', cat:['corp','conf']},
+  ]},
+];
+let activeSection = 'wedding';
+let selectedTemplate = null;
+let selectedPalette = null;
+let selectedIntro = 'none';
+
+// ─── Build gallery ────────────────────────────────────────────────────────
+const gallery = document.getElementById('gallery');
+const PAGE_W = 390; // эмулируемая ширина страницы
+
+// Пересчитать scale для одной карточки
+function scaleMiniPage(thumb, miniPage) {
+  const thumbW = thumb.offsetWidth;
+  if (!thumbW) return;
+  const scale = thumbW / PAGE_W;
+  miniPage.style.width = PAGE_W + 'px';
+  miniPage.style.height = (PAGE_W * 16 / 9) + 'px';
+  miniPage.style.transform = `scale(${scale})`;
+  miniPage.style.transformOrigin = 'top left';
+}
+
+// ResizeObserver для пересчёта при изменении размера
+const thumbResizeObserver = new ResizeObserver(entries => {
+  entries.forEach(entry => {
+    const thumb = entry.target;
+    const miniPage = thumb.querySelector('.mini-page');
+    if (miniPage) scaleMiniPage(thumb, miniPage);
+  });
+});
+
+function buildGallery(sectionId) {
+  // Отключаем observer для старых элементов
+  thumbResizeObserver.disconnect();
+
+  gallery.innerHTML = '';
+  selectedTemplate = null;
+  selectedPalette = null;
+  document.getElementById('previewCanvas').innerHTML = '<div class="preview-empty"><div class="icon">💍</div><p>Выберите макет из галереи<br>для предпросмотра</p></div>';
+  document.getElementById('previewTitle').textContent = 'Выберите макет';
+  document.getElementById('previewSub').textContent = 'Кликните на шаблон слева';
+  document.getElementById('formTplPreview').innerHTML = '<div class="no-tpl-msg">Макет не выбран</div>';
+
+  const sec = SECTIONS.find(s => s.id === sectionId);
+  if (!sec) return;
+
+  sec.cats.forEach(({ label, cat }) => {
+    const cats = Array.isArray(cat) ? cat : [cat];
+    const items = sec.templates.filter(t => cats.includes(t.cat));
+    if (!items.length) return;
+
+    const sep = document.createElement('div');
+    sep.className = 'cat-label';
+    sep.textContent = label;
+    gallery.appendChild(sep);
+
+    items.forEach(tpl => {
+      const s = tpl.scheme;
+      const isDark = s.bg.startsWith('#0') || s.bg.startsWith('#1') || s.bg.startsWith('#08');
+      const wmColor = isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.12)';
+
+      const card = document.createElement('div');
+      card.className = 'template-card';
+      card.dataset.id = tpl.id;
+      card.innerHTML = `
+        <div class="template-thumb" style="aspect-ratio:9/16; height:auto;">
+          <div class="mini-page">
+            ${miniPageHTML(tpl, 1)}
+          </div>
+          <div class="wm-overlay" style="width:100%;height:100%;">
+            <span class="wm-text" style="color:${wmColor};">© IN_SITE</span>
+          </div>
+          <button class="card-preview-btn" onclick="event.stopPropagation()">👁 Превью</button>
+        </div>
+        <div class="template-info">
+          <span class="template-name">${tpl.name}</span>
+          <span class="template-tag">${tpl.tag}</span>
+        </div>
+        <div class="selected-check">✓</div>
+      `;
+      card.addEventListener('click', () => openOverlay(tpl));
+      gallery.appendChild(card);
+
+      // Наблюдаем за resize thumb-контейнера
+      const thumb = card.querySelector('.template-thumb');
+      const miniPage = card.querySelector('.mini-page');
+      thumbResizeObserver.observe(thumb);
+      // Первоначальный расчёт после рендера
+      requestAnimationFrame(() => scaleMiniPage(thumb, miniPage));
+    });
+  });
+}
+
+const SECTION_HEADERS = { wedding:'Детали проекта', tilda:'Детали заказа', portfolio:'Детали портфолио', events:'Детали мероприятия' };
+const ALL_FIELD_IDS   = ['fields-wedding','fields-tilda','fields-portfolio','fields-events'];
+
+function switchSection(sectionId) {
+  activeSection = sectionId;
+  document.querySelectorAll('.sec-btn').forEach(b => b.classList.toggle('active', b.dataset.sec === sectionId));
+  ALL_FIELD_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    const match = id === 'fields-' + sectionId;
+    el.style.display = match ? (id === 'fields-wedding' ? '' : 'flex') : 'none';
+  });
+  document.getElementById('formPanelHeader').textContent = SECTION_HEADERS[sectionId] || 'Детали заказа';
+  buildGallery(sectionId);
+  updateSteps();
+}
+
+// ─── Init section nav ─────────────────────────────────────────────────────
+const sectionNav = document.getElementById('sectionNav');
+SECTIONS.forEach(sec => {
+  const btn = document.createElement('button');
+  btn.className = 'sec-btn' + (sec.id === activeSection ? ' active' : '');
+  btn.dataset.sec = sec.id;
+  btn.textContent = sec.icon + ' ' + sec.label;
+  btn.onclick = () => switchSection(sec.id);
+  sectionNav.appendChild(btn);
+});
+
+buildGallery(activeSection);
+
+// ─── Color Palettes ───────────────────────────────────────────────────────
+const PALETTES = [
+  { id:'gold',     name:'Золото',    grad:'linear-gradient(135deg,#1a120a,#c9a84c)',
+    scheme:{ bg:'#1a120a', hero:'linear-gradient(180deg,#0d0b08 0%,#1a1408 100%)', text:'#f0d080', muted:'rgba(240,208,128,.55)', accent:'#c9a84c', line:'rgba(201,168,76,.2)', btn:'#c9a84c', btnText:'#1a120a', timer:'#c9a84c' } },
+  { id:'rose',     name:'Роза',      grad:'linear-gradient(135deg,#fdf0f0,#c48080)',
+    scheme:{ bg:'#fdf0f0', hero:'linear-gradient(180deg,#fdf0f0 0%,#f8e0e0 100%)', text:'#5a2020', muted:'rgba(90,32,32,.5)',     accent:'#c48080', line:'rgba(196,128,128,.2)', btn:'#8b5c5c', btnText:'#fff',    timer:'#c48080' } },
+  { id:'sage',     name:'Шалфей',    grad:'linear-gradient(135deg,#0f1e16,#6ab090)',
+    scheme:{ bg:'#0f1e16', hero:'linear-gradient(180deg,#0b1610 0%,#0f2018 100%)', text:'#c8e0d0', muted:'rgba(200,224,208,.5)',  accent:'#6ab090', line:'rgba(106,176,144,.2)', btn:'#4a7a5a', btnText:'#e8f5ec', timer:'#6ab090' } },
+  { id:'ivory',    name:'Айвори',    grad:'linear-gradient(135deg,#faf5eb,#a08040)',
+    scheme:{ bg:'#faf5eb', hero:'linear-gradient(180deg,#faf5eb 0%,#f0e8d0 100%)', text:'#3a2810', muted:'rgba(58,40,16,.45)',    accent:'#a08040', line:'rgba(160,128,64,.2)',  btn:'#c9b89a', btnText:'#3a2a10', timer:'#a08040' } },
+  { id:'midnight', name:'Полночь',   grad:'linear-gradient(135deg,#0a0a14,#6060c0)',
+    scheme:{ bg:'#0a0a14', hero:'linear-gradient(180deg,#06060e 0%,#0d0d1c 100%)', text:'#c0c8f0', muted:'rgba(192,200,240,.5)', accent:'#8080d0', line:'rgba(96,96,192,.2)',   btn:'#4040a0', btnText:'#e0e4ff', timer:'#8080d0' } },
+  { id:'burgundy', name:'Бордо',     grad:'linear-gradient(135deg,#1a0808,#c04040)',
+    scheme:{ bg:'#1a0808', hero:'linear-gradient(180deg,#100404 0%,#1a0808 100%)', text:'#f0d0d0', muted:'rgba(240,208,208,.5)', accent:'#c04040', line:'rgba(192,64,64,.2)',   btn:'#8b2020', btnText:'#ffe0e0', timer:'#c04040' } },
+  { id:'lavender', name:'Лаванда',   grad:'linear-gradient(135deg,#f3f0fa,#8b5cf6)',
+    scheme:{ bg:'#f3f0fa', hero:'linear-gradient(180deg,#f3f0fa 0%,#e8e0f5 100%)', text:'#3a2060', muted:'rgba(58,32,96,.45)',   accent:'#8b5cf6', line:'rgba(139,92,246,.2)',  btn:'#7c3aed', btnText:'#fff',    timer:'#8b5cf6' } },
+  { id:'film',     name:'Плёнка',    grad:'linear-gradient(135deg,#2c1f14,#c8a06a)',
+    scheme:{ bg:'#2c1f14', hero:'linear-gradient(180deg,#1e1408 0%,#2c1f14 100%)', text:'#f0e0c0', muted:'rgba(240,224,192,.5)', accent:'#c8a06a', line:'rgba(200,160,106,.2)', btn:'#7a5c3a', btnText:'#f5ead0', timer:'#c8a06a' } },
+];
+
+// selectedPalette declared above
+
+// ─── Intro Options ────────────────────────────────────────────────────────
+const INTROS = [
+  { id:'none',       name:'Без интро',        icon:'🚫',
+    desc:'Сразу к сайту',
+    preview:`<span style="font-size:11px;color:#888;">Сразу →</span>` },
+  { id:'fade',       name:'Fade In',           icon:'🌫',
+    desc:'Плавное появление',
+    preview:`<div class="anim-fade" style="font-size:13px;font-weight:700;">A & B</div>` },
+  { id:'slide',      name:'Slide Up',          icon:'⬆',
+    desc:'Имена поднимаются',
+    preview:`<div class="anim-slide" style="font-size:13px;font-weight:700;">A & B</div>` },
+  { id:'curtain',    name:'Занавес',           icon:'🎭',
+    desc:'Шторки раскрываются',
+    preview:`<div style="display:flex;gap:1px;width:40px;height:28px;overflow:hidden;">
+      <div style="flex:1;background:#1a1a24;transform-origin:right;animation:curtainL 1.5s ease-in-out infinite alternate;"></div>
+      <div style="flex:1;background:#1a1a24;transform-origin:left;animation:curtainR 1.5s ease-in-out infinite alternate;"></div>
+    </div>` },
+  { id:'petals',     name:'Лепестки',          icon:'🌸',
+    desc:'Падающие цветы',
+    preview:`<div style="position:relative;width:36px;height:36px;overflow:hidden;">
+      <span class="anim-petal1" style="position:absolute;left:4px;top:0;font-size:12px;">🌸</span>
+      <span class="anim-petal2" style="position:absolute;left:14px;top:0;font-size:10px;">🌺</span>
+      <span class="anim-petal3" style="position:absolute;left:22px;top:0;font-size:11px;">🌸</span>
+    </div>` },
+  { id:'countdown',  name:'Обратный счёт',     icon:'⏱',
+    desc:'3 · 2 · 1 · ✦',
+    preview:`<div style="font-size:20px;font-weight:900;animation:fadeIn .8s ease infinite alternate;">3</div>` },
+];
+
+// selectedIntro declared above
+
+// Рендер интро-сетки
+const introGrid = document.getElementById('introGrid');
+INTROS.forEach(intro => {
+  const card = document.createElement('div');
+  card.className = 'intro-card' + (intro.id === 'none' ? ' selected' : '');
+  card.dataset.id = intro.id;
+  card.innerHTML = `
+    <div class="intro-preview">
+      <div class="intro-icon">${intro.icon}</div>
+      <div class="intro-card-name">${intro.name}</div>
+      <div class="intro-card-desc">${intro.desc}</div>
+    </div>
+    <div class="intro-check">✓</div>
+  `;
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.intro-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedIntro = intro.id;
+  });
+  introGrid.appendChild(card);
+});
+
+// Рендер палитр
+const paletteRow = document.getElementById('paletteRow');
+PALETTES.forEach(pal => {
+  const sw = document.createElement('div');
+  sw.className = 'palette-swatch';
+  sw.dataset.id = pal.id;
+  sw.innerHTML = `
+    <div class="swatch-dot" style="background:${pal.grad};"></div>
+    <span class="swatch-name">${pal.name}</span>
+  `;
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.palette-swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    selectedPalette = pal;
+    if (selectedTemplate) refreshPreview();
+  });
+  paletteRow.appendChild(sw);
+});
+
+// ─── Select & Preview ─────────────────────────────────────────────────────
+// selectedTemplate declared above
+let references = [];
+let selectedBudget = '';
+let zoom = 1;
+let overlayTpl = null;
+
+// ─── Overlay ────────────────────────────────────────────────
+const tplOverlay    = document.getElementById('tplOverlay');
+const overlayClose  = document.getElementById('overlayClose');
+const overlayScreen = document.getElementById('overlayScreen');
+const overlaySelectBtn = document.getElementById('overlaySelectBtn');
+
+function openOverlay(tpl) {
+  overlayTpl = tpl;
+  document.getElementById('overlayName').textContent = tpl.name;
+  document.getElementById('overlayTag').textContent  = tpl.tag + ' · ' + tpl.vibe;
+
+  const s = tpl.scheme;
+  const isDark = s.bg.startsWith('#0') || s.bg.startsWith('#1');
+  document.getElementById('overlayWm').style.color = isDark ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.12)';
+
+  // Render full mini-page at scale 1 inside overlay (300px wide phone)
+  const OVERLAY_SCALE = 300 / 390;
+  overlayScreen.innerHTML = `
+    <div style="width:390px; transform-origin:top left; transform:scale(${OVERLAY_SCALE}); pointer-events:none;">
+      ${miniPageHTML(tpl, 1)}
+    </div>
+  `;
+  overlayScreen.style.height = Math.round(OVERLAY_SCALE * 390 * 2.2) + 'px';
+
+  // Update select button state
+  const isSelected = selectedTemplate?.id === tpl.id;
+  overlaySelectBtn.className = 'tpl-select-btn' + (isSelected ? ' already-selected' : '');
+  document.getElementById('overlaySelectIcon').textContent = isSelected ? '✓' : '✓';
+  document.getElementById('overlaySelectLabel').textContent = isSelected ? 'Выбран' : 'Выбрать этот шаблон';
+
+  // Animate open
+  tplOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeOverlay() {
+  tplOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+  setTimeout(() => { overlayScreen.innerHTML = ''; }, 400);
+}
+
+overlayClose.addEventListener('click', closeOverlay);
+tplOverlay.addEventListener('click', e => { if (e.target === tplOverlay) closeOverlay(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && tplOverlay.classList.contains('open')) closeOverlay(); });
+
+overlaySelectBtn.addEventListener('click', () => {
+  if (!overlayTpl) return;
+  const card = document.querySelector(`.template-card[data-id="${overlayTpl.id}"]`);
+  selectTemplate(overlayTpl, card);
+  closeOverlay();
+});
+
+function effectiveScheme() {
+  return selectedPalette ? selectedPalette.scheme : (selectedTemplate ? selectedTemplate.scheme : null);
+}
+
+function formOverlay() {
+  const sec = selectedTemplate?.section || 'wedding';
+  const overlay = {};
+  if (sec === 'wedding' || !sec) {
+    const names = document.getElementById('coupleNames')?.value.trim();
+    const dateRaw = document.getElementById('weddingDate')?.value;
+    const venue = document.getElementById('venue')?.value.trim();
+    if (names) overlay.names = names;
+    if (dateRaw) {
+      const d = new Date(dateRaw);
+      overlay.date = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+    }
+    if (venue) overlay.place = venue;
+  } else {
+    const nameId = { tilda: 'tildaName', portfolio: 'portName', events: 'evtName' }[sec];
+    const names = nameId && document.getElementById(nameId)?.value.trim();
+    if (names) overlay.names = names;
+  }
+  return overlay;
+}
+
+function refreshPreview() {
+  if (!selectedTemplate) return;
+  const tpl = { ...selectedTemplate, scheme: effectiveScheme(), ...formOverlay() };
+  const s = tpl.scheme;
+  const isDark = s.bg.startsWith('#0') || s.bg.startsWith('#1') || s.bg.startsWith('#2');
+  const wmColor = isDark ? 'rgba(255,255,255,0.11)' : 'rgba(0,0,0,0.08)';
+  const PREVIEW_SCALE = 0.55;
+  const pw = 360;
+  const scaledW = Math.round(pw / PREVIEW_SCALE);
+  document.getElementById('previewCanvas').innerHTML = `
+    <div class="phone-frame" id="previewFrame" style="transform:scale(${zoom}); width:${pw}px;">
+      <div class="phone-notch"></div>
+      <div class="phone-screen" style="background:${s.bg};">
+        <div style="position:sticky;top:50%;z-index:50;pointer-events:none;display:flex;justify-content:center;height:0;overflow:visible;">
+          <span style="font-size:13px;font-weight:900;letter-spacing:3px;color:${wmColor};transform:rotate(-30deg) translateY(-8px);white-space:nowrap;">© IN_SITE — PREVIEW</span>
+        </div>
+        <div style="width:${scaledW}px; transform:scale(${PREVIEW_SCALE}); transform-origin:top left; position:relative;">
+          ${miniPageHTML(tpl, 1)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function selectTemplate(tpl, card) {
+  document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedTemplate = tpl;
+  // Сбросить палитру при смене шаблона
+  selectedPalette = null;
+  document.querySelectorAll('.palette-swatch').forEach(s => s.classList.remove('active'));
+  const tip = document.getElementById('paletteTip');
+  if (tip) tip.style.display = 'none';
+  updateSteps();
+  if (window.innerWidth < 768) switchTab('preview');
+
+  document.getElementById('previewTitle').textContent = tpl.name;
+  document.getElementById('previewSub').textContent = tpl.tag + ' · ' + tpl.vibe;
+
+  const s = tpl.scheme;
+  const isDark = s.bg.startsWith('#0') || s.bg.startsWith('#1') || s.bg.startsWith('#2');
+  const wmColor = isDark ? 'rgba(255,255,255,0.11)' : 'rgba(0,0,0,0.08)';
+  const PREVIEW_SCALE = 0.55;
+  const pw = 360;
+  const scaledW = Math.round(pw / PREVIEW_SCALE);
+
+  document.getElementById('previewCanvas').innerHTML = `
+    <div class="phone-frame" id="previewFrame" style="transform:scale(${zoom}); width:${pw}px;">
+      <div class="phone-notch"></div>
+      <div class="phone-screen" style="background:${s.bg};">
+        <!-- sticky watermark -->
+        <div style="position:sticky;top:50%;z-index:50;pointer-events:none;display:flex;justify-content:center;height:0;overflow:visible;">
+          <span style="font-size:13px;font-weight:900;letter-spacing:3px;color:${wmColor};transform:rotate(-30deg) translateY(-8px);white-space:nowrap;">© IN_SITE — PREVIEW</span>
+        </div>
+        <div style="width:${scaledW}px; transform:scale(${PREVIEW_SCALE}); transform-origin:top left; position:relative;">
+          ${miniPageHTML(tpl, 1)}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Form preview swatch
+  const fp = document.getElementById('formTplPreview');
+  fp.className = 'selected-tpl-box';
+  fp.innerHTML = `
+    <div style="background:${s.hero};padding:12px 14px;display:flex;align-items:center;gap:12px;border-radius:8px;border:1px solid ${s.line};">
+      <div style="width:36px;height:36px;border-radius:50%;background:${s.btn};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
+        ${ ({inv:'💍',album:'📷',health:'🏥',psych:'🧠',law:'⚖️',auto:'🔧',beauty:'✂️',food:'🍽',sport:'💪',agency:'🚀',photo:'📷',realty:'🏠',design:'🎨',dev:'💻',arch:'🏛',art:'🖌',model:'💃',music:'🎵',birthday:'🎂',corp:'🏢',kids:'🎈',conf:'🎤',party:'🎉',grad:'🎓'})[tpl.cat] || '🖥' }
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:${s.text};">${tpl.name}</div>
+        <div style="font-size:11px;color:${s.muted};margin-top:1px;">${tpl.vibe}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Zoom ────────────────────────────────────────────────────────────────
+document.getElementById('zoomIn').addEventListener('click',  () => { zoom = Math.min(zoom + 0.1, 1.5); applyZoom(); });
+document.getElementById('zoomOut').addEventListener('click', () => { zoom = Math.max(zoom - 0.1, 0.4); applyZoom(); });
+function applyZoom() {
+  const f = document.getElementById('previewFrame');
+  if (f) f.style.transform = `scale(${zoom})`;
+}
+
+// ─── References ──────────────────────────────────────────────────────────
+const addRefBtn = document.getElementById('addRefBtn');
+const refInput  = document.getElementById('refInput');
+const refsRow   = document.getElementById('refsRow');
+
+addRefBtn.addEventListener('click', () => refInput.click());
+refInput.addEventListener('change', e => { handleFiles(e.target.files); refInput.value = ''; });
+
+function handleFiles(files) {
+  Array.from(files).forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e => addReference(file.name, e.target.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+function addReference(name, dataUrl) {
+  references.push({ name, dataUrl });
+  const thumb = document.createElement('div');
+  thumb.className = 'ref-thumb';
+  thumb.innerHTML = `<img src="${dataUrl}" alt="${name}" title="${name}"><div class="remove-ref">✕</div>`;
+  thumb.querySelector('img').addEventListener('click', () => openLightbox(dataUrl));
+  thumb.querySelector('.remove-ref').addEventListener('click', e => {
+    e.stopPropagation();
+    references = references.filter(r => r.dataUrl !== dataUrl);
+    thumb.remove();
+    updateSteps();
+  });
+  refsRow.insertBefore(thumb, addRefBtn);
+  updateSteps();
+}
+
+// Drag & drop
+document.addEventListener('dragover', e => { e.preventDefault(); document.getElementById('dragOverlay').classList.add('active'); });
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.getElementById('dragOverlay').classList.remove('active'); });
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  document.getElementById('dragOverlay').classList.remove('active');
+  if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+});
+
+// Lightbox
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+document.getElementById('lightboxClose').addEventListener('click', () => document.getElementById('lightbox').classList.remove('open'));
+document.getElementById('lightbox').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+
+// Budget
+['budgetGrid','tildaBudgetGrid','portBudgetGrid','evtBudgetGrid'].forEach(gridId => {
+  document.getElementById(gridId).addEventListener('click', e => {
+    const opt = e.target.closest('.budget-option');
+    if (!opt) return;
+    document.querySelectorAll('.budget-option').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    selectedBudget = opt.dataset.val;
+  });
+});
+
+const NAME_FIELD  = { wedding:'coupleNames', tilda:'tildaName',  portfolio:'portName',  events:'evtName'  };
+const EMAIL_FIELD = { wedding:'clientEmail', tilda:'tildaEmail', portfolio:'portEmail', events:'evtEmail' };
+
+function updateSteps() {
+  const hasTpl  = !!selectedTemplate;
+  const hasRefs = references.length > 0;
+  const nameVal  = document.getElementById(NAME_FIELD[activeSection])?.value.trim();
+  const emailVal = document.getElementById(EMAIL_FIELD[activeSection])?.value.trim();
+  const hasFill  = !!nameVal && !!emailVal;
+  document.getElementById('s1').className  = 'step ' + (hasTpl  ? 'done' : 'active');
+  document.getElementById('sl1').className = 'step-line ' + (hasTpl ? 'done' : '');
+  document.getElementById('s2').className  = 'step ' + (hasTpl && hasRefs ? 'done' : hasTpl ? 'active' : '');
+  document.getElementById('sl2').className = 'step-line ' + (hasTpl && hasRefs ? 'done' : '');
+  document.getElementById('s3').className  = 'step ' + (hasFill ? 'active' : '');
+}
+['coupleNames','clientEmail','tildaName','tildaEmail','portName','portEmail','evtName','evtEmail'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateSteps);
+});
+['coupleNames','weddingDate','venue','tildaName','portName','evtName'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', () => { if (selectedTemplate) refreshPreview(); });
+});
+
+// Send
+document.getElementById('sendBtn').addEventListener('click', async () => {
+  const validMsg = document.getElementById('validMsg');
+  const btn = document.getElementById('sendBtn');
+
+  let payload;
+  if (activeSection === 'wedding') {
+    const names = document.getElementById('coupleNames').value.trim();
+    const email = document.getElementById('clientEmail').value.trim();
+    if (!selectedTemplate || !names || !email) { validMsg.style.display = 'block'; return; }
+    validMsg.style.display = 'none';
+    payload = {
+      section:         'wedding',
+      couple_names:    names,
+      client_email:    email,
+      phone:           document.getElementById('clientPhone').value,
+      wedding_date:    document.getElementById('weddingDate').value,
+      project_type:    document.getElementById('projectType').value,
+      venue:           document.getElementById('venue').value,
+      template:        { id: selectedTemplate.id, name: selectedTemplate.name, tag: selectedTemplate.tag },
+      style_notes:     document.getElementById('taskDesc').value,
+      budget:          selectedBudget,
+      dresscode:       document.getElementById('dresscode').value,
+      color_palette:   selectedPalette ? { id: selectedPalette.id, name: selectedPalette.name } : null,
+      intro:           selectedIntro,
+      guest_count:     document.getElementById('guestCount').value,
+      extra_notes:     document.getElementById('extraNotes').value,
+      references:      references.map(r => ({ name: r.name, data: r.dataUrl })),
+      submitted_at:    new Date().toISOString(),
+    };
+  } else if (activeSection === 'tilda') {
+    const name  = document.getElementById('tildaName').value.trim();
+    const email = document.getElementById('tildaEmail').value.trim();
+    if (!selectedTemplate || !name || !email) { validMsg.style.display = 'block'; return; }
+    validMsg.style.display = 'none';
+    payload = {
+      section:       'tilda',
+      client_name:   name,
+      client_email:  email,
+      phone:         document.getElementById('tildaPhone').value,
+      niche:         document.getElementById('tildaNiche').value,
+      goal:          document.getElementById('tildaGoal').value,
+      tone:          document.getElementById('tildaTone').value,
+      template:      { id: selectedTemplate.id, name: selectedTemplate.name, tag: selectedTemplate.tag },
+      budget:        selectedBudget,
+      color_palette: selectedPalette ? { id: selectedPalette.id, name: selectedPalette.name } : null,
+      intro:         selectedIntro,
+      extra_notes:   document.getElementById('tildaNotes').value,
+      references:    references.map(r => ({ name: r.name, data: r.dataUrl })),
+      submitted_at:  new Date().toISOString(),
+    };
+  } else if (activeSection === 'portfolio') {
+    const name  = document.getElementById('portName').value.trim();
+    const email = document.getElementById('portEmail').value.trim();
+    if (!selectedTemplate || !name || !email) { validMsg.style.display = 'block'; return; }
+    validMsg.style.display = 'none';
+    payload = {
+      section:        'portfolio',
+      client_name:    name,
+      client_email:   email,
+      phone:          document.getElementById('portPhone').value,
+      specialization: document.getElementById('portSpec').value,
+      goal:           document.getElementById('portGoal').value,
+      template:       { id: selectedTemplate.id, name: selectedTemplate.name, tag: selectedTemplate.tag },
+      budget:         selectedBudget,
+      color_palette:  selectedPalette ? { id: selectedPalette.id, name: selectedPalette.name } : null,
+      intro:          selectedIntro,
+      extra_notes:    document.getElementById('portNotes').value,
+      references:     references.map(r => ({ name: r.name, data: r.dataUrl })),
+      submitted_at:   new Date().toISOString(),
+    };
+  } else if (activeSection === 'events') {
+    const name  = document.getElementById('evtName').value.trim();
+    const email = document.getElementById('evtEmail').value.trim();
+    if (!selectedTemplate || !name || !email) { validMsg.style.display = 'block'; return; }
+    validMsg.style.display = 'none';
+    payload = {
+      section:       'events',
+      event_name:    name,
+      client_email:  email,
+      phone:         document.getElementById('evtPhone').value,
+      event_type:    document.getElementById('evtType').value,
+      event_date:    document.getElementById('evtDate').value,
+      venue:         document.getElementById('evtVenue').value,
+      guest_count:   document.getElementById('evtGuests').value,
+      template:      { id: selectedTemplate.id, name: selectedTemplate.name, tag: selectedTemplate.tag },
+      budget:        selectedBudget,
+      color_palette: selectedPalette ? { id: selectedPalette.id, name: selectedPalette.name } : null,
+      intro:         selectedIntro,
+      extra_notes:   document.getElementById('evtNotes').value,
+      references:    references.map(r => ({ name: r.name, data: r.dataUrl })),
+      submitted_at:  new Date().toISOString(),
+    };
+  }
+
+  btn.disabled = true; btn.classList.add('loading'); btn.textContent = 'Отправка...';
+  try {
+    const res = await fetch('https://bendernostur.duckdns.org:88/insite/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-INSITE-KEY': 'insite-secret-2026' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      showToast('✓ Заявка отправлена! Свяжемся с вами в ближайшее время.', 'success');
+      btn.textContent = '✓ Отправлено';
+    } else throw new Error('HTTP ' + res.status);
+  } catch {
+    showToast('✕ Ошибка. Попробуйте позже или напишите напрямую.', 'error');
+    btn.disabled = false; btn.classList.remove('loading'); btn.textContent = 'Отправить заявку →';
+  }
+});
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type;
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => t.classList.remove('show'), 4500);
+}
+
+// ─── Mobile tabs ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+  const panels = { gallery: 'panelGallery', preview: 'panelPreview', form: 'panelForm' };
+  Object.entries(panels).forEach(([key, id]) => {
+    document.getElementById(id).classList.toggle('tab-active', key === tab);
+  });
+  document.querySelectorAll('.mobile-tabs button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+}
+
+</script>
+</body>
+</html>

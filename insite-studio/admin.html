@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IN_SITE — Админ</title>
+<style>
+  :root {
+    --bg: #0f0f13; --surface: #1a1a24; --surface2: #22222f;
+    --border: #2e2e3e; --accent: #7c6af7; --accent2: #a78bfa;
+    --text: #e8e8f0; --muted: #6b6b85;
+    --success: #34d399; --danger: #f87171; --warn: #fbbf24;
+  }
+  [data-theme="light"] {
+    --bg: #f4f4f8; --surface: #ffffff; --surface2: #eeeef4;
+    --border: #d8d8e4; --text: #1a1a2a; --muted: #7070a0;
+    --accent: #7c6af7; --accent2: #6355d4;
+    --success: #059669; --danger: #dc2626; --warn: #d97706;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── Login screen ── */
+  #loginScreen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 40%, #1a1a2e 0%, #0f0f13 100%);
+  }
+  .login-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 40px 36px; width: 340px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.5);
+  }
+  .login-logo { font-size: 22px; font-weight: 700; letter-spacing: 2px; color: var(--accent2); margin-bottom: 4px; }
+  .login-sub  { font-size: 12px; color: var(--muted); margin-bottom: 28px; }
+  .login-box label { font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 6px; }
+  .login-box input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 11px 14px; color: var(--text); font-size: 14px;
+    outline: none; transition: border-color .2s; margin-bottom: 16px;
+  }
+  .login-box input:focus { border-color: var(--accent); }
+  .login-btn {
+    width: 100%; padding: 12px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), #9f7aea);
+    color: white; font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: all .2s; letter-spacing: .5px;
+  }
+  .login-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,106,247,.4); }
+  .login-err { color: var(--danger); font-size: 12px; margin-top: 10px; text-align: center; display: none; }
+
+  /* ── App ── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px; border-bottom: 1px solid var(--border);
+    background: var(--surface); position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-size: 18px; font-weight: 700; letter-spacing: 2px; color: var(--accent2); }
+  .logo span { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; letter-spacing: 0; }
+  .logout-btn {
+    padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); font-size: 12px; cursor: pointer;
+    transition: all .2s;
+  }
+  .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  .theme-toggle {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--surface2);
+    cursor: pointer; font-size: 16px; display: flex;
+    align-items: center; justify-content: center; transition: all .2s;
+  }
+  .theme-toggle:hover { border-color: var(--accent); }
+
+  .app-body {
+    display: grid; grid-template-columns: 340px 1fr;
+    flex: 1; height: calc(100vh - 57px);
+  }
+
+  /* ── Mobile back button ── */
+  .back-btn {
+    display: none; padding: 4px 10px; border-radius: 6px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--muted); font-size: 12px; cursor: pointer;
+    transition: all .2s; white-space: nowrap;
+  }
+  .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .app-body {
+      grid-template-columns: 1fr;
+      height: auto;
+      min-height: calc(100vh - 57px);
+    }
+    .inbox { height: calc(100vh - 57px); position: relative; }
+    .detail { min-height: calc(100vh - 57px); }
+    .inbox.mobile-hidden { display: none; }
+    .detail.mobile-hidden { display: none; }
+    .back-btn { display: inline-flex; }
+    .order-info { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+    .detail-body { flex-direction: column; }
+  }
+
+  /* ── Inbox ── */
+  .inbox {
+    border-right: 1px solid var(--border); background: var(--surface);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .inbox-header {
+    padding: 14px 18px 10px; font-size: 11px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .badge {
+    background: var(--accent); color: white; font-size: 10px; font-weight: 700;
+    padding: 1px 7px; border-radius: 20px; min-width: 18px; text-align: center;
+  }
+  .inbox-scroll { overflow-y: auto; flex: 1; }
+  .inbox-scroll::-webkit-scrollbar { width: 4px; }
+  .inbox-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .order-card {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background .18s; position: relative;
+  }
+  .order-card:hover { background: var(--surface2); }
+  .order-card.active { background: rgba(124,106,247,.1); border-left: 3px solid var(--accent); }
+  .order-card.active { padding-left: 15px; }
+  .order-name { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .order-meta { font-size: 11px; color: var(--muted); }
+  .order-tpl  { font-size: 11px; color: var(--accent2); margin-top: 4px; }
+  .order-dot {
+    position: absolute; top: 16px; right: 16px;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+  }
+  .order-dot.read { display: none; }
+  .order-status {
+    display: inline-block; margin-top: 5px; padding: 2px 8px;
+    border-radius: 20px; font-size: 10px; font-weight: 600;
+  }
+  .status-new      { background: rgba(124,106,247,.2); color: var(--accent2); }
+  .status-revision { background: rgba(251,191,36,.15);  color: var(--warn); }
+  .status-done     { background: rgba(52,211,153,.15);  color: var(--success); }
+
+  .inbox-empty {
+    padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px;
+  }
+
+  /* ── Detail panel ── */
+  .detail { display: flex; flex-direction: column; overflow: hidden; }
+
+  .detail-empty {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 14px; text-align: center;
+  }
+
+  .detail-header {
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .detail-title { font-size: 16px; font-weight: 600; }
+  .detail-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .status-select {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 12px; color: var(--text);
+    font-size: 12px; outline: none; cursor: pointer;
+  }
+
+  .detail-body { display: flex; flex: 1; overflow: hidden; }
+
+  /* Order info */
+  .order-info {
+    width: 280px; border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 20px; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .order-info::-webkit-scrollbar { width: 4px; }
+  .order-info::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .info-section { }
+  .info-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .info-val   { font-size: 13px; color: var(--text); line-height: 1.5; }
+  .info-val a { color: var(--accent2); text-decoration: none; }
+  .info-val a:hover { text-decoration: underline; }
+
+  .refs-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .ref-mini {
+    width: 52px; height: 52px; border-radius: 6px; overflow: hidden;
+    border: 1px solid var(--border); cursor: pointer;
+  }
+  .ref-mini img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* Chat / revisions */
+  .chat-area {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .msg {
+    max-width: 80%; padding: 10px 14px; border-radius: 12px;
+    font-size: 13px; line-height: 1.55;
+  }
+  .msg-admin {
+    background: rgba(124,106,247,.18); border: 1px solid rgba(124,106,247,.3);
+    align-self: flex-end; border-bottom-right-radius: 4px; color: var(--text);
+  }
+  .msg-system {
+    background: var(--surface2); border: 1px solid var(--border);
+    align-self: flex-start; border-bottom-left-radius: 4px; color: var(--muted);
+    font-size: 12px; font-style: italic;
+  }
+  .msg-time { font-size: 10px; color: var(--muted); margin-top: 4px; text-align: right; }
+  .msg-label { font-size: 10px; color: var(--accent2); font-weight: 700; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .8px; }
+  .chat-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 40px; font-style: italic; }
+
+  /* Agent bubbles */
+  .msg-agent {
+    background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.25);
+    align-self: flex-start; border-bottom-left-radius: 4px; color: var(--text);
+    max-width: 90%;
+  }
+  .msg-agent pre { white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: 13px; }
+  .dept-badge {
+    display: inline-block; font-size: 9px; letter-spacing: .8px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 3px; font-weight: 700; margin-right: 6px;
+  }
+  .dept-creative_manager { background: rgba(167,139,250,.15); color: #a78bfa; border: 1px solid rgba(167,139,250,.3); }
+  .dept-frontend   { background: rgba(91,155,213,.15); color: #5b9bd5; border: 1px solid rgba(91,155,213,.3); }
+  .dept-backend    { background: rgba(91,213,160,.15); color: #5bd5a0; border: 1px solid rgba(91,213,160,.3); }
+  .dept-designer   { background: rgba(213,138,58,.15); color: #d58a3a; border: 1px solid rgba(213,138,58,.3); }
+  .dept-pr         { background: rgba(213,91,138,.15); color: #d55b8a; border: 1px solid rgba(213,91,138,.3); }
+  .dept-content    { background: rgba(138,213,91,.15); color: #8ad55b; border: 1px solid rgba(138,213,91,.3); }
+  .agent-spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid rgba(16,185,129,.3); border-top-color: #10b981; border-radius: 50%; animation: spin .7s linear infinite; margin-left: 6px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Agent send row */
+  .agent-send-row {
+    border-top: 1px solid var(--border); padding: 10px 20px;
+    background: var(--surface); display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+  }
+  .agent-select {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 8px 10px; font-size: 12px; font-family: inherit;
+    outline: none; cursor: pointer; flex-shrink: 0;
+  }
+  .agent-select:focus { border-color: var(--accent); }
+  .send-agent-btn {
+    padding: 8px 14px; border: none; border-radius: 8px; flex-shrink: 0;
+    background: rgba(16,185,129,.2); border: 1px solid rgba(16,185,129,.35);
+    color: #10b981; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .2s;
+  }
+  .send-agent-btn:hover { background: rgba(16,185,129,.3); }
+  .send-agent-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .chat-input-area {
+    border-top: 1px solid var(--border); padding: 16px 20px;
+    background: var(--surface); flex-shrink: 0;
+    display: flex; gap: 10px; align-items: flex-end;
+  }
+  .chat-input-area textarea {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; color: var(--text);
+    font-size: 13px; font-family: inherit; resize: none; outline: none;
+    transition: border-color .2s; min-height: 44px; max-height: 120px;
+  }
+  .chat-input-area textarea:focus { border-color: var(--accent); }
+  .send-revision-btn {
+    padding: 10px 18px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), #9f7aea);
+    color: white; font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: all .2s; white-space: nowrap; flex-shrink: 0;
+  }
+  .send-revision-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,106,247,.4); }
+  .send-revision-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,.88);
+    z-index: 300; display: none; align-items: center; justify-content: center;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img  { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+  .lb-close {
+    position: absolute; top: 20px; right: 28px;
+    font-size: 28px; cursor: pointer; color: white; opacity: .6;
+    transition: opacity .2s;
+  }
+  .lb-close:hover { opacity: 1; }
+
+  /* Debug modal */
+  .debug-modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,.82);
+    z-index: 400; display: none; align-items: flex-start; justify-content: center;
+    padding: 40px 20px; overflow-y: auto;
+  }
+  .debug-modal.open { display: flex; }
+  .debug-box {
+    background: #0d0d14; border: 1px solid var(--border);
+    border-radius: 12px; width: 100%; max-width: 720px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.6); flex-shrink: 0;
+  }
+  .debug-header {
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--accent2);
+    text-transform: uppercase;
+  }
+  .debug-actions { display: flex; gap: 8px; }
+  .debug-copy-btn {
+    padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted); font-size: 11px;
+    cursor: pointer; transition: all .2s;
+  }
+  .debug-copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .debug-close {
+    font-size: 18px; cursor: pointer; color: var(--muted);
+    transition: color .2s; line-height: 1;
+  }
+  .debug-close:hover { color: var(--text); }
+  .debug-body {
+    padding: 20px; overflow-x: auto;
+    font-family: 'Courier New', monospace; font-size: 12px;
+    line-height: 1.7; color: #a8d8a8; white-space: pre;
+    max-height: 70vh; overflow-y: auto;
+  }
+  .debug-body::-webkit-scrollbar { width: 4px; height: 4px; }
+  .debug-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 22px; font-size: 13px; font-weight: 500;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    z-index: 999; min-width: 240px; text-align: center;
+  }
+  .toast.show    { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--success); color: var(--success); }
+  .toast.error   { border-color: var(--danger);  color: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lb"><span class="lb-close" id="lbClose">✕</span><img id="lbImg" src="" alt=""></div>
+<div class="toast" id="toast"></div>
+
+<!-- Debug modal -->
+<div class="debug-modal" id="debugModal">
+  <div class="debug-box">
+    <div class="debug-header">
+      🐛 Debug — JSON заявки
+      <div class="debug-actions">
+        <button class="debug-copy-btn" id="debugCopyBtn">📋 Копировать</button>
+        <span class="debug-close" id="debugClose">✕</span>
+      </div>
+    </div>
+    <div class="debug-body" id="debugBody"></div>
+  </div>
+</div>
+
+<!-- ── Login ── -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">IN_SITE</div>
+    <div class="login-sub">Административная панель</div>
+    <label>Логин</label>
+    <input type="text" id="loginUser" placeholder="root" autocomplete="username">
+    <label>Пароль</label>
+    <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    <button class="login-btn" id="loginBtn">Войти</button>
+    <div class="login-err" id="loginErr">Неверный логин или пароль</div>
+  </div>
+</div>
+
+<!-- ── App ── -->
+<div id="app">
+  <header>
+    <div class="logo">IN_SITE <span>admin</span></div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="theme-toggle" id="themeToggle" title="Сменить тему">🌙</button>
+      <button class="logout-btn" id="logoutBtn">Выйти</button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <div class="inbox">
+      <div class="inbox-header">
+        Входящие заявки
+        <span class="badge" id="unreadBadge">0</span>
+      </div>
+      <div class="inbox-scroll" id="inboxList">
+        <div class="inbox-empty">Заявок пока нет.<br>Они появятся после отправки клиентом.</div>
+      </div>
+    </div>
+    <div class="detail" id="detail">
+      <div class="detail-empty">
+        <div>
+          <div style="font-size:36px;opacity:.3;margin-bottom:12px;">📋</div>
+          Выберите заявку слева
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Theme ──
+const THEME_KEY = 'insite_theme';
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = t === 'light' ? '☀️' : '🌙';
+}
+const savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
+applyTheme(savedTheme);
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+});
+
+// ── Mobile nav ──
+function showInbox() {
+  document.querySelector('.inbox').classList.remove('mobile-hidden');
+  document.getElementById('detail').classList.add('mobile-hidden');
+}
+function showDetail() {
+  if (window.innerWidth <= 768) {
+    document.querySelector('.inbox').classList.add('mobile-hidden');
+    document.getElementById('detail').classList.remove('mobile-hidden');
+  }
+}
+
+// ── Auth ──
+const CREDS = { user: 'root', pass: 'S1h2i3s4h5@!' };
+const SESSION_KEY = 'insite_admin_auth';
+const API_BASE    = 'https://bendernostur.duckdns.org:88/insite/api';
+const REVS_KEY    = 'insite_revisions';
+
+function checkAuth() {
+  return sessionStorage.getItem(SESSION_KEY) === '1';
+}
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  renderInbox();
+}
+
+if (checkAuth()) showApp();
+
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('loginUser').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  if (u === CREDS.user && p === CREDS.pass) {
+    sessionStorage.setItem(SESSION_KEY, '1');
+    showApp();
+  } else {
+    const err = document.getElementById('loginErr');
+    err.style.display = 'block';
+    setTimeout(() => err.style.display = 'none', 3000);
+  }
+}
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  sessionStorage.removeItem(SESSION_KEY);
+  location.reload();
+});
+
+// ── Labels ──
+const INTRO_LABELS = {
+  none:      'Без интро',
+  fade:      'Fade In — плавное появление',
+  slide:     'Slide Up — снизу вверх',
+  curtain:   'Занавес — шторки',
+  petals:    'Лепестки — падающие цветы',
+  countdown: 'Обратный счёт 3·2·1'
+};
+
+// ── Orders storage ──
+async function getOrders() {
+  try {
+    const res = await fetch(`${API_BASE}/orders`, {
+      headers: { 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) }
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch { return []; }
+}
+function getRevisions(orderId) {
+  try {
+    const all = JSON.parse(localStorage.getItem(REVS_KEY) || '{}');
+    return all[orderId] || [];
+  } catch { return []; }
+}
+function saveRevision(orderId, text) {
+  try {
+    const all = JSON.parse(localStorage.getItem(REVS_KEY) || '{}');
+    if (!all[orderId]) all[orderId] = [];
+    all[orderId].push({ text, ts: new Date().toISOString() });
+    localStorage.setItem(REVS_KEY, JSON.stringify(all));
+  } catch {}
+}
+
+setInterval(() => { if (checkAuth()) renderInbox(); }, 30000);
+
+let activeOrderId = null;
+
+async function renderInbox() {
+  const orders = await getOrders();
+  const list = document.getElementById('inboxList');
+  const badge = document.getElementById('unreadBadge');
+  const unread = orders.filter(o => !o.read).length;
+  badge.textContent = unread;
+  badge.style.display = unread ? 'inline-block' : 'none';
+
+  if (!orders.length) {
+    list.innerHTML = '<div class="inbox-empty">Заявок пока нет.<br>Они появятся после отправки клиентом.</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  [...orders].reverse().forEach(order => {
+    const card = document.createElement('div');
+    card.className = 'order-card' + (order.id === activeOrderId ? ' active' : '');
+    const statusMap = { new: 'status-new', revision: 'status-revision', done: 'status-done' };
+    const statusLabel = { new: 'Новая', revision: 'В правках', done: 'Готово' };
+    card.innerHTML = `
+      <div class="order-dot ${order.read ? 'read' : ''}"></div>
+      <div class="order-name">${esc(order.couple_names || order.client_name || 'Без имени')}</div>
+      <div class="order-meta">${esc(order.client_email || '')} · ${fmtDate(order.submitted_at)}</div>
+      <div class="order-tpl">${esc(order.template?.name || '—')}</div>
+      <span class="order-status ${statusMap[order.status] || 'status-new'}">${statusLabel[order.status] || 'Новая'}</span>
+    `;
+    card.addEventListener('click', () => openOrder(order.id));
+    list.appendChild(card);
+  });
+}
+
+async function openOrder(id) {
+  activeOrderId = id;
+  const orders = await getOrders();
+  const order = orders.find(o => o.id === id);
+  if (!order) return;
+  showDetail();
+  fetch(`${API_BASE}/orders/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
+    body: JSON.stringify({ read: true })
+  }).catch(() => {});
+  renderInbox();
+  renderDetail(order);
+}
+
+function renderDetail(order) {
+  const detail = document.getElementById('detail');
+  const revs = getRevisions(order.id);
+
+  detail.innerHTML = `
+    <div class="detail-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="back-btn" id="backBtn">← Назад</button>
+        <div>
+          <div class="detail-title">${esc(order.couple_names || order.client_name)}</div>
+          <div class="detail-sub">${esc(order.client_email)} · ${fmtDate(order.submitted_at)}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button class="send-agent-btn" id="buildSiteBtn" title="Сгенерировать готовый сайт">🏗 Собрать сайт</button>
+        <button class="send-agent-btn" id="runPipelineBtn" title="Запустить полный цикл агентов" style="background:rgba(139,92,246,.18);color:#c4b5fd;border:1px solid rgba(139,92,246,.3);">⚡ Агенты</button>
+        <button class="send-agent-btn" id="redesignBtn" title="Перегенерировать сайт в альтернативном стиле" style="background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.25);">✨ Redesign</button>
+        <button class="send-agent-btn" id="debugBtn" title="Посмотреть JSON заявки" style="background:rgba(100,100,120,.15);color:#8b8ba8;border:1px solid rgba(100,100,120,.25);">🐛 Debug</button>
+        <select class="status-select" id="statusSelect">
+          <option value="new"      ${order.status==='new'      ?'selected':''}>🔵 Новая</option>
+          <option value="revision" ${order.status==='revision' ?'selected':''}>🟡 В правках</option>
+          <option value="done"     ${order.status==='done'     ?'selected':''}>🟢 Готово</option>
+        </select>
+        <button class="send-agent-btn" id="deleteOrderBtn" title="Удалить заявку" style="background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.25);">🗑</button>
+      </div>
+    </div>
+    ${order.site_url ? `<div style="padding:8px 16px;background:rgba(52,211,153,.1);border-radius:8px;margin:0 0 8px;font-size:12px;">
+      ✅ Сайт готов: <a href="${esc(order.site_url)}" target="_blank" style="color:var(--success);">${esc(order.site_url)}</a></div>` : ''}
+
+    <div class="detail-body">
+      <div class="order-info">
+        ${infoRow('Шаблон', order.template?.name + ' (' + (order.template?.tag||'') + ')')}
+        ${infoRow('Цветовая схема', order.color_palette?.name)}
+        ${infoRow('Интро', INTRO_LABELS[order.intro] || order.intro)}
+        ${infoRow('Тип проекта', order.project_type)}
+        ${infoRow('Дата свадьбы', order.wedding_date)}
+        ${infoRow('Площадка', order.venue)}
+        ${infoRow('Бюджет', order.budget)}
+        ${infoRow('Дедлайн', order.deadline)}
+        ${infoRow('Кол-во гостей', order.guest_count)}
+        ${infoRow('Дресс-код', order.dresscode)}
+        ${infoRow('Задача', order.task_description || order.style_notes)}
+        ${infoRow('Доп. пожелания', order.extra_notes)}
+        ${order.references?.length ? `
+          <div class="info-section">
+            <div class="info-label">Референсы (${order.references.length})</div>
+            <div class="refs-grid" id="refsGrid"></div>
+          </div>` : ''}
+      </div>
+
+      <div class="chat-area">
+        <div class="chat-messages" id="chatMessages">
+          <div class="msg msg-system">
+            <div class="msg-label">Заявка получена</div>
+            Клиент: <b>${esc(order.couple_names || order.client_name || order.event_name || '—')}</b><br>
+            Шаблон: <b>${esc(order.template?.name||'—')}</b>
+            ${order.niche ? ' · ' + esc(order.niche) : ''}
+            ${order.budget ? '<br>Бюджет: ' + esc(order.budget) : ''}
+            ${order.extra_notes || order.style_notes ? '<br>Пожелания: ' + esc((order.extra_notes || order.style_notes || '').slice(0,120)) : ''}
+            <div class="msg-time">${fmtDate(order.submitted_at)}</div>
+          </div>
+
+          ${(order.agent_notes || []).map(n => `
+          <div class="msg msg-agent">
+            <div class="msg-label">
+              <span class="dept-badge dept-${n.department}">${n.department.replace('_',' ')}</span>
+              ${n.model ? '<span style="font-size:9px;color:var(--muted);">' + esc(n.model) + '</span>' : ''}
+            </div>
+            <pre>${esc(n.text)}</pre>
+            <div class="msg-time">${fmtDate(n.ts)}</div>
+          </div>`).join('')}
+
+          ${revs.map(r => `
+          <div class="msg msg-admin">
+            <div class="msg-label">Менеджер</div>
+            ${esc(r.text).replace(/\n/g,'<br>')}
+            <div class="msg-time">${fmtDate(r.ts)}</div>
+          </div>`).join('')}
+
+          ${!revs.length && !(order.agent_notes||[]).length
+            ? '<div class="chat-empty">Агент ещё не ответил.<br>Можно отправить задачу вручную ниже.</div>' : ''}
+        </div>
+
+        <div class="agent-send-row">
+          <select class="agent-select" id="agentDept">
+            <option value="creative_manager">🧠 Creative Manager</option>
+            <option value="designer">🎨 Designer</option>
+            <option value="frontend">💻 Frontend</option>
+            <option value="backend">⚙️ Backend</option>
+            <option value="content">✍️ Content</option>
+            <option value="pr">📣 PR</option>
+          </select>
+          <textarea id="agentTask" placeholder="Задача агенту (Enter+Ctrl отправить)..." rows="1"
+            style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:12px;font-family:inherit;resize:none;outline:none;min-height:36px;max-height:80px;"></textarea>
+          <button class="send-agent-btn" id="sendAgentBtn">▶ Агент</button>
+        </div>
+
+        <div class="chat-input-area">
+          <textarea id="revisionText" placeholder="Правки, комментарии для команды..." rows="2"></textarea>
+          <button class="send-revision-btn" id="sendRevBtn">Отправить правку</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const backBtn = document.getElementById('backBtn');
+  if (backBtn) backBtn.addEventListener('click', showInbox);
+
+  if (order.references?.length) {
+    const grid = document.getElementById('refsGrid');
+    order.references.forEach(ref => {
+      const d = document.createElement('div');
+      d.className = 'ref-mini';
+      d.innerHTML = `<img src="${ref.data}" alt="${esc(ref.name)}" title="${esc(ref.name)}">`;
+      d.addEventListener('click', () => openLb(ref.data));
+      grid.appendChild(d);
+    });
+  }
+
+  document.getElementById('statusSelect').addEventListener('change', async e => {
+    await fetch(`${API_BASE}/orders/${order.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
+      body: JSON.stringify({ status: e.target.value })
+    });
+    renderInbox();
+  });
+
+  document.getElementById('buildSiteBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('buildSiteBtn');
+    btn.disabled = true; btn.textContent = '⏳ Собираю…';
+    const brief = [
+      `Клиент: ${order.couple_names || order.client_name || order.event_name || '—'}`,
+      order.niche ? `Ниша: ${order.niche}` : '',
+      `Шаблон/стиль: ${(order.template||{}).name || '—'}`,
+      order.color_palette?.name ? `Палитра: ${order.color_palette.name}` : '',
+      order.budget ? `Бюджет: ${order.budget}` : '',
+      order.task_description || order.style_notes ? `Задача: ${order.task_description || order.style_notes}` : '',
+      order.extra_notes ? `Пожелания: ${order.extra_notes}` : '',
+      order.client_email ? `Контакт для формы: ${order.client_email}` : '',
+    ].filter(Boolean).join('\n');
+    try {
+      const res = await fetch(`${API_BASE}/build`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
+        body: JSON.stringify({ order_id: order.id, brief })
+      });
+      const d = await res.json();
+      if (d.ok) {
+        showToast('✅ Сайт собран', 'success');
+        const fresh = await getOrders();
+        renderDetail(fresh.find(x => x.id === order.id) || order);
+        renderInbox();
+      } else {
+        showToast('Ошибка: ' + (d.error || 'не удалось'), 'error');
+        btn.disabled = false; btn.textContent = '🏗 Собрать сайт';
+      }
+    } catch (e) {
+      showToast('Ошибка сети: ' + e.message, 'error');
+      btn.disabled = false; btn.textContent = '🏗 Собрать сайт';
+    }
+  });
+
+  document.getElementById('runPipelineBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('runPipelineBtn');
+    btn.disabled = true; btn.textContent = '⏳ Запуск…';
+    const orderContext = [
+      `Клиент: ${order.couple_names || order.client_name || order.event_name || '—'}`,
+      `Шаблон: ${(order.template||{}).name || '—'}`,
+      order.niche ? `Ниша: ${order.niche}` : '',
+      order.budget ? `Бюджет: ${order.budget}` : '',
+      order.extra_notes || order.style_notes ? `Пожелания: ${(order.extra_notes || order.style_notes || '').slice(0,200)}` : '',
+    ].filter(Boolean).join('\n');
+    const WEBHOOK = 'https://bendernostur.duckdns.org:88/webhook/insite/task';
+    const AGENTS = [
+      { dept: 'creative_manager', task: `Проанализируй заявку и составь краткий creative brief:\n${orderContext}` },
+      { dept: 'designer', task: `На основе заявки предложи концепцию дизайна (цвета, стиль, UX):\n${orderContext}` },
+      { dept: 'frontend', task: `Опиши структуру сайта и ключевые секции для реализации:\n${orderContext}` },
+    ];
+    let allNotes = [];
+    for (const ag of AGENTS) {
+      try {
+        const res = await fetch(WEBHOOK, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ department: ag.dept, task: ag.task, context: `E-T-E LABORATORY — IN_SITE Studio. Заявка #${order.id}.`, order_id: order.id }),
+        });
+        if (res.ok) {
+          const raw = await res.json();
+          const items = Array.isArray(raw) ? raw : [raw];
+          items.forEach(item => {
+            const text = item.result || item.text || item.output;
+            if (text) allNotes.push({ department: ag.dept, model: item.model || '', text: text.trim(), ts: new Date().toISOString() });
+          });
+        }
+      } catch {}
+    }
+    if (allNotes.length) {
+      await fetch(`${API_BASE}/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
+        body: JSON.stringify({ agent_notes: allNotes }),
+      }).catch(() => {});
+      showToast(`⚡ Агенты отработали (${allNotes.length} ответов)`, 'success');
+    } else {
+      showToast('Агенты не вернули ответ', 'error');
+    }
+    btn.disabled = false; btn.textContent = '⚡ Агенты';
+    const freshOrders = await getOrders();
+    renderDetail(freshOrders.find(x => x.id === order.id) || order);
+    renderInbox();
+  });
+
+  document.getElementById('deleteOrderBtn').addEventListener('click', async () => {
+    if (!confirm(`Удалить заявку "${order.couple_names || order.client_name}"? Это действие необратимо.`)) return;
+    const btn = document.getElementById('deleteOrderBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/orders/${order.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
+      });
+      if (res.ok) {
+        showToast('🗑 Заявка удалена', 'success');
+        detail.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);">Выберите заявку</div>';
+        renderInbox();
+      } else {
+        showToast('Ошибка удаления: ' + res.status, 'error');
+        btn.disabled = false;
+      }
+    } catch (e) {
+      showToast('Ошибка сети: ' + e.message, 'error');
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('sendRevBtn').addEventListener('click', async () => {
+    const text = document.getElementById('revisionText').value.trim();
+    if (!text) return;
+    const btn = document.getElementById('sendRevBtn');
+    btn.disabled = true;
+    saveRevision(order.id, text);
+    try {
+      await fetch('https://bendernostur.duckdns.org:88/webhook/insite/revision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id:     order.id,
+          client_name:  order.couple_names || order.client_name,
+          client_email: order.client_email,
+          template:     order.template?.name,
+          revision:     text,
+          sent_at:      new Date().toISOString(),
+        }),
+      });
+    } catch {}
+    if (order.status === 'new') {
+      fetch(`${API_BASE}/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
+        body: JSON.stringify({ status: 'revision' })
+      }).catch(() => {});
+    }
+    showToast('✓ Правка сохранена и отправлена', 'success');
+    const freshOrders = await getOrders();
+    renderDetail(freshOrders.find(x => x.id === order.id) || order);
+    renderInbox();
+    btn.disabled = false;
+  });
+
+  const agentTaskEl = document.getElementById('agentTask');
+  document.getElementById('sendAgentBtn').addEventListener('click', () => sendToAgent(order));
+  agentTaskEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendToAgent(order);
+  });
+
+  async function sendToAgent(ord) {
+    const dept = document.getElementById('agentDept').value;
+    const task = agentTaskEl.value.trim();
+    if (!task) return;
+    const btn = document.getElementById('sendAgentBtn');
+    btn.disabled = true; btn.textContent = '…';
+    const spinner = document.createElement('div');
+    spinner.className = 'msg msg-agent'; spinner.id = 'agentSpinner';
+    spinner.innerHTML = `<div class="msg-label"><span class="dept-badge dept-${dept}">${dept.replace('_',' ')}</span></div>
+      <span style="color:var(--muted);font-size:12px;">Обрабатывает<span class="agent-spinner"></span></span>`;
+    document.getElementById('chatMessages').appendChild(spinner);
+    spinner.scrollIntoView({ behavior: 'smooth' });
+    const orderContext = [
+      `Клиент: ${ord.couple_names || ord.client_name || ord.event_name || '—'}`,
+      `Шаблон: ${(ord.template||{}).name || '—'}`,
+      ord.niche ? `Ниша: ${ord.niche}` : '',
+      ord.budget ? `Бюджет: ${ord.budget}` : '',
+      ord.extra_notes || ord.style_notes ? `Пожелания: ${(ord.extra_notes || ord.style_notes || '').slice(0,200)}` : '',
+    ].filter(Boolean).join('\n');
+    try {
+      const res = await fetch('https://bendernostur.duckdns.org:88/webhook/insite/task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          department: dept, task,
+          context: `E-T-E LABORATORY — IN_SITE Studio.\nЗаявка #${ord.id}:\n${orderContext}`,
+          order_id: ord.id,
+        }),
+      });
+      const raw = await res.json();
+      const items = Array.isArray(raw) ? raw : [raw];
+      const notes = items.map(item => ({
+        department: item.department || dept, model: item.model || '',
+        text: item.result || item.text || item.output || JSON.stringify(item),
+        ts: new Date().toISOString(),
+      })).filter(n => n.text);
+      if (notes.length) {
+        await fetch(`${API_BASE}/orders/${ord.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
+          body: JSON.stringify({ agent_notes: notes }),
+        });
+      }
+      agentTaskEl.value = '';
+    } catch (e) { showToast('Ошибка агента: ' + e.message, 'error'); }
+    btn.disabled = false; btn.textContent = '▶ Агент';
+    const freshOrders = await getOrders();
+    renderDetail(freshOrders.find(x => x.id === ord.id) || ord);
+    renderInbox();
+  }
+
+  setTimeout(() => {
+    const cm = document.getElementById('chatMessages');
+    if (cm) cm.scrollTop = cm.scrollHeight;
+  }, 50);
+
+  // ── Debug button ──
+  document.getElementById('debugBtn').addEventListener('click', () => {
+    document.getElementById('debugBody').textContent = JSON.stringify(order, null, 2);
+    document.getElementById('debugModal').classList.add('open');
+  });
+
+  // ── Redesign button ──
+  document.getElementById('redesignBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('redesignBtn');
+    btn.disabled = true; btn.textContent = '⏳ Redesign…';
+    const brief = [
+      `REDESIGN: создай АЛЬТЕРНАТИВНЫЙ вариант сайта с другим визуальным стилем.`,
+      `Клиент: ${order.couple_names || order.client_name || order.event_name || '—'}`,
+      order.niche ? `Ниша: ${order.niche}` : '',
+      `Шаблон/стиль: ${(order.template||{}).name || '—'}`,
+      order.color_palette?.name ? `Исходная палитра: ${order.color_palette.name} — выбери другую` : '',
+      order.budget ? `Бюджет: ${order.budget}` : '',
+      order.task_description || order.style_notes ? `Задача: ${order.task_description || order.style_notes}` : '',
+      order.extra_notes ? `Пожелания: ${order.extra_notes}` : '',
+      order.client_email ? `Контакт: ${order.client_email}` : '',
+      `Сделай другую цветовую гамму, другую типографику и другую компоновку секций.`,
+    ].filter(Boolean).join('\n');
+    try {
+      const res = await fetch(\`\${API_BASE}/build\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(\`root:\${CREDS.pass}\`) },
+        body: JSON.stringify({ order_id: order.id + '_r' + Date.now().toString(36), brief, link_to: order.id }),
+      });
+      const d = await res.json();
+      if (d.ok) {
+        showToast('✨ Redesign готов', 'success');
+        window.open(d.url, '_blank');
+      } else {
+        showToast('Ошибка: ' + (d.error || 'не удалось'), 'error');
+      }
+    } catch (e) {
+      showToast('Ошибка сети: ' + e.message, 'error');
+    }
+    btn.disabled = false; btn.textContent = '✨ Redesign';
+  });
+}
+
+// ── Debug modal global handlers ──
+document.getElementById('debugClose').addEventListener('click', () => {
+  document.getElementById('debugModal').classList.remove('open');
+});
+document.getElementById('debugModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+document.getElementById('debugCopyBtn').addEventListener('click', () => {
+  const text = document.getElementById('debugBody').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('debugCopyBtn');
+    btn.textContent = '✓ Скопировано';
+    setTimeout(() => btn.textContent = '📋 Копировать', 1800);
+  });
+});
+
+function infoRow(label, val) {
+  if (!val) return '';
+  return `<div class="info-section">
+    <div class="info-label">${label}</div>
+    <div class="info-val">${esc(String(val)).replace(/\n/g,'<br>')}</div>
+  </div>`;
+}
+
+function openLb(src) {
+  document.getElementById('lbImg').src = src;
+  document.getElementById('lb').classList.add('open');
+}
+document.getElementById('lbClose').addEventListener('click', () => document.getElementById('lb').classList.remove('open'));
+document.getElementById('lb').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type;
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('ru-RU', { day:'2-digit', month:'short' }) + ' ' +
+           d.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+  } catch { return iso; }
+}
+</script>
+</body>
+</html>

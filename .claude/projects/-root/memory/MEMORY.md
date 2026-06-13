@@ -1,3 +1,6 @@
+- [IN_SITE Studio stack](insite-studio-stack.md) — host /root: AI agents (n8n+Gemini) build client sites; /build endpoint + @benderobo_bot control added 2026-06-02
+- [3x-ui panel @ 167.17.180.42](3x-ui-panel-91-149-238-201.md) — панель 3x-ui на 167.17.180.42:34443 (старый IP 91.149.238.201); URL входа со слешем; cert на IP (SAN)
+
 # Task Group: Parrot workstation audit, DNS automation, and Btrfs swap repair on /home/bender
 scope: Local workstation audits and follow-up remediation on the user's Parrot/Linux host, including Wi-Fi DNS automation, explanatory inventory reports, swapfile recovery, and USB Wi-Fi monitor-mode follow-up.
 applies_to: cwd=/home/bender; reuse_rule=safe for this host and similar Parrot/Btrfs maintenance tasks, but treat privileged edits, live network state, and attached USB hardware as host-state sensitive and verify them before changing anything
@@ -743,3 +746,6 @@ applies_to: cwd=/home/bender; reuse_rule=low-confidence and request-scoped only,
 ## Failures and how to do differently
 
 - Symptom: memory suggests the keyboard behavior was handled. Cause: only the user request is visible; no implementation or verification was recorded. Fix: confirm actual F3/F4 behavior before treating this as done [Task 1]
+
+# Pointers (topic files)
+- [server-194-87-18-116-justhost](server-194-87-18-116-justhost.md) — VPN/xray-сервер 194.87.18.116 = VPS на JustHost.asia (нода cn301, VM 1086004); диагностика полного отвала сети (ARP до шлюза FAILED = L2/null-route на стороне хостера)

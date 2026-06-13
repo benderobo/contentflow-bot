@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IN_SITE Studio — Panel</title>
+<style>
+  :root {
+    --bg: #0a0a0f; --surface: #111118; --surface2: #1e1a12;
+    --border: #2a2a3e; --border2: #1e1e2e;
+    --text: #d4c5a9; --muted: #8a7560; --accent: #c9a87c;
+    --focus-border: #4a3f2f;
+  }
+  [data-theme="light"] {
+    --bg: #f5f3ef; --surface: #ffffff; --border: #d8d0c8;
+    --text: #2a2318; --muted: #7a6e64; --accent: #c9a87c;
+    --surface2: #f0ebe3; --border2: #e0d8cc; --focus-border: #c9a87c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    padding: 24px;
+    transition: background .2s, color .2s;
+  }
+  h1 {
+    font-size: 1.1rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border2);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  h1 span { color: var(--accent); }
+
+  .theme-toggle {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--surface2);
+    cursor: pointer; font-size: 16px; display: flex;
+    align-items: center; justify-content: center; transition: all .2s;
+    flex-shrink: 0;
+  }
+  .theme-toggle:hover { border-color: var(--accent); }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 180px 1fr auto;
+    gap: 10px;
+    align-items: start;
+    margin-bottom: 24px;
+  }
+  select, textarea, button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 10px 12px;
+    border-radius: 3px;
+    outline: none;
+    transition: background .2s, border-color .2s, color .2s;
+  }
+  select:focus, textarea:focus { border-color: var(--focus-border); }
+  select { height: 42px; cursor: pointer; }
+  textarea { resize: vertical; min-height: 42px; max-height: 200px; }
+  button {
+    background: var(--surface2);
+    border-color: var(--focus-border);
+    color: var(--accent);
+    cursor: pointer;
+    height: 42px;
+    padding: 0 20px;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  button:hover { background: var(--border2); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  @media (max-width: 600px) {
+    body { padding: 16px; }
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+    select, button { width: 100%; }
+    button { height: 44px; }
+    .clear-btn { float: none; display: block; width: auto; margin-bottom: 12px; }
+  }
+
+  .dept-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    padding: 2px 8px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    margin-right: 8px;
+  }
+  .dept-frontend   { background: #0d1f2d; color: #5b9bd5; border: 1px solid #1a3a5c; }
+  .dept-backend    { background: #0d1f1a; color: #5bd5a0; border: 1px solid #1a5c40; }
+  .dept-creative_manager { background: #1f0d2d; color: #b07ad5; border: 1px solid #3d1a5c; }
+  .dept-designer   { background: #2d1a0d; color: #d58a3a; border: 1px solid #5c3a1a; }
+  .dept-pr         { background: #2d0d1a; color: #d55b8a; border: 1px solid #5c1a3a; }
+  .dept-content    { background: #1a2d0d; color: #8ad55b; border: 1px solid #3a5c1a; }
+
+  #history { display: flex; flex-direction: column; gap: 16px; }
+
+  .entry {
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .entry-header {
+    background: var(--surface);
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .entry-header .model { margin-left: auto; color: var(--muted); font-size: 0.75rem; opacity: .6; }
+  .entry-task {
+    padding: 10px 14px;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border2);
+  }
+  .entry-result {
+    padding: 14px;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .entry.loading .entry-result { color: #3a3a5a; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+  .entry.error { border-color: #3a1a1a; }
+  .entry.error .entry-result { color: #8a3a3a; }
+
+  .empty {
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding: 20px 0;
+    opacity: .5;
+  }
+
+  .clear-btn {
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    height: auto;
+    color: var(--muted);
+    border-color: var(--border);
+    background: transparent;
+    margin-bottom: 12px;
+    float: right;
+  }
+  .clear-btn:hover { color: var(--text); background: transparent; }
+</style>
+</head>
+<body>
+
+<h1>IN_SITE <span>Studio</span><button class="theme-toggle" id="themeToggle" title="Сменить тему">🌙</button></h1>
+
+<div class="form-grid">
+  <select id="dept">
+    <option value="creative_manager">Creative Manager</option>
+    <option value="frontend">Frontend</option>
+    <option value="backend">Backend</option>
+    <option value="designer">Designer</option>
+    <option value="pr">PR</option>
+    <option value="content">Content</option>
+  </select>
+  <textarea id="task" placeholder="Задача..." rows="2"></textarea>
+  <button id="send-btn" onclick="sendTask()">Отправить</button>
+</div>
+
+<div style="overflow:hidden">
+  <button class="clear-btn" onclick="clearHistory()">Очистить историю</button>
+</div>
+
+<div id="history"><div class="empty">История пуста</div></div>
+
+<script>
+// ── Theme ──
+const THEME_KEY = 'insite_theme';
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeToggle').textContent = t === 'light' ? '☀️' : '🌙';
+}
+const systemTheme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+const savedTheme = localStorage.getItem(THEME_KEY) || systemTheme;
+applyTheme(savedTheme);
+
+window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', e => {
+  if (!localStorage.getItem(THEME_KEY)) applyTheme(e.matches ? 'light' : 'dark');
+});
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+});
+
+const WEBHOOK = 'https://bendernostur.duckdns.org:88/webhook/insite/task';
+const CONTEXT = 'E-T-E LABORATORY — luxury lighting atelier, Dubai';
+
+let history = JSON.parse(localStorage.getItem('insite_history') || '[]');
+
+function renderHistory() {
+  const el = document.getElementById('history');
+  if (history.length === 0) {
+    el.innerHTML = '<div class="empty">История пуста</div>';
+    return;
+  }
+  el.innerHTML = history.slice().reverse().map((e, i) => `
+    <div class="entry ${e.state}" id="entry-${history.length - 1 - i}">
+      <div class="entry-header">
+        <span class="dept-badge dept-${e.department}">${e.department}</span>
+        <span>${e.time}</span>
+        <span class="model">${e.model || ''}</span>
+      </div>
+      <div class="entry-task">${esc(e.task)}</div>
+      <div class="entry-result">${esc(e.result || '…')}</div>
+    </div>
+  `).join('');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function saveHistory() {
+  localStorage.setItem('insite_history', JSON.stringify(history));
+}
+
+function clearHistory() {
+  history = [];
+  saveHistory();
+  renderHistory();
+}
+
+async function sendTask() {
+  const dept = document.getElementById('dept').value;
+  const task = document.getElementById('task').value.trim();
+  if (!task) return;
+
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+
+  const idx = history.length;
+  history.push({
+    department: dept,
+    task,
+    time: new Date().toLocaleTimeString('ru'),
+    model: '',
+    result: '',
+    state: 'loading'
+  });
+  saveHistory();
+  renderHistory();
+
+  try {
+    const resp = await fetch(WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ department: dept, task, context: CONTEXT })
+    });
+    const data = await resp.json();
+    const d = Array.isArray(data) ? data[0] : data;
+    history[idx].result = d.result || JSON.stringify(d);
+    history[idx].model = d.model || '';
+    history[idx].state = '';
+  } catch (e) {
+    history[idx].result = 'Ошибка: ' + e.message;
+    history[idx].state = 'error';
+  }
+
+  saveHistory();
+  renderHistory();
+  btn.disabled = false;
+}
+
+document.getElementById('task').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendTask();
+});
+
+renderHistory();
+</script>
+</body>
+</html>
