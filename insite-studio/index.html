@@ -3011,8 +3011,8 @@ async function loadCabinetOrders() {
       box.innerHTML = '<div class="cab-empty">Проектов пока нет.<br>Отправьте заявку — здесь появится статус.</div>';
       return;
     }
-    const statusLabel = { pending: 'Ожидает', progress: 'В работе', done: 'Готово' };
-    const statusClass = { pending: 'cab-status-pending', progress: 'cab-status-progress', done: 'cab-status-done' };
+    const statusLabel = { new: 'Новая', pending: 'Ожидает', progress: 'В работе', revision: 'В правках', built: 'Готово', done: 'Завершено' };
+    const statusClass = { new: 'cab-status-pending', pending: 'cab-status-pending', progress: 'cab-status-progress', revision: 'cab-status-progress', built: 'cab-status-done', done: 'cab-status-done' };
     box.innerHTML = orders.slice().reverse().map(o => {
       const tpl  = o.template?.name || o.section || 'Проект';
       const date = o.submitted_at ? new Date(o.submitted_at).toLocaleDateString('ru-RU', {day:'numeric',month:'long',year:'numeric'}) : '';
