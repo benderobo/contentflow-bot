@@ -82,7 +82,7 @@
 
   .workspace {
     display: grid;
-    grid-template-columns: 1fr 360px;
+    grid-template-columns: 1fr 360px 360px;
     flex: 1;
     height: calc(100vh - 65px);
   }
@@ -165,8 +165,18 @@
 
   /* ── Preview ── */
   .preview-panel {
-    display: none !important;
+    display: flex !important;
     flex-direction: column; overflow: hidden; background: var(--bg);
+  }
+  .preview-panels-wrap {
+    display: flex; flex: 1; overflow: hidden; gap: 1px; background: var(--border);
+  }
+  .preview-panel-item {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); position: relative;
+  }
+  .preview-panel-label {
+    position: absolute; top: 12px; right: 12px; font-size: 10px; color: var(--muted);
+    background: rgba(0,0,0,.4); padding: 4px 8px; border-radius: 4px; z-index: 10;
   }
   .preview-toolbar {
     padding: 12px 24px; border-bottom: 1px solid var(--border);
@@ -622,6 +632,17 @@
     .preview-canvas { padding: 16px 8px; }
     .phone-frame { width: 260px; max-width: calc(100vw - 32px); }
     .phone-frame .phone-screen { height: 470px; overflow-x: hidden; }
+
+    /* Mobile: swipeable preview cards */
+    .preview-panels-wrap {
+      overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .preview-panels-wrap::-webkit-scrollbar { height: 2px; }
+    .preview-panels-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 1px; }
+    .preview-panel-item {
+      flex: 0 0 100%; scroll-snap-align: start;
+    }
 
     /* overlay phone: smaller */
     .tpl-overlay-phone { width: 260px; height: 500px; }
@@ -1240,10 +1261,24 @@
       <button class="zoom-btn" id="zoomIn">+</button>
     </div>
 
-    <div class="preview-canvas" id="previewCanvas">
-      <div class="preview-empty">
-        <div class="icon">💍</div>
-        <p>Выберите макет из галереи<br>для предпросмотра</p>
+    <div class="preview-panels-wrap" id="previewPanelsWrap">
+      <div class="preview-panel-item">
+        <div class="preview-panel-label">📱 Мобильный</div>
+        <div class="preview-canvas" id="previewCanvas">
+          <div class="preview-empty">
+            <div class="icon">💍</div>
+            <p>Выберите макет<br>для предпросмотра</p>
+          </div>
+        </div>
+      </div>
+      <div class="preview-panel-item">
+        <div class="preview-panel-label">🖥️ Десктоп</div>
+        <div class="preview-canvas" id="previewCanvasDesktop">
+          <div class="preview-empty">
+            <div class="icon">💍</div>
+            <p>Выберите макет<br>для предпросмотра</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2656,10 +2691,12 @@ function refreshPreview() {
   const s = tpl.scheme;
   const isDark = s.bg.startsWith('#0') || s.bg.startsWith('#1') || s.bg.startsWith('#2');
   const wmColor = isDark ? 'rgba(255,255,255,0.11)' : 'rgba(0,0,0,0.08)';
+
+  // ── Mobile preview ──
   const PREVIEW_SCALE = 0.55;
   const pw = 360;
   const scaledW = Math.round(pw / PREVIEW_SCALE);
-  document.getElementById('previewCanvas').innerHTML = `
+  const mobileHTML = `
     <div class="phone-frame" id="previewFrame" style="transform:scale(${zoom}); width:${pw}px;">
       <div class="phone-notch"></div>
       <div class="phone-screen" style="background:${s.bg};">
@@ -2672,6 +2709,25 @@ function refreshPreview() {
       </div>
     </div>
   `;
+  const mobileCanvas = document.getElementById('previewCanvas');
+  if (mobileCanvas) mobileCanvas.innerHTML = mobileHTML;
+
+  // ── Desktop preview ──
+  const pw2 = 800;
+  const PREVIEW_SCALE2 = 0.35;
+  const scaledW2 = Math.round(pw2 / PREVIEW_SCALE2);
+  const desktopHTML = `
+    <div style="transform:scale(${Math.min(zoom * 0.6, 1.2)}); transform-origin:top center; width:${pw2}px; background:${s.bg}; position:relative;">
+      <div style="position:sticky;top:50%;z-index:50;pointer-events:none;display:flex;justify-content:center;height:0;overflow:visible;">
+        <span style="font-size:13px;font-weight:900;letter-spacing:3px;color:${wmColor};transform:rotate(-30deg) translateY(-8px);white-space:nowrap;">© IN_SITE — PREVIEW</span>
+      </div>
+      <div style="width:${scaledW2}px; transform:scale(${PREVIEW_SCALE2}); transform-origin:top left; position:relative;">
+        ${miniPageHTML(tpl, 1)}
+      </div>
+    </div>
+  `;
+  const desktopCanvas = document.getElementById('previewCanvasDesktop');
+  if (desktopCanvas) desktopCanvas.innerHTML = desktopHTML;
 
   // ── Update visible palette preview in form panel ──
   const fp = document.getElementById('formTplPreview');
