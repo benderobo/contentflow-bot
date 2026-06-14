@@ -846,7 +846,7 @@ function renderDetail(order) {
       `Шаблон: ${(ord.template||{}).name || '—'} (${(ord.template||{}).tag || '—'})`,
       `Стиль: ${(ord.template||{}).vibe || '—'}`,
       `Палитра цветов: ${ord.color_palette?.name || 'шаблонная по умолчанию'}`,
-      `Интро-анимация: ${ord.intro || 'нет'}`,
+      \`Интро-анимация: ${INTRO_LABELS[ord.intro] || ord.intro || 'нет'}\`,
       `Шрифт: ${ord.font || 'стандартный'}`,
       '',
       // === БИЗНЕС И СРОКИ ===
@@ -883,7 +883,7 @@ function renderDetail(order) {
           // Split context into multiple fields to prevent truncation
           client_info: `${clientTypeLabel}\nКлиент: ${ord.couple_names || ord.client_name || ord.event_name || '—'}\nEmail: ${ord.client_email || '—'}`,
           project_details: `Тип проекта: ${ord.project_type || 'не указан'}\nШаблон: ${(ord.template||{}).name || '—'}\nНиша: ${ord.niche || 'не указана'}\nБюджет: ${ord.budget || 'не указан'}\nДедлайн: ${ord.deadline || 'гибкий'}`,
-          design_specs: `Стиль: ${(ord.template||{}).vibe || '—'}\nПалитра: ${ord.color_palette?.name || 'шаблонная'}\nИнтро: ${ord.intro || 'нет'}\nШрифт: ${ord.font || 'стандартный'}`,
+          design_specs: `Стиль: ${(ord.template||{}).vibe || '—'}\nПалитра: ${ord.color_palette?.name || 'шаблонная'}\nИнтро: ${INTRO_LABELS[ord.intro] || ord.intro || 'нет'}\nШрифт: ${ord.font || 'стандартный'}`,
           full_task_description: ord.task_description || ord.style_notes || 'Задача не указана',
           additional_wishes: ord.extra_notes || '',
           event_details: [
