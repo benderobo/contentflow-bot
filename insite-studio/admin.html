@@ -827,11 +827,35 @@ function renderDetail(order) {
     document.getElementById('chatMessages').appendChild(spinner);
     spinner.scrollIntoView({ behavior: 'smooth' });
     const orderContext = [
+      // === ОСНОВНАЯ ИНФОРМАЦИЯ ===
       `Клиент: ${ord.couple_names || ord.client_name || ord.event_name || '—'}`,
-      `Шаблон: ${(ord.template||{}).name || '—'}`,
-      ord.niche ? `Ниша: ${ord.niche}` : '',
-      ord.budget ? `Бюджет: ${ord.budget}` : '',
-      ord.extra_notes || ord.style_notes ? `Пожелания: ${(ord.extra_notes || ord.style_notes || '').slice(0,200)}` : '',
+      `Email: ${ord.client_email || '—'}`,
+      `Проект: ${ord.project_type || '—'}`,
+      '',
+      // === ДИЗАЙН ===
+      `Раздел: ${ord.section || '—'}`,
+      `Шаблон: ${(ord.template||{}).name || '—'} (${(ord.template||{}).tag || '—'})`,
+      `Палитра: ${ord.color_palette?.name || 'шаблонная'}`,
+      `Интро: ${ord.intro || '—'}`,
+      `Шрифт: ${ord.font || '—'}`,
+      '',
+      // === БИЗНЕС ===
+      `Ниша/категория: ${ord.niche || '—'}`,
+      `Бюджет: ${ord.budget || '—'}`,
+      `Дедлайн: ${ord.deadline || '—'}`,
+      '',
+      // === ПОЖЕЛАНИЯ И ДЕТАЛИ ===
+      `Задача: ${(ord.task_description || ord.style_notes || '—').slice(0,300)}`,
+      ord.extra_notes ? `Доп. пожелания: ${ord.extra_notes.slice(0,300)}` : '',
+      '',
+      // === СПЕЦИФИКА СОБЫТИЯ ===
+      ord.wedding_date ? `Дата события: ${ord.wedding_date}` : '',
+      ord.venue ? `Площадка: ${ord.venue}` : '',
+      ord.guest_count ? `Гостей: ${ord.guest_count}` : '',
+      ord.dresscode ? `Дресс-код: ${ord.dresscode}` : '',
+      '',
+      // === ССЫЛКИ И REFERENCIAS ===
+      ord.references?.length ? `Референсы: ${ord.references.length} изображений загружено` : '',
     ].filter(Boolean).join('\n');
     try {
       const res = await fetch('https://bendernostur.duckdns.org:88/webhook/insite/task', {
