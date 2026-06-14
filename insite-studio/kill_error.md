@@ -63,6 +63,20 @@
 - **Решение**: обновил JS-код ноды в n8n SQLite DB напрямую. Теперь: если `body.system_prompt` пришёл — использовать его + специализацию отдела; иначе — дефолтный промт. Перезапустил docker контейнер n8n. Проверил: Gemini отвечает согласно переданному system_prompt.
 - **Профилактика**: при добавлении нового поля в webhook-payload — СРАЗУ проверять код n8n ноды и убедиться что поле реально читается (`body.field`). Не считать что n8n "автоматически" использует всё что прислано.
 
+## 2026-06-14 · Полный аудит admin.html — системные баги
+
+- **Симптом**: лоадер зависал навсегда; статусы отображались неверно; правки не доходили до агента; спиннер оставался после ошибки; кнопки "Собрать сайт" и Redesign давали 504.
+- **Причина**: (1) ручной `showLoader()` + fetch-перехватчик оба увеличивали счётчик — `hideLoader()` вручную не вызывался; (2) `built` отсутствовал в `statusMap`; (3) `/webhook/insite/revision` не был зарегистрирован в n8n; (4) `checkAuth` не определена → ReferenceError каждые 30 сек; (5) `/api/build` endpoint не существует → 504.
+- **Решение**: убрали ручные `showLoader()` из кнопок; добавили `built` в statusMap; создали workflow `IN_SITE Revision Router` в n8n через API + `POST /activate`; заменили `checkAuth()` на просто `renderInbox()`; перенаправили buildSiteBtn и redesignBtn на `/webhook/insite/task`.
+- **Профилактика**: при добавлении нового статуса — грепать по `statusMap`, `statusLabel`, `statusSelect` во всех файлах. При добавлении нового webhook в код — сразу проверять `sqlite3 webhook_entity` и тестировать `curl -o /dev/null -w "%{http_code}"`. Лоадер: либо только fetch-перехватчик, либо только ручной — не оба сразу.
+
+## 2026-06-14 · n8n: новый workflow не регистрирует webhook без activeVersionId + /activate
+
+- **Симптом**: workflow вставлен в БД, `active=1`, webhook в `webhook_entity` есть, но n8n отвечает "Active version not found" на каждый запрос.
+- **Причина**: n8n требует запись в `workflow_history` с тем же `versionId` И установленного `activeVersionId` в `workflow_entity`. Даже после этого webhook не регистрируется пока не вызван `POST /api/v1/workflows/{id}/activate`.
+- **Решение**: вставить запись в `workflow_history`, установить `activeVersionId`, затем вызвать `POST http://localhost:5678/api/v1/workflows/{id}/activate` с API ключом.
+- **Профилактика**: никогда не вставлять workflow напрямую в SQLite без последующего вызова `/activate` через API. Всегда тестировать: `curl -sk -o /dev/null -w "%{http_code}" -X POST https://.../webhook/path`.
+
 ## 2026-06-13 · Personal cabinet status labels не совпадали с админкой
 
 - **Симптом**: в ЛК клиента статусы проектов показывались сырым словом (built, revision, new) без красивой подписи и цвета — админка показывала правильные.
