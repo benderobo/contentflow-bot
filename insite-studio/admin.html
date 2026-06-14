@@ -895,14 +895,17 @@ function renderDetail(order) {
       <span style="color:var(--muted);font-size:12px;">Обрабатывает<span class="agent-spinner"></span></span>`;
     document.getElementById('chatMessages').appendChild(spinner);
     spinner.scrollIntoView({ behavior: 'smooth' });
-    // Determine client type based on section
+    // Determine client type based on section + project_type
     const sectionLabels = {
       wedding: 'СВАДЕБНЫЙ ПРОЕКТ — Клиент: НЕВЕСТА И ЖЕНИХ',
       tilda: 'БИЗНЕС-САЙТ — Клиент: УСЛУГА ИЛИ КОМПАНИЯ',
       portfolio: 'ПОРТФОЛИО ФОТОГРАФА/ДИЗАЙНЕРА — Клиент: ПРОФЕССИОНАЛ',
       events: 'ПРАЗДНИЧНЫЙ САЙТ — Клиент: ОРГАНИЗАТОРЫ СОБЫТИЯ'
     };
-    const clientTypeLabel = sectionLabels[ord.section] || 'ВЕБ-ПРОЕКТ';
+    const baseLabel = sectionLabels[ord.section] || 'ВЕБ-ПРОЕКТ';
+    const clientTypeLabel = ord.project_type
+      ? `${baseLabel}\n⚠️ ТИП САЙТА: "${ord.project_type}" — создавай именно этот формат, не общий свадебный сайт`
+      : baseLabel;
 
     const orderContext = [
       // === ТИП И ОСНОВНАЯ ИНФОРМАЦИЯ ===
