@@ -524,6 +524,16 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 });
 
 // ── Labels ──
+const SYSTEM_PROMPT = `Ты — элитный digital-архитектор, UX-психолог, CRO-стратег и специалист по управлению вниманием пользователя (Senior UX Architect + UI Art Director + Behavioral Psychologist + Neuro Marketing Strategist).
+
+Твоя задача — создавать сайты, которые визуально поражают, вызывают доверие за секунды, удерживают внимание, ведут пользователя по нужному сценарию и превращают хаотичный интерфейс в идеально продуманную систему.
+
+ГЛАВНЫЙ ПРИНЦИП: Сайт — это управляемый психологический маршрут пользователя. Каждый экран должен захватывать внимание, создавать эмоцию, снижать когнитивную нагрузку, усиливать доверие и подталкивать к действию.
+
+СТАНДАРТЫ: Уровень Apple / Stripe / Linear / Airbnb. Большие отступы, чистая композиция, сильная типографика, глубокая визуальная иерархия, cinematic layouts, controlled minimalism, premium motion, focus-driven interfaces.
+
+ВАЖНО: Всегда строй ИМЕННО тот тип сайта, который указан в заявке. Не обобщай. Save the Date — это Save the Date. Love Story — это Love Story. Портфолио — это портфолио. Не подменяй тип.`;
+
 const INTRO_LABELS = {
   none:      'Без интро',
   fade:      'Fade In — плавное появление',
@@ -783,16 +793,16 @@ function renderDetail(order) {
     ].filter(Boolean).join('\n');
     const WEBHOOK = 'https://bendernostur.duckdns.org:88/webhook/insite/task';
     const AGENTS = [
-      { dept: 'creative_manager', task: `Проанализируй заявку и составь краткий creative brief:\n${orderContext}` },
-      { dept: 'designer', task: `На основе заявки предложи концепцию дизайна (цвета, стиль, UX):\n${orderContext}` },
-      { dept: 'frontend', task: `Опиши структуру сайта и ключевые секции для реализации:\n${orderContext}` },
+      { dept: 'creative_manager', task: `${SYSTEM_PROMPT}\n\n---\n\nПроанализируй заявку и составь краткий creative brief:\n${orderContext}` },
+      { dept: 'designer', task: `${SYSTEM_PROMPT}\n\n---\n\nНа основе заявки предложи концепцию дизайна (цвета, стиль, UX):\n${orderContext}` },
+      { dept: 'frontend', task: `${SYSTEM_PROMPT}\n\n---\n\nОпиши структуру сайта и ключевые секции для реализации:\n${orderContext}` },
     ];
     let allNotes = [];
     for (const ag of AGENTS) {
       try {
         const res = await fetch(WEBHOOK, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ department: ag.dept, task: ag.task, context: `E-T-E LABORATORY — IN_SITE Studio. Заявка #${order.id}.`, order_id: order.id }),
+          body: JSON.stringify({ department: ag.dept, task: ag.task, system_prompt: SYSTEM_PROMPT, context: `E-T-E LABORATORY — IN_SITE Studio. Заявка #${order.id}.`, order_id: order.id }),
         });
         if (res.ok) {
           const raw = await res.json();
@@ -949,6 +959,7 @@ function renderDetail(order) {
         body: JSON.stringify({
           // Agent command and context
           department: dept,
+          system_prompt: SYSTEM_PROMPT,
           task,
           order_id: ord.id,
 
