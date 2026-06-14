@@ -1362,7 +1362,12 @@
         </div>
 
         <div class="form-group">
-          <label>Пожелания по стилю</label>
+          <label>Текст о себе / О нас <span style="font-weight:400;color:var(--muted);font-size:11px;">(пойдёт на сайт)</span></label>
+          <textarea id="aboutText" placeholder="Мы — Анна и Дмитрий. Наша история началась в 2019 году..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Пожелания по стилю <span style="font-weight:400;color:var(--muted);font-size:11px;">(инструкции для дизайнера)</span></label>
           <textarea id="taskDesc" placeholder="Цвета, шрифты, настроение, примеры нравящихся сайтов..."></textarea>
         </div>
 
@@ -2921,6 +2926,7 @@ async function doSend() {
       project_type:    document.getElementById('projectType').value,
       venue:           document.getElementById('venue').value,
       template:        { id: selectedTemplate.id, name: selectedTemplate.name, tag: selectedTemplate.tag },
+      about_text:      document.getElementById('aboutText').value,
       style_notes:     document.getElementById('taskDesc').value,
       budget:          selectedBudget,
       dresscode:       document.getElementById('dresscode').value,

@@ -861,8 +861,11 @@ function renderDetail(order) {
       `Бюджет: ${ord.budget || 'не указан'}`,
       `Дедлайн: ${ord.deadline || 'гибкий'}`,
       '',
-      // === ПОЛНОЕ ОПИСАНИЕ ЗАДАЧИ ===
-      `ЗАДАЧА И ТРЕБОВАНИЯ:\n${ord.task_description || ord.style_notes || 'Задача не указана'}`,
+      // === ТЕКСТ ДЛЯ САЙТА (контент от клиента, размещается на странице) ===
+      ord.about_text ? `ТЕКСТ ДЛЯ САЙТА (О нас / история пары — вставить в соответствующую секцию сайта, НЕ интерпретировать как тип проекта):\n${ord.about_text}` : '',
+      '',
+      // === ИНСТРУКЦИИ ДИЗАЙНЕРУ ===
+      `ПОЖЕЛАНИЯ ПО СТИЛЮ (инструкции по дизайну, не текст для сайта):\n${ord.task_description || ord.style_notes || 'Не указаны'}`,
       ord.extra_notes ? `\nДОПОЛНИТЕЛЬНЫЕ ПОЖЕЛАНИЯ:\n${ord.extra_notes}` : '',
       '',
       // === СПЕЦИФИКА СОБЫТИЯ (если это свадьба/праздник) ===
@@ -891,7 +894,8 @@ function renderDetail(order) {
           client_info: `${clientTypeLabel}\nКлиент: ${ord.couple_names || ord.client_name || ord.event_name || '—'}\nEmail: ${ord.client_email || '—'}`,
           project_details: `Тип проекта: ${ord.project_type || 'не указан'}\nШаблон: ${(ord.template||{}).name || '—'}\nНиша: ${ord.niche || 'не указана'}\nБюджет: ${ord.budget || 'не указан'}\nДедлайн: ${ord.deadline || 'гибкий'}`,
           design_specs: `Стиль: ${(ord.template||{}).vibe || '—'}\nПалитра: ${ord.color_palette?.name || 'шаблонная'}\nИнтро: ${INTRO_LABELS[ord.intro] || ord.intro || 'нет'}\nШрифт: ${ord.font || 'стандартный'}`,
-          full_task_description: ord.task_description || ord.style_notes || 'Задача не указана',
+          site_content_about: ord.about_text ? `ТЕКСТ ДЛЯ САЙТА (О нас — вставить на страницу, НЕ определяет тип проекта): ${ord.about_text}` : '',
+          full_task_description: `ПОЖЕЛАНИЯ ПО ДИЗАЙНУ: ${ord.task_description || ord.style_notes || 'Не указаны'}`,
           additional_wishes: ord.extra_notes || '',
           event_details: [
             ord.wedding_date ? `Дата: ${ord.wedding_date}` : '',
