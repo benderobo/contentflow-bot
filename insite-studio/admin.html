@@ -568,7 +568,7 @@ function saveRevision(orderId, text) {
   } catch {}
 }
 
-setInterval(() => { if (checkAuth()) renderInbox(); }, 30000);
+setInterval(() => renderInbox(), 30000);
 
 let activeOrderId = null;
 
@@ -589,8 +589,8 @@ async function renderInbox() {
   [...orders].reverse().forEach(order => {
     const card = document.createElement('div');
     card.className = 'order-card' + (order.id === activeOrderId ? ' active' : '');
-    const statusMap = { new: 'status-new', revision: 'status-revision', done: 'status-done' };
-    const statusLabel = { new: 'Новая', revision: 'В правках', done: 'Готово' };
+    const statusMap = { new: 'status-new', revision: 'status-revision', done: 'status-done', built: 'status-done' };
+    const statusLabel = { new: 'Новая', revision: 'В правках', done: 'Завершено', built: 'Собран ✅' };
     card.innerHTML = `
       <div class="order-dot ${order.read ? 'read' : ''}"></div>
       <div class="order-name">${esc(order.couple_names || order.client_name || 'Без имени')}</div>
@@ -639,7 +639,8 @@ function renderDetail(order) {
         <select class="status-select" id="statusSelect">
           <option value="new"      ${order.status==='new'      ?'selected':''}>🔵 Новая</option>
           <option value="revision" ${order.status==='revision' ?'selected':''}>🟡 В правках</option>
-          <option value="done"     ${order.status==='done'     ?'selected':''}>🟢 Готово</option>
+          <option value="built"    ${order.status==='built'    ?'selected':''}>✅ Собран</option>
+          <option value="done"     ${order.status==='done'     ?'selected':''}>🟢 Завершено</option>
         </select>
         <button class="send-agent-btn" id="deleteOrderBtn" title="Удалить заявку" style="background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.25);">🗑</button>
       </div>
@@ -743,47 +744,60 @@ function renderDetail(order) {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
       body: JSON.stringify({ status: e.target.value })
     });
+    const freshOrders = await getOrders();
+    renderDetail(freshOrders.find(x => x.id === order.id) || order);
     renderInbox();
   });
 
   document.getElementById('buildSiteBtn').addEventListener('click', async () => {
     const btn = document.getElementById('buildSiteBtn');
-    btn.disabled = true; btn.textContent = '⏳ Собираю…'; showLoader('Собираю сайт…');
+    btn.disabled = true; btn.textContent = '⏳ Собираю…';
     const brief = [
+      `ЗАДАЧА: Собери готовый сайт по всем параметрам заявки.`,
       `Клиент: ${order.couple_names || order.client_name || order.event_name || '—'}`,
-      order.niche ? `Ниша: ${order.niche}` : '',
-      `Шаблон/стиль: ${(order.template||{}).name || '—'}`,
+      order.project_type ? `Тип сайта: ${order.project_type}` : '',
+      `Шаблон: ${(order.template||{}).name || '—'} (${(order.template||{}).tag || ''})`,
       order.color_palette?.name ? `Палитра: ${order.color_palette.name}` : '',
       order.budget ? `Бюджет: ${order.budget}` : '',
-      order.task_description || order.style_notes ? `Задача: ${order.task_description || order.style_notes}` : '',
-      order.extra_notes ? `Пожелания: ${order.extra_notes}` : '',
-      order.client_email ? `Контакт для формы: ${order.client_email}` : '',
+      order.about_text ? `Текст о клиенте (вставить на сайт): ${order.about_text}` : '',
+      order.task_description || order.style_notes ? `Пожелания по стилю: ${order.task_description || order.style_notes}` : '',
+      order.extra_notes ? `Доп. пожелания: ${order.extra_notes}` : '',
+      order.wedding_date ? `Дата: ${order.wedding_date}` : '',
+      order.venue ? `Площадка: ${order.venue}` : '',
+      order.client_email ? `Email: ${order.client_email}` : '',
     ].filter(Boolean).join('\n');
     try {
-      const res = await fetch(`${API_BASE}/build`, {
+      const res = await fetch('https://bendernostur.duckdns.org:88/webhook/insite/task', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
-        body: JSON.stringify({ order_id: order.id, brief })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department: 'frontend', system_prompt: SYSTEM_PROMPT, task: brief, order_id: order.id, order })
       });
-      const d = await res.json();
-      if (d.ok) {
-        showToast('✅ Сайт собран', 'success');
+      const raw = await res.json();
+      const items = Array.isArray(raw) ? raw : [raw];
+      const note = { department: 'frontend', model: items[0]?.model || '', text: items[0]?.result || items[0]?.text || '', ts: new Date().toISOString() };
+      if (note.text) {
+        await fetch(`${API_BASE}/orders/${order.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
+          body: JSON.stringify({ agent_notes: [note], status: 'built' })
+        });
+        showToast('✅ Сайт собран агентом', 'success');
         const fresh = await getOrders();
         renderDetail(fresh.find(x => x.id === order.id) || order);
         renderInbox();
       } else {
-        showToast('Ошибка: ' + (d.error || 'не удалось'), 'error');
-        btn.disabled = false; btn.textContent = '🏗 Собрать сайт';
+        showToast('Агент не вернул результат', 'error');
       }
+      btn.disabled = false; btn.textContent = '🏗 Собрать сайт';
     } catch (e) {
-      showToast('Ошибка сети: ' + e.message, 'error');
+      showToast('Ошибка: ' + e.message, 'error');
       btn.disabled = false; btn.textContent = '🏗 Собрать сайт';
     }
   });
 
   document.getElementById('runPipelineBtn').addEventListener('click', async () => {
     const btn = document.getElementById('runPipelineBtn');
-    btn.disabled = true; btn.textContent = '⏳ Запуск…'; showLoader('Запускаю агентов…');
+    btn.disabled = true; btn.textContent = '⏳ Запуск…';
     const orderContext = [
       `Клиент: ${order.couple_names || order.client_name || order.event_name || '—'}`,
       `Шаблон: ${(order.template||{}).name || '—'}`,
@@ -873,7 +887,7 @@ function renderDetail(order) {
         }),
       });
     } catch {}
-    if (order.status === 'new') {
+    if (order.status !== 'done') {
       fetch(`${API_BASE}/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
@@ -1000,7 +1014,10 @@ function renderDetail(order) {
         });
       }
       agentTaskEl.value = '';
-    } catch (e) { showToast('Ошибка агента: ' + e.message, 'error'); }
+    } catch (e) {
+      showToast('Ошибка агента: ' + e.message, 'error');
+      document.getElementById('agentSpinner')?.remove();
+    }
     btn.disabled = false; btn.textContent = '▶ Агент';
     const freshOrders = await getOrders();
     renderDetail(freshOrders.find(x => x.id === ord.id) || ord);
@@ -1021,34 +1038,41 @@ function renderDetail(order) {
   // ── Redesign button ──
   document.getElementById('redesignBtn').addEventListener('click', async () => {
     const btn = document.getElementById('redesignBtn');
-    btn.disabled = true; btn.textContent = '⏳ Redesign…'; showLoader('Генерирую редизайн…');
+    btn.disabled = true; btn.textContent = '⏳ Redesign…';
     const brief = [
-      `REDESIGN: создай АЛЬТЕРНАТИВНЫЙ вариант сайта с другим визуальным стилем.`,
+      `REDESIGN: создай АЛЬТЕРНАТИВНЫЙ вариант концепции сайта с другим визуальным стилем.`,
       `Клиент: ${order.couple_names || order.client_name || order.event_name || '—'}`,
-      order.niche ? `Ниша: ${order.niche}` : '',
-      `Шаблон/стиль: ${(order.template||{}).name || '—'}`,
-      order.color_palette?.name ? `Исходная палитра: ${order.color_palette.name} — выбери другую` : '',
-      order.budget ? `Бюджет: ${order.budget}` : '',
-      order.task_description || order.style_notes ? `Задача: ${order.task_description || order.style_notes}` : '',
-      order.extra_notes ? `Пожелания: ${order.extra_notes}` : '',
-      order.client_email ? `Контакт: ${order.client_email}` : '',
-      `Сделай другую цветовую гамму, другую типографику и другую компоновку секций.`,
+      order.project_type ? `Тип сайта: ${order.project_type}` : '',
+      `Шаблон: ${(order.template||{}).name || '—'}`,
+      order.color_palette?.name ? `Исходная палитра: ${order.color_palette.name} — выбери ДРУГУЮ` : '',
+      order.task_description || order.style_notes ? `Пожелания клиента: ${order.task_description || order.style_notes}` : '',
+      order.extra_notes ? `Доп. пожелания: ${order.extra_notes}` : '',
+      `Требования: другая цветовая гамма, другая типографика, другая компоновка секций. Объясни почему это лучше.`,
     ].filter(Boolean).join('\n');
     try {
-      const res = await fetch(`${API_BASE}/build`, {
+      const res = await fetch('https://bendernostur.duckdns.org:88/webhook/insite/task', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
-        body: JSON.stringify({ order_id: order.id + '_r' + Date.now().toString(36), brief, link_to: order.id }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department: 'designer', system_prompt: SYSTEM_PROMPT, task: brief, order_id: order.id, order })
       });
-      const d = await res.json();
-      if (d.ok) {
-        showToast('✨ Redesign готов', 'success');
-        window.open(d.url, '_blank');
+      const raw = await res.json();
+      const items = Array.isArray(raw) ? raw : [raw];
+      const note = { department: 'designer', model: items[0]?.model || '', text: items[0]?.result || items[0]?.text || '', ts: new Date().toISOString() };
+      if (note.text) {
+        await fetch(`${API_BASE}/orders/${order.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
+          body: JSON.stringify({ agent_notes: [note] })
+        });
+        showToast('✨ Redesign концепция готова', 'success');
+        const fresh = await getOrders();
+        renderDetail(fresh.find(x => x.id === order.id) || order);
+        renderInbox();
       } else {
-        showToast('Ошибка: ' + (d.error || 'не удалось'), 'error');
+        showToast('Агент не вернул результат', 'error');
       }
     } catch (e) {
-      showToast('Ошибка сети: ' + e.message, 'error');
+      showToast('Ошибка: ' + e.message, 'error');
     }
     btn.disabled = false; btn.textContent = '✨ Redesign';
   });
