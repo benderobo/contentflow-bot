@@ -1308,7 +1308,16 @@
       <!-- WEDDING fields -->
       <div id="fields-wedding">
         <div class="form-group">
-          <label>Имена молодожёнов *</label>
+          <label>Кто заказывает сайт?</label>
+          <select id="clientRole" onchange="updateWeddingFormRole()">
+            <option value="couple">Молодожёны (свадебный сайт)</option>
+            <option value="photographer">Фотограф / видеограф</option>
+            <option value="agency">Свадебное агентство / организатор</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label id="coupleNamesLabel">Имена молодожёнов *</label>
           <input type="text" id="coupleNames" placeholder="Анна & Дмитрий">
         </div>
 
@@ -2417,6 +2426,20 @@ function buildGallery(sectionId) {
 const SECTION_HEADERS = { wedding:'Детали проекта', tilda:'Детали заказа', portfolio:'Детали портфолио', events:'Детали мероприятия' };
 const ALL_FIELD_IDS   = ['fields-wedding','fields-tilda','fields-portfolio','fields-events'];
 
+function updateWeddingFormRole() {
+  const role = document.getElementById('clientRole')?.value || 'couple';
+  const label = document.getElementById('coupleNamesLabel');
+  const namesInput = document.getElementById('coupleNames');
+  const roleLabels = {
+    couple:       { label: 'Имена молодожёнов *',        placeholder: 'Анна & Дмитрий' },
+    photographer: { label: 'Ваше имя / имена *',         placeholder: 'Ольга & Георгий (фотографы)' },
+    agency:       { label: 'Название агентства / имя *', placeholder: 'Happy Day Agency' },
+  };
+  const cfg = roleLabels[role] || roleLabels.couple;
+  if (label) label.textContent = cfg.label;
+  if (namesInput) namesInput.placeholder = cfg.placeholder;
+}
+
 function switchSection(sectionId) {
   activeSection = sectionId;
   document.querySelectorAll('.sec-btn').forEach(b => b.classList.toggle('active', b.dataset.sec === sectionId));
@@ -2887,8 +2910,10 @@ async function doSend() {
     const email = document.getElementById('clientEmail').value.trim();
     if (!selectedTemplate || !names || !email) { validMsg.style.display = 'block'; return; }
     validMsg.style.display = 'none';
+    const clientRole = document.getElementById('clientRole')?.value || 'couple';
     payload = {
       section:         'wedding',
+      client_role:     clientRole,
       couple_names:    names,
       client_email:    email,
       phone:           document.getElementById('clientPhone').value,

@@ -833,7 +833,14 @@ function renderDetail(order) {
       portfolio: 'ПОРТФОЛИО ФОТОГРАФА/ДИЗАЙНЕРА — Клиент: ПРОФЕССИОНАЛ',
       events: 'ПРАЗДНИЧНЫЙ САЙТ — Клиент: ОРГАНИЗАТОРЫ СОБЫТИЯ'
     };
-    const clientTypeLabel = sectionLabels[ord.section] || 'ВЕБ-ПРОЕКТ';
+    const weddingRoleLabels = {
+      couple:       'СВАДЕБНЫЙ ПРОЕКТ — Клиент: НЕВЕСТА И ЖЕНИХ',
+      photographer: 'СВАДЕБНЫЙ РАЗДЕЛ — Клиент: ФОТОГРАФ / ВИДЕОГРАФ (создаёт свой бизнес-сайт, НЕ свадебное приглашение)',
+      agency:       'СВАДЕБНЫЙ РАЗДЕЛ — Клиент: СВАДЕБНОЕ АГЕНТСТВО / ОРГАНИЗАТОР (создаёт корпоративный сайт)',
+    };
+    const clientTypeLabel = ord.section === 'wedding' && ord.client_role
+      ? (weddingRoleLabels[ord.client_role] || sectionLabels.wedding)
+      : (sectionLabels[ord.section] || 'ВЕБ-ПРОЕКТ');
 
     const orderContext = [
       // === ТИП И ОСНОВНАЯ ИНФОРМАЦИЯ ===
