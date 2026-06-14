@@ -826,36 +826,46 @@ function renderDetail(order) {
       <span style="color:var(--muted);font-size:12px;">Обрабатывает<span class="agent-spinner"></span></span>`;
     document.getElementById('chatMessages').appendChild(spinner);
     spinner.scrollIntoView({ behavior: 'smooth' });
+    // Determine client type based on section
+    const sectionLabels = {
+      wedding: 'СВАДЕБНЫЙ ПРОЕКТ — Клиент: НЕВЕСТА И ЖЕНИХ',
+      tilda: 'БИЗНЕС-САЙТ — Клиент: УСЛУГА ИЛИ КОМПАНИЯ',
+      portfolio: 'ПОРТФОЛИО ФОТОГРАФА/ДИЗАЙНЕРА — Клиент: ПРОФЕССИОНАЛ',
+      events: 'ПРАЗДНИЧНЫЙ САЙТ — Клиент: ОРГАНИЗАТОРЫ СОБЫТИЯ'
+    };
+    const clientTypeLabel = sectionLabels[ord.section] || 'ВЕБ-ПРОЕКТ';
+
     const orderContext = [
-      // === ОСНОВНАЯ ИНФОРМАЦИЯ ===
+      // === ТИП И ОСНОВНАЯ ИНФОРМАЦИЯ ===
+      clientTypeLabel,
       `Клиент: ${ord.couple_names || ord.client_name || ord.event_name || '—'}`,
       `Email: ${ord.client_email || '—'}`,
-      `Проект: ${ord.project_type || '—'}`,
+      `Проект: ${ord.project_type || 'не указан'}`,
       '',
-      // === ДИЗАЙН ===
-      `Раздел: ${ord.section || '—'}`,
+      // === ДИЗАЙН И СТИЛЬ ===
       `Шаблон: ${(ord.template||{}).name || '—'} (${(ord.template||{}).tag || '—'})`,
-      `Палитра: ${ord.color_palette?.name || 'шаблонная'}`,
-      `Интро: ${ord.intro || '—'}`,
-      `Шрифт: ${ord.font || '—'}`,
+      `Стиль: ${(ord.template||{}).vibe || '—'}`,
+      `Палитра цветов: ${ord.color_palette?.name || 'шаблонная по умолчанию'}`,
+      `Интро-анимация: ${ord.intro || 'нет'}`,
+      `Шрифт: ${ord.font || 'стандартный'}`,
       '',
-      // === БИЗНЕС ===
-      `Ниша/категория: ${ord.niche || '—'}`,
-      `Бюджет: ${ord.budget || '—'}`,
-      `Дедлайн: ${ord.deadline || '—'}`,
+      // === БИЗНЕС И СРОКИ ===
+      `Ниша/категория: ${ord.niche || 'не указана'}`,
+      `Бюджет: ${ord.budget || 'не указан'}`,
+      `Дедлайн: ${ord.deadline || 'гибкий'}`,
       '',
-      // === ПОЖЕЛАНИЯ И ДЕТАЛИ ===
-      `Задача: ${(ord.task_description || ord.style_notes || '—').slice(0,300)}`,
-      ord.extra_notes ? `Доп. пожелания: ${ord.extra_notes.slice(0,300)}` : '',
+      // === ПОЛНОЕ ОПИСАНИЕ ЗАДАЧИ ===
+      `ЗАДАЧА И ТРЕБОВАНИЯ:\n${ord.task_description || ord.style_notes || 'Задача не указана'}`,
+      ord.extra_notes ? `\nДОПОЛНИТЕЛЬНЫЕ ПОЖЕЛАНИЯ:\n${ord.extra_notes}` : '',
       '',
-      // === СПЕЦИФИКА СОБЫТИЯ ===
+      // === СПЕЦИФИКА СОБЫТИЯ (если это свадьба/праздник) ===
       ord.wedding_date ? `Дата события: ${ord.wedding_date}` : '',
       ord.venue ? `Площадка: ${ord.venue}` : '',
-      ord.guest_count ? `Гостей: ${ord.guest_count}` : '',
+      ord.guest_count ? `Количество гостей: ${ord.guest_count}` : '',
       ord.dresscode ? `Дресс-код: ${ord.dresscode}` : '',
       '',
-      // === ССЫЛКИ И REFERENCIAS ===
-      ord.references?.length ? `Референсы: ${ord.references.length} изображений загружено` : '',
+      // === МАТЕРИАЛЫ И РЕФЕРЕНСЫ ===
+      ord.references?.length ? `Загруженные референсы: ${ord.references.length} изображений\n(Клиент предоставил примеры стиля, который ему нравится)` : 'Референсы не загружены',
     ].filter(Boolean).join('\n');
     try {
       const res = await fetch('https://bendernostur.duckdns.org:88/webhook/insite/task', {
