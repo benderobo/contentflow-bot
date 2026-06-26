@@ -253,6 +253,39 @@
   .agent-spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid rgba(16,185,129,.3); border-top-color: #10b981; border-radius: 50%; animation: spin .7s linear infinite; margin-left: 6px; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Global page loader ── */
+  #pageLoader {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px;
+    background: rgba(15,15,19,.85);
+    backdrop-filter: blur(8px);
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s;
+  }
+  #pageLoader.visible { opacity: 1; pointer-events: all; }
+  .pl-ring {
+    width: 52px; height: 52px; border-radius: 50%;
+    border: 3px solid rgba(124,106,247,.15);
+    border-top-color: #7c6af7;
+    border-right-color: #a78bfa;
+    animation: spin .9s cubic-bezier(.4,0,.2,1) infinite;
+  }
+  .pl-dots {
+    display: flex; gap: 6px;
+  }
+  .pl-dots span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent2); opacity: .3;
+    animation: plDot 1.2s ease-in-out infinite;
+  }
+  .pl-dots span:nth-child(2) { animation-delay: .2s; }
+  .pl-dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes plDot { 0%,80%,100%{opacity:.3;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+  .pl-label {
+    font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase;
+  }
+
   /* Agent send row */
   .agent-send-row {
     border-top: 1px solid var(--border); padding: 10px 20px;
@@ -362,6 +395,13 @@
 </head>
 <body>
 
+<!-- Global loader -->
+<div id="pageLoader">
+  <div class="pl-ring"></div>
+  <div class="pl-dots"><span></span><span></span><span></span></div>
+  <div class="pl-label" id="plLabel">Загрузка…</div>
+</div>
+
 <!-- Lightbox -->
 <div class="lightbox" id="lb"><span class="lb-close" id="lbClose">✕</span><img id="lbImg" src="" alt=""></div>
 <div class="toast" id="toast"></div>
@@ -413,6 +453,35 @@
 </div>
 
 <script>
+// ── Loader ──
+let _loaderCount = 0, _loaderTimer = null;
+const _loader = () => document.getElementById('pageLoader');
+const _plLabel = () => document.getElementById('plLabel');
+function showLoader(label) {
+  _loaderCount++;
+  if (_loaderTimer) { clearTimeout(_loaderTimer); _loaderTimer = null; }
+  if (_plLabel()) _plLabel().textContent = label || 'Загрузка…';
+  if (_loader()) _loader().classList.add('visible');
+}
+function hideLoader() {
+  _loaderCount = Math.max(0, _loaderCount - 1);
+  if (_loaderCount === 0) {
+    _loaderTimer = setTimeout(() => { if (_loader()) _loader().classList.remove('visible'); }, 180);
+  }
+}
+// Auto-intercept slow fetches (>300ms show loader)
+const _origFetch = window.fetch;
+window.fetch = function(...args) {
+  const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+  const isApi = url.includes('/insite/') || url.includes('/webhook/') || url.includes('bendernostur');
+  let timer = null;
+  if (isApi) timer = setTimeout(() => showLoader(), 300);
+  return _origFetch.apply(this, args).finally(() => {
+    if (timer) clearTimeout(timer);
+    if (isApi) hideLoader();
+  });
+};
+
 // ── Theme ──
 const THEME_KEY = 'insite_theme';
 function applyTheme(t) {
@@ -455,6 +524,16 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 });
 
 // ── Labels ──
+const SYSTEM_PROMPT = `Ты — элитный digital-архитектор, UX-психолог, CRO-стратег и специалист по управлению вниманием пользователя (Senior UX Architect + UI Art Director + Behavioral Psychologist + Neuro Marketing Strategist).
+
+Твоя задача — создавать сайты, которые визуально поражают, вызывают доверие за секунды, удерживают внимание, ведут пользователя по нужному сценарию и превращают хаотичный интерфейс в идеально продуманную систему.
+
+ГЛАВНЫЙ ПРИНЦИП: Сайт — это управляемый психологический маршрут пользователя. Каждый экран должен захватывать внимание, создавать эмоцию, снижать когнитивную нагрузку, усиливать доверие и подталкивать к действию.
+
+СТАНДАРТЫ: Уровень Apple / Stripe / Linear / Airbnb. Большие отступы, чистая композиция, сильная типографика, глубокая визуальная иерархия, cinematic layouts, controlled minimalism, premium motion, focus-driven interfaces.
+
+ВАЖНО: Всегда строй ИМЕННО тот тип сайта, который указан в заявке. Не обобщай. Save the Date — это Save the Date. Love Story — это Love Story. Портфолио — это портфолио. Не подменяй тип.`;
+
 const INTRO_LABELS = {
   none:      'Без интро',
   fade:      'Fade In — плавное появление',
@@ -489,7 +568,7 @@ function saveRevision(orderId, text) {
   } catch {}
 }
 
-setInterval(() => { if (checkAuth()) renderInbox(); }, 30000);
+setInterval(() => renderInbox(), 30000);
 
 let activeOrderId = null;
 
@@ -510,8 +589,8 @@ async function renderInbox() {
   [...orders].reverse().forEach(order => {
     const card = document.createElement('div');
     card.className = 'order-card' + (order.id === activeOrderId ? ' active' : '');
-    const statusMap = { new: 'status-new', revision: 'status-revision', done: 'status-done' };
-    const statusLabel = { new: 'Новая', revision: 'В правках', done: 'Готово' };
+    const statusMap = { new: 'status-new', revision: 'status-revision', done: 'status-done', built: 'status-done' };
+    const statusLabel = { new: 'Новая', revision: 'В правках', done: 'Завершено', built: 'Собран ✅' };
     card.innerHTML = `
       <div class="order-dot ${order.read ? 'read' : ''}"></div>
       <div class="order-name">${esc(order.couple_names || order.client_name || 'Без имени')}</div>
@@ -560,7 +639,8 @@ function renderDetail(order) {
         <select class="status-select" id="statusSelect">
           <option value="new"      ${order.status==='new'      ?'selected':''}>🔵 Новая</option>
           <option value="revision" ${order.status==='revision' ?'selected':''}>🟡 В правках</option>
-          <option value="done"     ${order.status==='done'     ?'selected':''}>🟢 Готово</option>
+          <option value="built"    ${order.status==='built'    ?'selected':''}>✅ Собран</option>
+          <option value="done"     ${order.status==='done'     ?'selected':''}>🟢 Завершено</option>
         </select>
         <button class="send-agent-btn" id="deleteOrderBtn" title="Удалить заявку" style="background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.25);">🗑</button>
       </div>
@@ -664,6 +744,8 @@ function renderDetail(order) {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
       body: JSON.stringify({ status: e.target.value })
     });
+    const freshOrders = await getOrders();
+    renderDetail(freshOrders.find(x => x.id === order.id) || order);
     renderInbox();
   });
 
@@ -671,33 +753,44 @@ function renderDetail(order) {
     const btn = document.getElementById('buildSiteBtn');
     btn.disabled = true; btn.textContent = '⏳ Собираю…';
     const brief = [
+      `ЗАДАЧА: Собери готовый сайт по всем параметрам заявки.`,
       `Клиент: ${order.couple_names || order.client_name || order.event_name || '—'}`,
-      order.niche ? `Ниша: ${order.niche}` : '',
-      `Шаблон/стиль: ${(order.template||{}).name || '—'}`,
+      order.project_type ? `Тип сайта: ${order.project_type}` : '',
+      `Шаблон: ${(order.template||{}).name || '—'} (${(order.template||{}).tag || ''})`,
       order.color_palette?.name ? `Палитра: ${order.color_palette.name}` : '',
       order.budget ? `Бюджет: ${order.budget}` : '',
-      order.task_description || order.style_notes ? `Задача: ${order.task_description || order.style_notes}` : '',
-      order.extra_notes ? `Пожелания: ${order.extra_notes}` : '',
-      order.client_email ? `Контакт для формы: ${order.client_email}` : '',
+      order.about_text ? `Текст о клиенте (вставить на сайт): ${order.about_text}` : '',
+      order.task_description || order.style_notes ? `Пожелания по стилю: ${order.task_description || order.style_notes}` : '',
+      order.extra_notes ? `Доп. пожелания: ${order.extra_notes}` : '',
+      order.wedding_date ? `Дата: ${order.wedding_date}` : '',
+      order.venue ? `Площадка: ${order.venue}` : '',
+      order.client_email ? `Email: ${order.client_email}` : '',
     ].filter(Boolean).join('\n');
     try {
-      const res = await fetch(`${API_BASE}/build`, {
+      const res = await fetch('https://bendernostur.duckdns.org:88/webhook/insite/task', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
-        body: JSON.stringify({ order_id: order.id, brief })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department: 'frontend', system_prompt: SYSTEM_PROMPT, task: brief, order_id: order.id, order })
       });
-      const d = await res.json();
-      if (d.ok) {
-        showToast('✅ Сайт собран', 'success');
+      const raw = await res.json();
+      const items = Array.isArray(raw) ? raw : [raw];
+      const note = { department: 'frontend', model: items[0]?.model || '', text: items[0]?.result || items[0]?.text || '', ts: new Date().toISOString() };
+      if (note.text) {
+        await fetch(`${API_BASE}/orders/${order.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
+          body: JSON.stringify({ agent_notes: [note], status: 'built' })
+        });
+        showToast('✅ Сайт собран агентом', 'success');
         const fresh = await getOrders();
         renderDetail(fresh.find(x => x.id === order.id) || order);
         renderInbox();
       } else {
-        showToast('Ошибка: ' + (d.error || 'не удалось'), 'error');
-        btn.disabled = false; btn.textContent = '🏗 Собрать сайт';
+        showToast('Агент не вернул результат', 'error');
       }
+      btn.disabled = false; btn.textContent = '🏗 Собрать сайт';
     } catch (e) {
-      showToast('Ошибка сети: ' + e.message, 'error');
+      showToast('Ошибка: ' + e.message, 'error');
       btn.disabled = false; btn.textContent = '🏗 Собрать сайт';
     }
   });
@@ -714,16 +807,16 @@ function renderDetail(order) {
     ].filter(Boolean).join('\n');
     const WEBHOOK = 'https://bendernostur.duckdns.org:88/webhook/insite/task';
     const AGENTS = [
-      { dept: 'creative_manager', task: `Проанализируй заявку и составь краткий creative brief:\n${orderContext}` },
-      { dept: 'designer', task: `На основе заявки предложи концепцию дизайна (цвета, стиль, UX):\n${orderContext}` },
-      { dept: 'frontend', task: `Опиши структуру сайта и ключевые секции для реализации:\n${orderContext}` },
+      { dept: 'creative_manager', task: `${SYSTEM_PROMPT}\n\n---\n\nПроанализируй заявку и составь краткий creative brief:\n${orderContext}` },
+      { dept: 'designer', task: `${SYSTEM_PROMPT}\n\n---\n\nНа основе заявки предложи концепцию дизайна (цвета, стиль, UX):\n${orderContext}` },
+      { dept: 'frontend', task: `${SYSTEM_PROMPT}\n\n---\n\nОпиши структуру сайта и ключевые секции для реализации:\n${orderContext}` },
     ];
     let allNotes = [];
     for (const ag of AGENTS) {
       try {
         const res = await fetch(WEBHOOK, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ department: ag.dept, task: ag.task, context: `E-T-E LABORATORY — IN_SITE Studio. Заявка #${order.id}.`, order_id: order.id }),
+          body: JSON.stringify({ department: ag.dept, task: ag.task, system_prompt: SYSTEM_PROMPT, context: `E-T-E LABORATORY — IN_SITE Studio. Заявка #${order.id}.`, order_id: order.id }),
         });
         if (res.ok) {
           const raw = await res.json();
@@ -794,7 +887,7 @@ function renderDetail(order) {
         }),
       });
     } catch {}
-    if (order.status === 'new') {
+    if (order.status !== 'done') {
       fetch(`${API_BASE}/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
@@ -826,14 +919,17 @@ function renderDetail(order) {
       <span style="color:var(--muted);font-size:12px;">Обрабатывает<span class="agent-spinner"></span></span>`;
     document.getElementById('chatMessages').appendChild(spinner);
     spinner.scrollIntoView({ behavior: 'smooth' });
-    // Determine client type based on section
+    // Determine client type based on section + project_type
     const sectionLabels = {
       wedding: 'СВАДЕБНЫЙ ПРОЕКТ — Клиент: НЕВЕСТА И ЖЕНИХ',
       tilda: 'БИЗНЕС-САЙТ — Клиент: УСЛУГА ИЛИ КОМПАНИЯ',
       portfolio: 'ПОРТФОЛИО ФОТОГРАФА/ДИЗАЙНЕРА — Клиент: ПРОФЕССИОНАЛ',
       events: 'ПРАЗДНИЧНЫЙ САЙТ — Клиент: ОРГАНИЗАТОРЫ СОБЫТИЯ'
     };
-    const clientTypeLabel = sectionLabels[ord.section] || 'ВЕБ-ПРОЕКТ';
+    const baseLabel = sectionLabels[ord.section] || 'ВЕБ-ПРОЕКТ';
+    const clientTypeLabel = ord.project_type
+      ? `${baseLabel}\n⚠️ ТИП САЙТА: "${ord.project_type}" — создавай именно этот формат, не общий свадебный сайт`
+      : baseLabel;
 
     const orderContext = [
       // === ТИП И ОСНОВНАЯ ИНФОРМАЦИЯ ===
@@ -846,7 +942,7 @@ function renderDetail(order) {
       `Шаблон: ${(ord.template||{}).name || '—'} (${(ord.template||{}).tag || '—'})`,
       `Стиль: ${(ord.template||{}).vibe || '—'}`,
       `Палитра цветов: ${ord.color_palette?.name || 'шаблонная по умолчанию'}`,
-      \`Интро-анимация: ${INTRO_LABELS[ord.intro] || ord.intro || 'нет'}\`,
+      `Интро-анимация: ${INTRO_LABELS[ord.intro] || ord.intro || 'нет'}`,
       `Шрифт: ${ord.font || 'стандартный'}`,
       '',
       // === БИЗНЕС И СРОКИ ===
@@ -854,8 +950,11 @@ function renderDetail(order) {
       `Бюджет: ${ord.budget || 'не указан'}`,
       `Дедлайн: ${ord.deadline || 'гибкий'}`,
       '',
-      // === ПОЛНОЕ ОПИСАНИЕ ЗАДАЧИ ===
-      `ЗАДАЧА И ТРЕБОВАНИЯ:\n${ord.task_description || ord.style_notes || 'Задача не указана'}`,
+      // === ТЕКСТ ДЛЯ САЙТА (контент от клиента, размещается на странице) ===
+      ord.about_text ? `ТЕКСТ ДЛЯ САЙТА (О нас / история пары — вставить в соответствующую секцию сайта, НЕ интерпретировать как тип проекта):\n${ord.about_text}` : '',
+      '',
+      // === ИНСТРУКЦИИ ДИЗАЙНЕРУ ===
+      `ПОЖЕЛАНИЯ ПО СТИЛЮ (инструкции по дизайну, не текст для сайта):\n${ord.task_description || ord.style_notes || 'Не указаны'}`,
       ord.extra_notes ? `\nДОПОЛНИТЕЛЬНЫЕ ПОЖЕЛАНИЯ:\n${ord.extra_notes}` : '',
       '',
       // === СПЕЦИФИКА СОБЫТИЯ (если это свадьба/праздник) ===
@@ -874,6 +973,7 @@ function renderDetail(order) {
         body: JSON.stringify({
           // Agent command and context
           department: dept,
+          system_prompt: SYSTEM_PROMPT,
           task,
           order_id: ord.id,
 
@@ -884,7 +984,8 @@ function renderDetail(order) {
           client_info: `${clientTypeLabel}\nКлиент: ${ord.couple_names || ord.client_name || ord.event_name || '—'}\nEmail: ${ord.client_email || '—'}`,
           project_details: `Тип проекта: ${ord.project_type || 'не указан'}\nШаблон: ${(ord.template||{}).name || '—'}\nНиша: ${ord.niche || 'не указана'}\nБюджет: ${ord.budget || 'не указан'}\nДедлайн: ${ord.deadline || 'гибкий'}`,
           design_specs: `Стиль: ${(ord.template||{}).vibe || '—'}\nПалитра: ${ord.color_palette?.name || 'шаблонная'}\nИнтро: ${INTRO_LABELS[ord.intro] || ord.intro || 'нет'}\nШрифт: ${ord.font || 'стандартный'}`,
-          full_task_description: ord.task_description || ord.style_notes || 'Задача не указана',
+          site_content_about: ord.about_text ? `ТЕКСТ ДЛЯ САЙТА (О нас — вставить на страницу, НЕ определяет тип проекта): ${ord.about_text}` : '',
+          full_task_description: `ПОЖЕЛАНИЯ ПО ДИЗАЙНУ: ${ord.task_description || ord.style_notes || 'Не указаны'}`,
           additional_wishes: ord.extra_notes || '',
           event_details: [
             ord.wedding_date ? `Дата: ${ord.wedding_date}` : '',
@@ -913,7 +1014,10 @@ function renderDetail(order) {
         });
       }
       agentTaskEl.value = '';
-    } catch (e) { showToast('Ошибка агента: ' + e.message, 'error'); }
+    } catch (e) {
+      showToast('Ошибка агента: ' + e.message, 'error');
+      document.getElementById('agentSpinner')?.remove();
+    }
     btn.disabled = false; btn.textContent = '▶ Агент';
     const freshOrders = await getOrders();
     renderDetail(freshOrders.find(x => x.id === ord.id) || ord);
@@ -936,32 +1040,39 @@ function renderDetail(order) {
     const btn = document.getElementById('redesignBtn');
     btn.disabled = true; btn.textContent = '⏳ Redesign…';
     const brief = [
-      `REDESIGN: создай АЛЬТЕРНАТИВНЫЙ вариант сайта с другим визуальным стилем.`,
+      `REDESIGN: создай АЛЬТЕРНАТИВНЫЙ вариант концепции сайта с другим визуальным стилем.`,
       `Клиент: ${order.couple_names || order.client_name || order.event_name || '—'}`,
-      order.niche ? `Ниша: ${order.niche}` : '',
-      `Шаблон/стиль: ${(order.template||{}).name || '—'}`,
-      order.color_palette?.name ? `Исходная палитра: ${order.color_palette.name} — выбери другую` : '',
-      order.budget ? `Бюджет: ${order.budget}` : '',
-      order.task_description || order.style_notes ? `Задача: ${order.task_description || order.style_notes}` : '',
-      order.extra_notes ? `Пожелания: ${order.extra_notes}` : '',
-      order.client_email ? `Контакт: ${order.client_email}` : '',
-      `Сделай другую цветовую гамму, другую типографику и другую компоновку секций.`,
+      order.project_type ? `Тип сайта: ${order.project_type}` : '',
+      `Шаблон: ${(order.template||{}).name || '—'}`,
+      order.color_palette?.name ? `Исходная палитра: ${order.color_palette.name} — выбери ДРУГУЮ` : '',
+      order.task_description || order.style_notes ? `Пожелания клиента: ${order.task_description || order.style_notes}` : '',
+      order.extra_notes ? `Доп. пожелания: ${order.extra_notes}` : '',
+      `Требования: другая цветовая гамма, другая типографика, другая компоновка секций. Объясни почему это лучше.`,
     ].filter(Boolean).join('\n');
     try {
-      const res = await fetch(`${API_BASE}/build`, {
+      const res = await fetch('https://bendernostur.duckdns.org:88/webhook/insite/task', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
-        body: JSON.stringify({ order_id: order.id + '_r' + Date.now().toString(36), brief, link_to: order.id }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department: 'designer', system_prompt: SYSTEM_PROMPT, task: brief, order_id: order.id, order })
       });
-      const d = await res.json();
-      if (d.ok) {
-        showToast('✨ Redesign готов', 'success');
-        window.open(d.url, '_blank');
+      const raw = await res.json();
+      const items = Array.isArray(raw) ? raw : [raw];
+      const note = { department: 'designer', model: items[0]?.model || '', text: items[0]?.result || items[0]?.text || '', ts: new Date().toISOString() };
+      if (note.text) {
+        await fetch(`${API_BASE}/orders/${order.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(`root:${CREDS.pass}`) },
+          body: JSON.stringify({ agent_notes: [note] })
+        });
+        showToast('✨ Redesign концепция готова', 'success');
+        const fresh = await getOrders();
+        renderDetail(fresh.find(x => x.id === order.id) || order);
+        renderInbox();
       } else {
-        showToast('Ошибка: ' + (d.error || 'не удалось'), 'error');
+        showToast('Агент не вернул результат', 'error');
       }
     } catch (e) {
-      showToast('Ошибка сети: ' + e.message, 'error');
+      showToast('Ошибка: ' + e.message, 'error');
     }
     btn.disabled = false; btn.textContent = '✨ Redesign';
   });
