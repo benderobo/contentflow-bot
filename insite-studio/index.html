@@ -82,9 +82,11 @@
 
   .workspace {
     display: grid;
-    grid-template-columns: 1fr 360px 360px;
+    grid-template-columns: 1fr 420px;
     flex: 1;
     height: calc(100vh - 65px);
+    gap: 1px;
+    background: var(--border);
   }
 
   /* ── Gallery ── */
@@ -92,6 +94,7 @@
     border-right: 1px solid var(--border);
     background: var(--surface);
     display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: inset 1px 0 0 rgba(124,106,247,.1);
   }
   .panel-header {
     padding: 14px 20px 10px;
@@ -165,8 +168,11 @@
 
   /* ── Preview ── */
   .preview-panel {
-    display: flex !important;
+    display: none !important;
     flex-direction: column; overflow: hidden; background: var(--bg);
+  }
+  @media (max-width: 1024px) {
+    .preview-panel { display: flex !important; }
   }
   .preview-panels-wrap {
     display: flex; flex: 1; overflow: hidden; gap: 1px; background: var(--border);
@@ -319,10 +325,11 @@
     border-left: 1px solid var(--border); background: var(--surface);
     display: flex; flex-direction: column; overflow: hidden;
     position: sticky; top: 58px; height: calc(100vh - 58px);
+    box-shadow: inset 1px 0 0 rgba(124,106,247,.1), -1px 0 12px rgba(0,0,0,.2);
   }
   .form-scroll {
-    flex: 1; overflow-y: auto; padding: 18px;
-    display: flex; flex-direction: column; gap: 16px;
+    flex: 1; overflow-y: auto; padding: 24px 20px;
+    display: flex; flex-direction: column; gap: 18px;
   }
   .form-scroll::-webkit-scrollbar { width: 4px; }
   .form-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -417,6 +424,59 @@
   input[type=file] { display: none; }
 
   /* ── Color Palette Strip ── */
+  /* ── Style panel (font + palette quick picker) ── */
+  .style-panel {
+    border-bottom: 1px solid var(--border); padding: 10px 14px;
+    background: var(--surface2); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;
+  }
+  .style-panel-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .style-panel-label {
+    font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
+    color: var(--muted); white-space: nowrap; min-width: 44px;
+  }
+  .style-font-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+  .style-font-chip {
+    padding: 4px 10px; border-radius: 20px; font-size: 11px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    transition: all .15s; white-space: nowrap;
+  }
+  .style-font-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .style-palette-dots { display: flex; gap: 6px; flex-wrap: wrap; }
+  .style-dot {
+    width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; transition: all .15s; position: relative; overflow: hidden;
+    flex-shrink: 0;
+  }
+  .style-dot.active { border-color: var(--accent2); transform: scale(1.2); }
+  .style-dot::after { content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; opacity:0; }
+  .style-dot.active::after { opacity:1; }
+  .style-actions {
+    display: flex; gap: 6px; justify-content: flex-end; padding-top: 2px;
+  }
+  .style-btn {
+    padding: 5px 14px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer;
+    border: none; transition: all .15s;
+  }
+  .style-btn-cancel { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+  .style-btn-cancel:hover { color: var(--text); border-color: var(--text); }
+  .style-btn-apply { background: var(--accent); color: #fff; }
+  .style-btn-apply:hover { background: var(--accent2); }
+
+  @media (max-width: 768px) {
+    .style-panel { padding: 8px 10px; gap: 6px; }
+    .style-panel-row { flex-wrap: wrap; gap: 6px; }
+    .style-panel-label { min-width: 38px; font-size: 9px; }
+    .style-font-chips { gap: 4px; }
+    .style-font-chip { padding: 3px 8px; font-size: 10px; }
+    .style-palette-dots { gap: 5px; }
+    .style-dot { width: 20px; height: 20px; }
+    .style-dot::after { font-size: 8px; }
+    .style-actions { justify-content: flex-start; padding-top: 0; }
+    .style-btn { padding: 4px 12px; font-size: 10px; }
+  }
+
   .palette-strip {
     border-top: 1px solid var(--border); padding: 12px 14px;
     background: var(--surface); flex-shrink: 0;
@@ -579,16 +639,28 @@
   .mobile-tabs {
     display: none;
     position: sticky; top: 57px; z-index: 90;
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+    background: var(--surface); border-bottom: 2px solid var(--accent);
+    flex-shrink: 0; gap: 0;
   }
   .mobile-tabs button {
-    flex: 1; padding: 10px 4px; background: none; border: none;
-    color: var(--muted); font-size: 11px; font-weight: 600;
+    flex: 1; padding: 12px 8px; background: none; border: none;
+    color: var(--muted); font-size: 12px; font-weight: 600;
     letter-spacing: .5px; text-transform: uppercase; cursor: pointer;
-    border-bottom: 2px solid transparent; transition: all .2s;
+    border-bottom: 3px solid transparent; transition: all .25s;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
   }
-  .mobile-tabs button.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+  .mobile-tabs button::before {
+    font-size: 18px; display: block;
+  }
+  .mobile-tabs button[data-tab="gallery"]::before { content: "🎨"; }
+  .mobile-tabs button[data-tab="preview"]::before { content: "👁"; }
+  .mobile-tabs button[data-tab="form"]::before { content: "📝"; }
+
+  .mobile-tabs button:hover { color: var(--text); background: rgba(124,106,247,.08); }
+  .mobile-tabs button.active {
+    color: var(--accent2); border-bottom-color: var(--accent2);
+    background: rgba(124,106,247,.12);
+  }
 
   /* ── Tablet (768–1024px): 2-row layout ── */
   @media (max-width: 1024px) {
@@ -926,8 +998,46 @@
     background: rgba(139,127,247,.15);
     color: #c8c0ff; font-weight: 600;
   }
+  @media (max-width: 480px) {
+    .reg-types {
+      display: none;
+    }
+    #regTypeSelect {
+      display: block;
+    }
+  }
+  #regTypeSelect {
+    display: none; width: 100%; padding: 12px 14px;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 10px; color: #fff; font-size: 14px; cursor: pointer;
+    font-family: inherit; outline: none; transition: border-color .2s;
+  }
+  #regTypeSelect:focus {
+    border-color: rgba(110,99,240,.6); background: rgba(110,99,240,.08);
+  }
+  #regTypeSelect option {
+    background: #0e0e1c; color: #fff;
+  }
+  .reg-consent {
+    display: flex; align-items: flex-start; gap: 10px; margin: 20px 0 24px;
+    padding: 12px; background: rgba(110,99,240,.08); border-radius: 10px;
+    border: 1px solid rgba(110,99,240,.2);
+  }
+  .reg-consent input[type="checkbox"] {
+    width: 18px; height: 18px; margin-top: 2px; cursor: pointer;
+    accent-color: #6e63f0; flex-shrink: 0;
+  }
+  .reg-consent label {
+    font-size: 12px; color: rgba(255,255,255,.65); margin: 0; cursor: pointer;
+    text-transform: none; letter-spacing: 0; font-weight: 400;
+    line-height: 1.4;
+  }
+  .reg-consent label a {
+    color: #6e63f0; text-decoration: none; border-bottom: 1px solid #6e63f0;
+  }
+  .reg-consent label a:hover { opacity: .8; }
   .reg-submit {
-    width: 100%; margin-top: 24px;
+    width: 100%; margin-top: 0;
     padding: 14px; border: none; border-radius: 10px;
     background: linear-gradient(135deg, #6e63f0, #5b9fd4);
     color: #fff; font-size: 15px; font-weight: 600;
@@ -935,6 +1045,7 @@
     font-family: inherit; letter-spacing: .01em;
   }
   .reg-submit:hover { opacity: .9; transform: translateY(-1px); }
+  .reg-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
   /* ── Parallax background ── */
   .parallax-bg {
@@ -1104,6 +1215,47 @@
   }
   .font-size-btn.active { border-color: var(--accent2); color: var(--accent2); background: rgba(124,106,247,.12); }
   .font-size-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  /* ── Mobile dropdown ── */
+  .section-dropdown { display: none; }
+  .section-dropdown-toggle {
+    display: none; width: 100%; padding: 12px 14px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s;
+    text-align: left; font-family: var(--font-ui); position: relative;
+  }
+  .section-dropdown-toggle::after {
+    content: '▼'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 10px; transition: transform .3s;
+  }
+  .section-dropdown-toggle:hover { border-color: var(--accent); background: var(--surface2); }
+  .section-dropdown.open .section-dropdown-toggle::after { transform: translateY(-50%) rotate(180deg); }
+
+  .section-dropdown-menu {
+    display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1000;
+    background: var(--surface); border: 1px solid var(--accent); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.3); margin-top: 4px;
+  }
+  .section-dropdown.open .section-dropdown-menu { display: block; animation: slideDown .2s ease-out; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-dropdown-item {
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 8px;
+    color: var(--muted); font-size: 13px;
+  }
+  .section-dropdown-item:last-child { border-bottom: none; }
+  .section-dropdown-item:hover { background: var(--surface2); color: var(--text); }
+  .section-dropdown-item.active { background: rgba(124,106,247,.2); color: var(--accent); font-weight: 600; }
+  .section-dropdown-item-icon { font-size: 16px; }
+
+  @media (max-width: 767px) {
+    .section-nav { display: none; }
+    .section-dropdown { display: block; position: relative; padding: 0 16px; }
+  }
 </style>
 </head>
 <body>
@@ -1170,6 +1322,16 @@
         <div class="reg-type" data-sec="portfolio">🎨 Портфолио</div>
         <div class="reg-type" data-sec="events">🎪 Мероприятие</div>
       </div>
+      <select id="regTypeSelect">
+        <option value="wedding" selected>💍 Свадьба</option>
+        <option value="tilda">🏢 Бизнес</option>
+        <option value="portfolio">🎨 Портфолио</option>
+        <option value="events">🎪 Мероприятие</option>
+      </select>
+    </div>
+    <div class="reg-consent">
+      <input type="checkbox" id="regConsent" required>
+      <label for="regConsent">Я согласен(а) с <a href="#" onclick="return false">обработкой персональных данных</a> согласно политике конфиденциальности IN_SITE</label>
     </div>
     <button class="reg-submit" id="regSubmit">Отправить заявку →</button>
   </div>
@@ -1210,6 +1372,10 @@
 <header>
   <div class="logo">IN_SITE <span>клиентская панель</span></div>
   <nav class="section-nav" id="sectionNav"></nav>
+  <div class="section-dropdown" id="sectionDropdown">
+    <button class="section-dropdown-toggle" id="sectionDropdownToggle">💍 Свадьба</button>
+    <div class="section-dropdown-menu" id="sectionDropdownMenu"></div>
+  </div>
   <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
     <div class="step-indicator">
       <div class="step active" id="s1">1</div>
@@ -1237,6 +1403,23 @@
   <!-- LEFT -->
   <div class="gallery-panel tab-active" id="panelGallery">
     <div class="panel-header">Готовые макеты</div>
+
+    <!-- Style quick-picker -->
+    <div class="style-panel" id="stylePanel">
+      <div class="style-panel-row">
+        <span class="style-panel-label">Шрифт</span>
+        <div class="style-font-chips" id="styleFontChips"></div>
+      </div>
+      <div class="style-panel-row">
+        <span class="style-panel-label">Цвет</span>
+        <div class="style-palette-dots" id="stylePaletteDots"></div>
+      </div>
+      <div class="style-actions">
+        <button class="style-btn style-btn-cancel" id="styleCancelBtn">Отмена</button>
+        <button class="style-btn style-btn-apply" id="styleApplyBtn">Применить</button>
+      </div>
+    </div>
+
     <div class="gallery-scroll" id="gallery"></div>
     <div class="palette-strip">
       <div class="palette-label">
@@ -1337,8 +1520,8 @@
               <option>Save the Date</option>
             </optgroup>
             <optgroup label="Фотоальбомы">
-              <option>Свадебный фотоальбом</option>
-              <option>Галерея + история</option>
+              <option>Свадебный фотоальбом пары</option>
+              <option>Love Story — Галерея пары</option>
             </optgroup>
             <optgroup label="Другое">
               <option>Полный свадебный сайт</option>
@@ -1696,25 +1879,44 @@
   document.getElementById('regTypes').addEventListener('click', e => {
     const t = e.target.closest('.reg-type');
     if (!t) return;
+    const sec = t.dataset.sec;
     document.querySelectorAll('.reg-type').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
+    document.getElementById('regTypeSelect').value = sec;
+    updateRegFormLabels(sec);
+  });
+
+  document.getElementById('regTypeSelect').addEventListener('change', e => {
+    const sec = e.target.value;
+    document.querySelectorAll('.reg-type').forEach(x => x.classList.remove('active'));
+    document.querySelector(`.reg-type[data-sec="${sec}"]`).classList.add('active');
+    updateRegFormLabels(sec);
   });
 
   document.getElementById('regSubmit').addEventListener('click', () => {
     const nameEl  = document.getElementById('regName');
     const emailEl = document.getElementById('regEmail');
+    const consentEl = document.getElementById('regConsent');
     const name    = nameEl.value.trim();
     const email   = emailEl.value.trim();
-    const sec     = document.querySelector('.reg-type.active')?.dataset.sec || (typeof activeSection !== 'undefined' ? activeSection : 'wedding');
+    const sec     = document.getElementById('regTypeSelect').value ||
+                    document.querySelector('.reg-type.active')?.dataset.sec ||
+                    (typeof activeSection !== 'undefined' ? activeSection : 'wedding');
 
     nameEl.classList.remove('invalid');
     emailEl.classList.remove('invalid');
     if (!name)                         { nameEl.classList.add('invalid');  nameEl.focus();  return; }
     if (!email || !email.includes('@')){ emailEl.classList.add('invalid'); emailEl.focus(); return; }
+    if (!consentEl.checked) {
+      showToast('✕ Пожалуйста, примите условия обработки данных', 'error');
+      consentEl.focus();
+      return;
+    }
 
     localStorage.setItem('insite_reg_email', email);
     localStorage.setItem('insite_reg_name',  name);
     localStorage.setItem('insite_reg_sec',   sec);
+    localStorage.setItem('insite_consent',  'true');
     regModal.classList.remove('open');
 
     prefillRegFields(name, email, sec);
@@ -2042,15 +2244,15 @@ function miniPageHTML(tpl, scale) {
   ">
     <!-- HERO -->
     <div style="background:${s.hero};padding:28px 20px 22px;text-align:center;border-bottom:1px solid ${s.line};">
-      <div style="font-size:9px;letter-spacing:3px;color:${s.muted};margin-bottom:6px;text-transform:uppercase;">${isAlbum ? 'ФОТОАЛЬБОМ' : 'СВАДЬБА'}</div>
-      <div style="font-size:19px;font-weight:700;color:${s.accent};line-height:1.2;margin-bottom:4px;">${tpl.names}</div>
+      <div style="font-size:11px;letter-spacing:3px;color:${s.muted};margin-bottom:6px;text-transform:uppercase;">${isAlbum ? 'ФОТОАЛЬБОМ' : 'СВАДЬБА'}</div>
+      <div style="font-size:22px;font-weight:700;color:${s.accent};line-height:1.2;margin-bottom:4px;">${tpl.names}</div>
       <div style="width:30px;height:1px;background:${s.accent};margin:8px auto;opacity:.6;"></div>
-      <div style="font-size:11px;letter-spacing:2px;color:${s.muted};">${tpl.date}</div>
+      <div style="font-size:13px;letter-spacing:2px;color:${s.muted};">${tpl.date}</div>
     </div>
 
     <!-- INVITE TEXT / ОПИСАНИЕ -->
     <div style="padding:16px 20px 14px;border-bottom:1px solid ${s.line};">
-      <div style="font-size:8px;color:${s.muted};line-height:1.6;">
+      <div style="font-size:11px;color:${s.muted};line-height:1.6;">
         ${isAlbum
           ? 'Воспоминания о самом&nbsp;важном дне нашей жизни...'
           : 'Дорогие родные и близкие! Мы приглашаем вас разделить радость нашего торжества.'
@@ -2060,83 +2262,80 @@ function miniPageHTML(tpl, scale) {
 
     <!-- МЕСТО -->
     <div style="padding:14px 20px;border-bottom:1px solid ${s.line};">
-      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:6px;">Место</div>
-      <div style="font-size:11px;font-weight:700;color:${s.text};margin-bottom:8px;">${tpl.place}</div>
-      <div style="display:inline-block;padding:5px 14px;background:${s.btn};color:${s.btnText};font-size:8px;letter-spacing:1px;border-radius:2px;font-family:sans-serif;">
+      <div style="font-size:10px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:6px;">Место</div>
+      <div style="font-size:13px;font-weight:700;color:${s.text};margin-bottom:8px;">${tpl.place}</div>
+      <div style="display:inline-block;padding:6px 16px;background:${s.btn};color:${s.btnText};font-size:11px;letter-spacing:1px;border-radius:3px;font-family:sans-serif;">
         ${isAlbum ? 'СМОТРЕТЬ' : 'ОТПРАВИТЬСЯ'}
       </div>
     </div>
 
     <!-- ПРОГРАММА / ХРОНОЛОГИЯ -->
     <div style="padding:14px 20px;border-bottom:1px solid ${s.line};">
-      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:10px;">${isAlbum ? 'Хронология' : 'Программа'}</div>
+      <div style="font-size:10px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:10px;">${isAlbum ? 'Хронология' : 'Программа'}</div>
       ${(['14:00','14:30','16:00','19:00']).map((t,i) => `
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
-        <div style="font-size:7px;color:${s.accent};min-width:28px;padding-top:1px;font-family:sans-serif;">${t}</div>
+        <div style="font-size:10px;color:${s.accent};min-width:32px;padding-top:1px;font-family:sans-serif;">${t}</div>
         <div style="flex:1;border-top:1px solid ${s.line};padding-top:4px;">
-          <div style="font-size:8px;font-weight:700;color:${s.text};">${['Сбор гостей','Фуршет','Фотосессия','Банкет'][i]}</div>
-          <div style="font-size:7px;color:${s.muted};margin-top:1px;">${['Встреча и знакомство','Угощения и общение','Памятные кадры','Торжество'][i]}</div>
+          <div style="font-size:11px;font-weight:700;color:${s.text};">${['Сбор гостей','Фуршет','Фотосессия','Банкет'][i]}</div>
+          <div style="font-size:10px;color:${s.muted};margin-top:1px;">${['Встреча и знакомство','Угощения и общение','Памятные кадры','Торжество'][i]}</div>
         </div>
       </div>`).join('')}
     </div>
 
     <!-- ТАЙМЕР -->
     <div style="padding:14px 20px;border-bottom:1px solid ${s.line};text-align:center;">
-      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:6px;">Осталось до дня</div>
+      <div style="font-size:10px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:6px;">Осталось до дня</div>
       <div style="display:flex;justify-content:center;gap:12px;">
         ${['101','20','46'].map((v,i) => `
         <div>
-          <div style="font-size:18px;font-weight:700;color:${s.accent};line-height:1;font-family:sans-serif;">${v}</div>
-          <div style="font-size:6px;color:${s.muted};margin-top:2px;">${['ДНЕЙ','ЧАСОВ','МИН'][i]}</div>
+          <div style="font-size:20px;font-weight:700;color:${s.accent};line-height:1;font-family:sans-serif;">${v}</div>
+          <div style="font-size:9px;color:${s.muted};margin-top:2px;">${['ДНЕЙ','ЧАСОВ','МИН'][i]}</div>
         </div>`).join('')}
       </div>
     </div>
 
     <!-- ПОЖЕЛАНИЯ -->
     <div style="padding:14px 20px;border-bottom:1px solid ${s.line};">
-      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:8px;">Пожелания</div>
-      <div style="font-size:8px;color:${s.muted};line-height:1.6;font-style:italic;">
+      <div style="font-size:10px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:8px;">Пожелания</div>
+      <div style="font-size:11px;color:${s.muted};line-height:1.6;font-style:italic;">
         Будем благодарны за тёплые слова и добрые пожелания...
-      </div>
-      <div style="margin-top:8px;font-size:8px;color:${s.muted};line-height:1.6;font-style:italic;">
-        Не ломайте голову над подарком — ваши пожелания в конвертах помогут осуществить мечту.
       </div>
     </div>
 
     <!-- ДРЕСС-КОД -->
     <div style="padding:14px 20px;border-bottom:1px solid ${s.line};text-align:center;">
-      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:8px;">Дресс-код</div>
+      <div style="font-size:10px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:8px;">Дресс-код</div>
       <div style="display:inline-flex;gap:6px;margin-bottom:8px;">
-        <div style="width:20px;height:20px;border-radius:50%;background:#111;border:1px solid ${s.line};"></div>
-        <div style="width:20px;height:20px;border-radius:50%;background:#fff;border:1px solid ${s.line};"></div>
+        <div style="width:22px;height:22px;border-radius:50%;background:#111;border:1px solid ${s.line};"></div>
+        <div style="width:22px;height:22px;border-radius:50%;background:#fff;border:1px solid ${s.line};"></div>
       </div>
-      <div style="font-size:8px;color:${s.muted};line-height:1.5;">
-        Чёрный и белый цвет —<br>особый стиль и элегантность
+      <div style="font-size:11px;color:${s.muted};line-height:1.5;">
+        Чёрный и белый — стиль и элегантность
       </div>
     </div>
 
     <!-- АНКЕТА (RSVP) -->
     <div style="padding:14px 20px 28px;">
-      <div style="font-size:7px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:10px;">Анкета гостя</div>
+      <div style="font-size:10px;letter-spacing:2px;color:${s.muted};text-transform:uppercase;margin-bottom:10px;">Анкета гостя</div>
       <!-- Имя -->
-      <div style="height:18px;border:1px solid ${s.line};border-radius:3px;margin-bottom:7px;display:flex;align-items:center;padding:0 6px;">
-        <span style="font-size:7px;color:${s.muted};">Ваше имя</span>
+      <div style="height:24px;border:1px solid ${s.line};border-radius:4px;margin-bottom:7px;display:flex;align-items:center;padding:0 8px;">
+        <span style="font-size:11px;color:${s.muted};">Ваше имя</span>
       </div>
       <!-- Придёте? -->
-      <div style="font-size:7px;color:${s.muted};margin-bottom:4px;">Вы придёте?</div>
+      <div style="font-size:10px;color:${s.muted};margin-bottom:4px;">Вы придёте?</div>
       <div style="display:flex;gap:4px;margin-bottom:8px;">
         ${['Да','Нет','Не знаю'].map((v,i) => `
-        <div style="flex:1;text-align:center;padding:3px 0;border:1px solid ${i===0 ? s.accent : s.line};border-radius:3px;font-size:6px;color:${i===0 ? s.accent : s.muted};">${v}</div>`).join('')}
+        <div style="flex:1;text-align:center;padding:4px 0;border:1px solid ${i===0 ? s.accent : s.line};border-radius:4px;font-size:10px;color:${i===0 ? s.accent : s.muted};">${v}</div>`).join('')}
       </div>
       <!-- Напитки -->
-      <div style="font-size:7px;color:${s.muted};margin-bottom:4px;">Предпочтения в напитках</div>
-      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">
-        ${['Красное вино','Белое вино','Шампанское','Виски','Не пью'].map(v => `
-        <div style="padding:2px 6px;border:1px solid ${s.line};border-radius:20px;font-size:6px;color:${s.muted};">${v}</div>`).join('')}
+      <div style="font-size:10px;color:${s.muted};margin-bottom:4px;">Предпочтения в напитках</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">
+        ${['Вино','Шампанское','Виски','Не пью'].map(v => `
+        <div style="padding:3px 8px;border:1px solid ${s.line};border-radius:20px;font-size:9px;color:${s.muted};">${v}</div>`).join('')}
       </div>
       <!-- Кнопка -->
       <div style="text-align:center;">
-        <div style="display:inline-block;padding:6px 20px;background:${s.btn};color:${s.btnText};font-size:7px;letter-spacing:1px;border-radius:2px;font-family:sans-serif;">ОТПРАВИТЬ</div>
+        <div style="display:inline-block;padding:8px 24px;background:${s.btn};color:${s.btnText};font-size:11px;letter-spacing:1px;border-radius:3px;font-family:sans-serif;">ОТПРАВИТЬ</div>
       </div>
     </div>
   </div>`;
@@ -2423,21 +2622,64 @@ const SECTION_HEADERS = { wedding:'Детали проекта', tilda:'Дета
 const ALL_FIELD_IDS   = ['fields-wedding','fields-tilda','fields-portfolio','fields-events'];
 
 
+const SECTION_THEMES = {
+  wedding: { bg: '#0a0a14', text: '#f0f0f5', accent: '#c48080', accentLight: '#e8a0a0' },
+  tilda:   { bg: '#0f1408', text: '#e8f0e8', accent: '#6ab090', accentLight: '#8fc0a8' },
+  portfolio: { bg: '#140a0a', text: '#f0e8e8', accent: '#c9a84c', accentLight: '#e8c080' },
+  events:  { bg: '#0a0810', text: '#f0e8f8', accent: '#8b5cf6', accentLight: '#b89fe8' },
+};
+
+function applyTheme(sectionId) {
+  const theme = SECTION_THEMES[sectionId] || SECTION_THEMES.wedding;
+  document.documentElement.style.setProperty('--bg-section', theme.bg);
+  document.documentElement.style.setProperty('--text-section', theme.text);
+  document.documentElement.style.setProperty('--accent-section', theme.accent);
+}
+
+function updateSectionLabel(secId) {
+  const sec = SECTIONS.find(s => s.id === secId);
+  if (sec && sectionDropdownToggle) {
+    sectionDropdownToggle.textContent = sec.icon + ' ' + sec.label;
+  }
+}
+
+function toggleDropdown() {
+  isDropdownOpen = !isDropdownOpen;
+  sectionDropdown.classList.toggle('open', isDropdownOpen);
+}
+
+function closeDropdown() {
+  isDropdownOpen = false;
+  sectionDropdown.classList.remove('open');
+}
+
 function switchSection(sectionId) {
   activeSection = sectionId;
   document.querySelectorAll('.sec-btn').forEach(b => b.classList.toggle('active', b.dataset.sec === sectionId));
+  document.querySelectorAll('.section-dropdown-item').forEach(i => i.classList.toggle('active', i.dataset.sec === sectionId));
   ALL_FIELD_IDS.forEach(id => {
     const el = document.getElementById(id);
     const match = id === 'fields-' + sectionId;
     el.style.display = match ? (id === 'fields-wedding' ? '' : 'flex') : 'none';
   });
   document.getElementById('formPanelHeader').textContent = SECTION_HEADERS[sectionId] || 'Детали заказа';
+  updateSectionLabel(sectionId);
+  applyTheme(sectionId);
   buildGallery(sectionId);
   updateSteps();
 }
 
 // ─── Init section nav ─────────────────────────────────────────────────────
 const sectionNav = document.getElementById('sectionNav');
+const sectionDropdown = document.getElementById('sectionDropdown');
+const sectionDropdownToggle = document.getElementById('sectionDropdownToggle');
+const sectionDropdownMenu = document.getElementById('sectionDropdownMenu');
+
+let isDropdownOpen = false;
+
+sectionDropdownToggle.addEventListener('click', toggleDropdown);
+
+// Render desktop nav buttons
 SECTIONS.forEach(sec => {
   const btn = document.createElement('button');
   btn.className = 'sec-btn' + (sec.id === activeSection ? ' active' : '');
@@ -2447,6 +2689,29 @@ SECTIONS.forEach(sec => {
   sectionNav.appendChild(btn);
 });
 
+// Render mobile dropdown menu
+SECTIONS.forEach(sec => {
+  const item = document.createElement('div');
+  item.className = 'section-dropdown-item' + (sec.id === activeSection ? ' active' : '');
+  item.dataset.sec = sec.id;
+  item.innerHTML = `<span class="section-dropdown-item-icon">${sec.icon}</span><span>${sec.label}</span>`;
+  item.addEventListener('click', () => {
+    switchSection(sec.id);
+    updateSectionLabel(sec.id);
+    document.querySelectorAll('.section-dropdown-item').forEach(i => i.classList.toggle('active', i.dataset.sec === sec.id));
+    closeDropdown();
+  });
+  sectionDropdownMenu.appendChild(item);
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (!sectionDropdown.contains(e.target) && isDropdownOpen) {
+    closeDropdown();
+  }
+});
+
+applyTheme(activeSection);
 buildGallery(activeSection);
 
 // ─── Color Palettes ───────────────────────────────────────────────────────
@@ -2604,6 +2869,75 @@ document.getElementById('ppSwatchReset').addEventListener('click', () => {
   selectedPalette = null;
   refreshPreview();
 });
+
+// ─── Style panel (quick font + palette picker) ────────────────────────────
+let pendingFont = null;
+let pendingPalette = null;
+
+(function initStylePanel() {
+  const fontChips = document.getElementById('styleFontChips');
+  const paletteDots = document.getElementById('stylePaletteDots');
+
+  FONTS.forEach(f => {
+    const chip = document.createElement('button');
+    chip.className = 'style-font-chip' + (f.css === selectedFont.css ? ' active' : '');
+    chip.textContent = f.label;
+    chip.style.fontFamily = f.css;
+    chip.addEventListener('click', () => {
+      pendingFont = f;
+      fontChips.querySelectorAll('.style-font-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+    fontChips.appendChild(chip);
+  });
+
+  PALETTES.forEach(pal => {
+    const dot = document.createElement('button');
+    dot.className = 'style-dot' + (selectedPalette && selectedPalette.id === pal.id ? ' active' : '');
+    dot.title = pal.name;
+    dot.style.background = pal.grad;
+    dot.addEventListener('click', () => {
+      pendingPalette = pal;
+      paletteDots.querySelectorAll('.style-dot').forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+    });
+    paletteDots.appendChild(dot);
+  });
+
+  document.getElementById('styleCancelBtn').addEventListener('click', () => {
+    pendingFont = null;
+    pendingPalette = null;
+    // reset chip active states to current selection
+    fontChips.querySelectorAll('.style-font-chip').forEach((c, i) => {
+      c.classList.toggle('active', FONTS[i] && FONTS[i].css === selectedFont.css);
+    });
+    paletteDots.querySelectorAll('.style-dot').forEach((d, i) => {
+      d.classList.toggle('active', selectedPalette ? PALETTES[i] && PALETTES[i].id === selectedPalette.id : false);
+    });
+  });
+
+  document.getElementById('styleApplyBtn').addEventListener('click', () => {
+    if (pendingFont) {
+      selectedFont = { ...selectedFont, family: pendingFont.label, css: pendingFont.css };
+      // sync main font cards
+      document.querySelectorAll('.font-card').forEach(c =>
+        c.classList.toggle('active', c.dataset && c.dataset.id === pendingFont.id));
+    }
+    if (pendingPalette) {
+      selectedPalette = pendingPalette;
+      // sync main palette swatches and pp-strip
+      document.querySelectorAll('.palette-swatch').forEach(s =>
+        s.classList.toggle('active', s.dataset.id === pendingPalette.id));
+      document.querySelectorAll('.pp-swatch').forEach(s =>
+        s.classList.toggle('active', s.dataset.id === pendingPalette.id));
+    }
+    if (pendingFont || pendingPalette) {
+      pendingFont = null;
+      pendingPalette = null;
+      buildGallery(activeSection);
+    }
+  });
+})();
 
 function syncPpStrip() {
   ppStrip.classList.toggle('visible', !!selectedTemplate);
@@ -3005,9 +3339,11 @@ document.getElementById('sendBtn').addEventListener('click', () => {
     const titleEl = document.getElementById('regTitle');
     const subEl   = document.getElementById('regSubtitle');
     const typeField = document.getElementById('regTypeField');
+    const sec = typeof activeSection !== 'undefined' ? activeSection : 'wedding';
     if (titleEl)    titleEl.textContent = 'Заявка готова!';
     if (subEl)      subEl.textContent   = 'Укажите контакт — передадим сайт в работу';
     if (typeField)  typeField.style.display = 'none';
+    updateRegFormLabels(sec);
     const regModal = document.getElementById('regModal');
     regModal.classList.add('open');
     setTimeout(() => document.getElementById('regName').focus(), 50);
@@ -3015,6 +3351,19 @@ document.getElementById('sendBtn').addEventListener('click', () => {
   }
   doSend();
 });
+
+function updateRegFormLabels(sec) {
+  const nameEl = document.getElementById('regName');
+  const nameLabel = nameEl.parentElement.querySelector('label');
+  const namePlaceholders = {
+    wedding: 'Имя невесты или жениха',
+    tilda: 'Имя или название компании',
+    portfolio: 'Ваше имя / ник',
+    events: 'Имя организатора',
+  };
+  if (nameLabel) nameLabel.textContent = namePlaceholders[sec] || 'Ваше имя';
+  if (nameEl) nameEl.placeholder = namePlaceholders[sec] || 'Как вас зовут?';
+}
 
 function showToast(msg, type) {
   const t = document.getElementById('toast');
