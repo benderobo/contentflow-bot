@@ -7,6 +7,7 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 MEM0_API_KEY = os.getenv("MEM0_API_KEY", "")
 MEM0_USER_ID = os.getenv("MEM0_USER_ID", "")
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GOOGLE_AI_API_KEY", "")
 
 MIMO_CMD = os.getenv("MIMO_CMD", "/root/.mimocode/bin/mimo")
 CLAUDE_CMD = os.getenv("CLAUDE_CMD", "/usr/bin/claude")
@@ -27,7 +28,7 @@ SERVERS = {
         "host": "100.112.44.14",
         "workdir": "/root",
         "desc": "benderpi@100.112.44.14\nIN_SITE PREMIUM, Ollama, ComfyUI",
-        "ssh": "sshpass -p '0099' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 benderpi@100.112.44.14",
+        "ssh": "sshpass -p '0099' ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 benderpi@100.112.44.14",
         "type": "remote",
     },
     "g0dmod": {
