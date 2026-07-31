@@ -408,8 +408,9 @@ def poll_loop():
 if __name__ == "__main__":
     log.info(f"Starting Sunny Lessons server on :{PORT}")
 
-    t = threading.Thread(target=poll_loop, daemon=True)
-    t.start()
+    # TODO: Enable Telegram polling after updating BOT_TOKEN with valid token
+    # t = threading.Thread(target=poll_loop, daemon=True)
+    # t.start()
 
     server = HTTPServer(("0.0.0.0", PORT), Handler)
     server.serve_forever()
