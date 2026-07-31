@@ -576,6 +576,8 @@ document.getElementById("codeInput").addEventListener("keydown", function(e) { i
     }
 })();
 
+let lastDoneLessons = [];
+
 async function fetchProgress() {
     try {
         const student = sessionStorage.getItem("current_student") || "milasha";
@@ -589,10 +591,16 @@ async function fetchProgress() {
         } else {
             doneLessons = [];
         }
+
+        const changed = lastDoneLessons.length !== doneLessons.length ||
+                        lastDoneLessons.some((v, i) => v !== doneLessons[i]);
+        if (changed) {
+            lastDoneLessons = [...doneLessons];
+            render();
+        }
     } catch {
         doneLessons = [];
     }
-    render();
 }
 
 function render() {
@@ -632,7 +640,7 @@ function render() {
     document.getElementById("progressText").textContent = `${doneLessons.length} из ${LESSONS.length} уроков пройдено`;
 }
 
-setInterval(fetchProgress, 10000);
+setInterval(fetchProgress, 3000);
 fetchProgress();
 </script>
 
