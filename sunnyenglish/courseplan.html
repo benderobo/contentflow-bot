@@ -504,8 +504,14 @@ async function verifyCode() {
     if (!input) { errorEl.textContent = "Введите код или пароль"; errorEl.style.display = "block"; return; }
 
     try {
-        const res = await fetch(API_URL + "/api/verify?code=" + encodeURIComponent(input) + "&password=" + encodeURIComponent(input));
-        const data = await res.json();
+        let res = await fetch(API_URL + "/api/verify?password=" + encodeURIComponent(input));
+        let data = await res.json();
+
+        if (!data.ok) {
+            res = await fetch(API_URL + "/api/verify?code=" + encodeURIComponent(input));
+            data = await res.json();
+        }
+
         if (data.ok) {
             authRole = data.role;
             document.getElementById("authSection").style.display = "none";
@@ -515,6 +521,9 @@ async function verifyCode() {
             if (data.role === "parent" && data.child) {
                 document.getElementById("mainTitle").textContent = "Программа для " + data.child.replace(/а$/, "и");
                 document.getElementById("mainDesc").textContent = "15 уроков от стартового занятия до финальной олимпиады. Отмечай уроки через @sunny_englishbot!";
+            } else if (data.role === "admin") {
+                document.getElementById("mainTitle").textContent = "Панель администратора";
+                document.getElementById("mainDesc").textContent = "Управление всеми студентами и их прогрессом";
             }
             sessionStorage.setItem("sunny_auth", JSON.stringify({code: input, role: data.role, child: data.child}));
             sessionStorage.setItem("current_student", data.child || "milasha");
@@ -524,7 +533,7 @@ async function verifyCode() {
             errorEl.style.display = "block";
         }
     } catch {
-        errorEl.textContent = "Ошибка соединения";
+        errorEl.textContent = "Ошибка соединения с сервером";
         errorEl.style.display = "block";
     }
 }
