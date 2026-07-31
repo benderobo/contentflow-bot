@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="">
 <title>IN_SITE — Создать сайт</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -548,6 +549,19 @@
   @keyframes countNum { 0%{content:'3'} 33%{content:'2'} 66%{content:'1'} 100%{content:'✦'} }
   .anim-fade    { animation: fadeIn 1.5s ease-in-out infinite alternate; }
   .anim-slide   { animation: slideUp 1.2s ease infinite alternate; }
+  .anim-curtain { animation: curtainReveal 2s ease-in-out; overflow: hidden; }
+  .anim-petals  { position: relative; overflow: hidden; }
+  .anim-petals::before, .anim-petals::after {
+    content: '🌸'; position: absolute; font-size: 18px;
+    animation: petal 2.5s ease-in infinite;
+  }
+  .anim-petals::before { left: 20%; animation-delay: 0s; }
+  .anim-petals::after  { left: 70%; animation-delay: .8s; }
+  .anim-countdown { animation: fadeIn 1s ease-in-out infinite alternate; }
+  @keyframes curtainReveal {
+    0% { clip-path: inset(0 50% 0 50%); }
+    100% { clip-path: inset(0 0 0 0); }
+  }
   .anim-petal1  { animation: petal 2s ease-in infinite; }
   .anim-petal2  { animation: petal 2s ease-in .6s infinite; }
   .anim-petal3  { animation: petal 2s ease-in 1.2s infinite; }
@@ -1810,6 +1824,45 @@
 
 
 <script>
+// CSRF Token Protection
+async function loadCSRFToken() {
+  try {
+    const res = await fetch('/csrf', { credentials: 'include' });
+    const data = await res.json();
+    document.querySelector('meta[name="csrf-token"]').setAttribute('content', data.token);
+    return data.token;
+  } catch (e) {
+    console.warn('Failed to load CSRF token:', e);
+    return '';
+  }
+}
+function getCSRFToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+document.addEventListener('DOMContentLoaded', () => { loadCSRFToken().catch(console.warn); });
+
+// Rate Limiting (client-side spam protection)
+class RateLimiter {
+  constructor(maxRequests = 3, windowMs = 60000) {
+    this.maxRequests = maxRequests;
+    this.windowMs = windowMs;
+    this.requests = [];
+  }
+  
+  isAllowed() {
+    const now = Date.now();
+    this.requests = this.requests.filter(time => now - time < this.windowMs);
+    if (this.requests.length >= this.maxRequests) {
+      return false;
+    }
+    this.requests.push(now);
+    return true;
+  }
+}
+
+const orderLimiter = new RateLimiter(3, 60000); // 3 requests per 60 seconds
+
+
 
 // ── Parallax ──
 (function() {
@@ -1893,7 +1946,19 @@
     updateRegFormLabels(sec);
   });
 
-  document.getElementById('regSubmit').addEventListener('click', () => {
+  
+// Email validation (RFC 5322 simplified)
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) return false;
+  if (email.length > 254) return false;
+  if (email.includes('..')) return false;
+  const [localPart] = email.split('@');
+  if (localPart.length > 64) return false;
+  return true;
+}
+
+document.getElementById('regSubmit').addEventListener('click', () => {
     const nameEl  = document.getElementById('regName');
     const emailEl = document.getElementById('regEmail');
     const consentEl = document.getElementById('regConsent');
@@ -1906,14 +1971,21 @@
     nameEl.classList.remove('invalid');
     emailEl.classList.remove('invalid');
     if (!name)                         { nameEl.classList.add('invalid');  nameEl.focus();  return; }
-    if (!email || !email.includes('@')){ emailEl.classList.add('invalid'); emailEl.focus(); return; }
+    if (!email || !isValidEmail(email)){ emailEl.classList.add('invalid'); emailEl.focus(); return; }
     if (!consentEl.checked) {
       showToast('✕ Пожалуйста, примите условия обработки данных', 'error');
       consentEl.focus();
       return;
     }
 
-    localStorage.setItem('insite_reg_email', email);
+    
+// TODO: Phase 2c - Migrate to httpOnly Cookies
+// Current: localStorage stores PII (email, name)
+// Planned: Server sets HttpOnly Set-Cookie with session data
+// Benefits: XSS-proof, CSRF-protected via SameSite=Strict
+// Implementation: POST /login endpoint returns session cookie
+
+    localStorage.setItem('insite_reg_email', email); // REMOVE after Phase 2c
     localStorage.setItem('insite_reg_name',  name);
     localStorage.setItem('insite_reg_sec',   sec);
     localStorage.setItem('insite_consent',  'true');
@@ -2818,6 +2890,7 @@ INTROS.forEach(intro => {
     document.querySelectorAll('.intro-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
     selectedIntro = intro.id;
+    if (selectedTemplate) refreshPreview();
   });
   introGrid.appendChild(card);
 });
@@ -3031,12 +3104,20 @@ function formOverlay() {
   return overlay;
 }
 
+function getIntroAnimClass() {
+  const map = { fade:'anim-fade', slide:'anim-slide', curtain:'anim-curtain', petals:'anim-petals', countdown:'anim-countdown' };
+  return map[selectedIntro] || '';
+}
+
 function refreshPreview() {
   if (!selectedTemplate) return;
   const tpl = { ...selectedTemplate, scheme: effectiveScheme(), ...formOverlay(), font: selectedFont };
   const s = tpl.scheme;
   const isDark = s.bg.startsWith('#0') || s.bg.startsWith('#1') || s.bg.startsWith('#2');
   const wmColor = isDark ? 'rgba(255,255,255,0.11)' : 'rgba(0,0,0,0.08)';
+  const introCls = getIntroAnimClass();
+  const introWrap = introCls ? `<div class="${introCls}">` : '';
+  const introClose = introCls ? '</div>' : '';
 
   // ── Mobile preview ──
   const PREVIEW_SCALE = 0.55;
@@ -3049,9 +3130,11 @@ function refreshPreview() {
         <div style="position:sticky;top:50%;z-index:50;pointer-events:none;display:flex;justify-content:center;height:0;overflow:visible;">
           <span style="font-size:13px;font-weight:900;letter-spacing:3px;color:${wmColor};transform:rotate(-30deg) translateY(-8px);white-space:nowrap;">© IN_SITE — PREVIEW</span>
         </div>
+        ${introWrap}
         <div style="width:${scaledW}px; transform:scale(${PREVIEW_SCALE}); transform-origin:top left; position:relative;">
           ${miniPageHTML(tpl, 1)}
         </div>
+        ${introClose}
       </div>
     </div>
   `;
@@ -3067,9 +3150,11 @@ function refreshPreview() {
       <div style="position:sticky;top:50%;z-index:50;pointer-events:none;display:flex;justify-content:center;height:0;overflow:visible;">
         <span style="font-size:13px;font-weight:900;letter-spacing:3px;color:${wmColor};transform:rotate(-30deg) translateY(-8px);white-space:nowrap;">© IN_SITE — PREVIEW</span>
       </div>
+      ${introWrap}
       <div style="width:${scaledW2}px; transform:scale(${PREVIEW_SCALE2}); transform-origin:top left; position:relative;">
         ${miniPageHTML(tpl, 1)}
       </div>
+      ${introClose}
     </div>
   `;
   const desktopCanvas = document.getElementById('previewCanvasDesktop');
@@ -3313,13 +3398,22 @@ async function doSend() {
     };
   }
 
+  if (!orderLimiter.isAllowed()) {
+    showToast('✕ Слишком частые запросы. Подождите 1 минуту.', 'error');
+    return;
+  }
   btn.disabled = true; btn.classList.add('loading'); btn.textContent = 'Отправка...';
   try {
-    const res = await fetch('https://bendernostur.duckdns.org:88/insite/api/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-INSITE-KEY': 'insite-secret-2026' },
-      body: JSON.stringify(payload),
-    });
+    const csrfToken = getCSRFToken();
+  const res = await fetch('/insite/api/orders', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken 
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
     if (res.ok) {
       showToast('✓ Заявка отправлена! Свяжемся с вами в ближайшее время.', 'success');
       btn.textContent = '✓ Отправлено';

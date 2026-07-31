@@ -751,3 +751,4 @@ applies_to: cwd=/home/bender; reuse_rule=low-confidence and request-scoped only,
 
 # Pointers (topic files)
 - [server-194-87-18-116-justhost](server-194-87-18-116-justhost.md) — VPN/xray-сервер 194.87.18.116 = VPS на JustHost.asia (нода cn301, VM 1086004); диагностика полного отвала сети (ARP до шлюза FAILED = L2/null-route на стороне хостера)
+- [Phase 3 deployment plan (ready to execute)](phase3-deployment-plan.md) — 6-week WAF + ELK deployment (2026-07-26 to 2026-08-31), 5-day pre-deployment checklist, Phase 3.1 (ModSecurity 08-01), Phase 3.2 (ELK 08-08), Phase 3.3 (tuning 08-15+)
