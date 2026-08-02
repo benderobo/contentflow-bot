@@ -9,10 +9,13 @@ import json, os, logging, threading, time
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 import urllib.request
+from dotenv import load_dotenv
 
-BOT_TOKEN = "8655259510:AAGd1iMvLL_ZZw77j2O8RXztspq94Xd2HtM"
-ADMIN_CHAT_ID = "1139186144"
-ADMIN_PASSWORD = "noinspiration"
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
+
+BOT_TOKEN = os.environ.get('BOT_TOKEN', '')
+ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID', '')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', '')
 DATA_FILE = "/root/sunnyenglish/lessons_progress.json"
 STUDENTS_FILE = "/root/sunnyenglish/students.json"
 INVITES_FILE = "/root/sunnyenglish/invites.json"
@@ -287,6 +290,13 @@ MIME_TYPES = {
 }
 
 class Handler(SimpleHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
     def do_GET(self):
         parsed = urlparse(self.path)
 
@@ -374,6 +384,35 @@ class Handler(SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({"ok": True}).encode())
             return
 
+        if parsed.path == "/api/update-progress":
+            params = parse_qs(parsed.query)
+            password = params.get("password", [""])[0]
+            if password != ADMIN_PASSWORD:
+                self.send_response(403)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps({"ok": False, "error": "Invalid password"}).encode())
+                return
+
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+            student = body.get("student", "milasha")
+            done_lessons = body.get("done", [])
+
+            progress = load_progress()
+            if student not in progress:
+                progress[student] = {"done": [], "chat_id": ""}
+            progress[student]["done"] = done_lessons
+            save_progress(progress)
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps({"ok": True}).encode())
+            return
+
         self.send_response(404)
         self.end_headers()
 
@@ -408,9 +447,8 @@ def poll_loop():
 if __name__ == "__main__":
     log.info(f"Starting Sunny Lessons server on :{PORT}")
 
-    # TODO: Enable Telegram polling after updating BOT_TOKEN with valid token
-    # t = threading.Thread(target=poll_loop, daemon=True)
-    # t.start()
+    t = threading.Thread(target=poll_loop, daemon=True)
+    t.start()
 
     server = HTTPServer(("0.0.0.0", PORT), Handler)
     server.serve_forever()
