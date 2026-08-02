@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunny English — Летний интенсив по английскому для детей</title>
+    <meta name="description" content="Летний интенсив по английскому для детей 1–2 класса. Интерактивные занятия с ИИ-персонажем, играми и песнями.">
+    <meta property="og:title" content="Sunny English — Летний интенсив по английскому">
+    <meta property="og:description" content="Интерактивные занятия для детей. Пакеты от 12 500. Все материалы включены.">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☀️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #E8E0F0;
+            --bg-light: #F0EAF7;
+            --bg-card: #FFFFFF;
+            --navy: #1B1464;
+            --navy-light: #2D2080;
+            --purple: #5B4FCF;
+            --purple-light: #7B6FEF;
+            --purple-bg: rgba(91,79,207,0.08);
+            --text: #1B1464;
+            --text-secondary: #4A4580;
+            --text-muted: #6B65A0;
+            --border: rgba(91,79,207,0.15);
+            --radius: 12px;
+            --radius-lg: 20px;
+            --shadow: 0 4px 24px rgba(27,20,100,0.06);
+            --shadow-hover: 0 8px 32px rgba(27,20,100,0.12);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+
+        /* ===== NAV ===== */
+        .nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 900;
+            background: rgba(232,224,240,0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+        }
+        .nav-brand {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--navy);
+            text-decoration: none;
+            letter-spacing: -0.02em;
+        }
+        .nav-links { display: flex; gap: 28px; list-style: none; align-items: center; }
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--purple); }
+        .nav-cta {
+            background: var(--purple);
+            color: #fff !important;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: 600 !important;
+        }
+        .nav-cta:hover { background: var(--navy) !important; }
+        @media (max-width: 700px) { .nav-links { display: none; } }
+
+        /* ===== HERO ===== */
+        .hero {
+            padding: 120px 0 80px;
+            background: linear-gradient(180deg, var(--bg) 0%, var(--bg-light) 100%);
+        }
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+        .hero-tags { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+        .hero-tag {
+            padding: 6px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .hero h1 {
+            font-size: clamp(2.4rem, 5vw, 3.6rem);
+            font-weight: 900;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            color: var(--navy);
+            margin-bottom: 28px;
+        }
+        .hero-desc {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+        .hero-final {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-top: 12px;
+        }
+        .hero-image {
+            width: 100%;
+            aspect-ratio: 4/3;
+            border-radius: var(--radius-lg);
+            object-fit: cover;
+            box-shadow: var(--shadow);
+        }
+        @media (max-width: 800px) {
+            .hero-grid { grid-template-columns: 1fr; }
+            .hero-image { order: -1; }
+        }
+
+        /* ===== SECTION COMMON ===== */
+        .section { padding: 80px 0; }
+        .section-label {
+            display: inline-block;
+            padding: 5px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: clamp(1.8rem, 4vw, 2.6rem);
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            color: var(--navy);
+            margin-bottom: 16px;
+        }
+        .section-subtitle {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            max-width: 640px;
+            line-height: 1.7;
+        }
+
+        /* ===== GOALS ===== */
+        .goals-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+            margin-top: 40px;
+        }
+        .goals-image {
+            width: 100%;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+        }
+        .goals-list { list-style: none; margin-top: 24px; }
+        .goals-list li {
+            padding: 10px 0;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .goals-list li::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--purple);
+            flex-shrink: 0;
+            margin-top: 8px;
+        }
+        @media (max-width: 800px) { .goals-grid { grid-template-columns: 1fr; } }
+
+        /* ===== LESSONS ===== */
+        .lessons { background: var(--bg-light); }
+        .lessons-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+            margin-top: 40px;
+        }
+        .lesson-card {
+            padding: 32px 24px;
+            border-bottom: 2px solid var(--border);
+        }
+        .lesson-card:nth-child(-n+3) { border-top: none; }
+        .lesson-card:nth-child(3n+1) { border-left: none; }
+        .lesson-num {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--purple);
+            margin-bottom: 8px;
+        }
+        .lesson-card h4 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--navy);
+            margin-bottom: 10px;
+        }
+        .lesson-card p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .lesson-card .grammar {
+            font-style: italic;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+        .lessons-note {
+            margin-top: 32px;
+            padding: 20px 24px;
+            background: var(--purple-bg);
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        .lessons-note strong { color: var(--navy); }
+        @media (max-width: 700px) { .lessons-grid { grid-template-columns: 1fr; } }
+
+        /* ===== MATERIALS ===== */
+        .materials-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 40px;
+        }
+        .material-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+        }
+        .material-card:hover { transform: translateY(-3px); }
+        .material-icon {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .material-icon svg { width: 28px; height: 28px; stroke: var(--purple); fill: none; stroke-width: 1.5; }
+        .material-card h4 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--navy);
+            margin-bottom: 10px;
+        }
+        .material-card p {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .material-btn {
+            display: inline-block;
+            margin-top: 14px;
+            padding: 8px 20px;
+            background: var(--purple);
+            color: #fff;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .material-btn:hover { background: var(--navy); }
+        @media (max-width: 700px) { .materials-grid { grid-template-columns: 1fr; } }
+
+        /* ===== PACKAGES (Squishy) ===== */
+        .packages { background: var(--bg); }
+        .packages-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 40px;
+        }
+        .squishy-card {
+            position: relative;
+            width: 320px;
+            border-radius: 20px;
+            padding: 32px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .squishy-card.card-short { height: 370px; }
+        .squishy-card.card-tall { height: 480px; }
+        .squishy-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+        }
+        .squishy-card .card-content {
+            position: relative;
+            z-index: 10;
+            color: #fff;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .squishy-card .card-features {
+            list-style: none;
+            margin-top: 8px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.3) transparent;
+        }
+        .squishy-card .card-features::-webkit-scrollbar { width: 4px; }
+        .squishy-card .card-features::-webkit-scrollbar-track { background: transparent; }
+        .squishy-card .card-features::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
+        .squishy-card .card-label {
+            display: inline-block;
+            width: fit;
+            padding: 4px 14px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 16px;
+            letter-spacing: 0.03em;
+        }
+        .squishy-card .card-price {
+            font-family: 'Inter', monospace;
+            font-size: 1.8rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            transform-origin: top left;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .squishy-card:hover .card-price { transform: scale(1); }
+        .squishy-card .card-price small {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: block;
+            opacity: 0.9;
+        }
+        .squishy-card .card-desc {
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.9);
+            line-height: 1.5;
+            flex: 1;
+        }
+        .squishy-card .card-features li {
+            padding: 2px 0;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.85);
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+        }
+        .squishy-card .card-features li::before {
+            content: '\2022';
+            color: rgba(255,255,255,0.6);
+            flex-shrink: 0;
+        }
+        .squishy-card .card-btn {
+            position: relative;
+            z-index: 20;
+            display: block;
+            width: 100%;
+            margin-top: auto;
+            padding: 11px;
+            border: 2px solid #fff;
+            border-radius: 12px;
+            background: #fff;
+            color: #1a1a2e;
+            font-family: 'Inter', monospace;
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            backdrop-filter: blur(8px);
+            flex-shrink: 0;
+        }
+        .squishy-card .card-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border-color: rgba(255,255,255,0.8);
+        }
+        .squishy-card .card-bg {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .squishy-card .card-bg svg {
+            width: 100%;
+            height: 100%;
+        }
+        .squishy-card .card-bg .bg-shape {
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .squishy-card:hover .bg-shape-1 {
+            transform: scaleY(0.5) translateY(-25px);
+        }
+        .squishy-card:hover .bg-ellipse-1 {
+            transform: scaleY(2.25) translateY(-25px);
+        }
+        .squishy-card:hover .bg-rect-1 {
+            transform: translateY(219px) rotate(90deg) scaleX(2);
+        }
+        .squishy-card:hover .bg-rect-2 {
+            transform: translateY(12px) rotate(90deg) scaleX(2);
+        }
+        .squishy-card:hover .bg-hex-1 { transform: translateY(-50px); }
+        .squishy-card:hover .bg-hex-2 { transform: translateY(-50px); }
+        .squishy-card:hover .bg-hex-3 { transform: translateY(-50px); }
+        .card-indigo { background: linear-gradient(135deg, #C4B5E0, #A898D0); }
+        .card-purple { background: linear-gradient(135deg, #9B8EC4, #7B6FB0); }
+        .card-pink { background: linear-gradient(135deg, #B8A5D8, #9B8EC4); }
+        @media (max-width: 700px) {
+            .squishy-card { width: 100%; max-width: 340px; }
+            .result-payment { grid-template-columns: 1fr; }
+        }
+
+        /* Result + Payment row */
+        .result-payment {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin-top: 40px;
+        }
+        .result-block h3 {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--navy);
+            margin-bottom: 12px;
+        }
+        .result-block p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        .payment-block {
+            background: var(--purple);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            color: #fff;
+        }
+        .payment-block h4 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        .payment-block ul { list-style: none; }
+        .payment-block ul li {
+            padding: 8px 0;
+            font-size: 0.92rem;
+            line-height: 1.6;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .payment-block ul li:last-child { border-bottom: none; }
+        .payment-block ul li strong { font-weight: 700; }
+
+        /* ===== TEACHER ===== */
+        .teacher { background: var(--bg-light); }
+        .teacher-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 48px;
+            align-items: start;
+            margin-top: 40px;
+        }
+        .teacher-left { text-align: center; overflow: visible; }
+        .teacher-avatar {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: url('img/teacher.jpg') center/cover no-repeat;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(91,79,207,0.2);
+            border: 4px solid var(--bg-card);
+        }
+        .teacher-name {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+        .teacher-or { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px; }
+        .teacher-role {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--purple);
+            margin-bottom: 20px;
+        }
+        .teacher-bio p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+        .teacher-bio strong { color: var(--navy); font-weight: 700; }
+        .teacher-contacts {
+            margin-top: 32px;
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .teacher-contacts a {
+            color: var(--purple);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .teacher-contacts a:hover { color: var(--navy); }
+        @media (max-width: 700px) {
+            .teacher-grid { grid-template-columns: 1fr; }
+            .teacher-left { display: flex; flex-direction: column; align-items: center; }
+        }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(27,20,100,0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(6px);
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            max-width: 440px;
+            width: 100%;
+            position: relative;
+            animation: modalIn 0.25s ease;
+            box-shadow: 0 24px 64px rgba(27,20,100,0.2);
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(16px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: none; border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+        .modal-close:hover { background: var(--purple-bg); }
+        .modal h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+        .modal .pkg-label {
+            color: var(--purple);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            background: var(--bg-light);
+            transition: border 0.2s;
+            outline: none;
+        }
+        .form-group input:focus { border-color: var(--purple); background: #fff; }
+        .form-group .error { border-color: #e74c3c; }
+        .form-group .error-msg {
+            color: #e74c3c;
+            font-size: 0.8rem;
+            margin-top: 4px;
+            display: none;
+        }
+        .form-group .error-msg.show { display: block; }
+        .btn-submit {
+            display: block;
+            width: 100%;
+            padding: 13px;
+            background: var(--purple);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+        .btn-submit:hover { background: var(--navy); }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+        .success-msg { display: none; text-align: center; padding: 20px 0; }
+        .success-msg .check { font-size: 3rem; margin-bottom: 12px; color: var(--purple); }
+        .success-msg h3 { font-size: 1.2rem; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+        .success-msg p { color: var(--text-muted); font-size: 0.95rem; }
+
+        /* ===== CONSENT CHECKBOX ===== */
+        .consent-group {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--purple-bg);
+            border-radius: 10px;
+        }
+        .consent-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            accent-color: var(--purple);
+            cursor: pointer;
+        }
+        .consent-group label {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            cursor: pointer;
+        }
+        .consent-group label a {
+            color: var(--purple);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .consent-group label a:hover { color: var(--navy); }
+        .consent-error {
+            color: #e74c3c;
+            font-size: 0.8rem;
+            margin-top: 6px;
+            display: none;
+        }
+        .consent-error.show { display: block; }
+
+        /* ===== PRIVACY MODAL ===== */
+        .privacy-modal {
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .privacy-modal h2 {
+            font-size: 1.3rem;
+            margin-bottom: 16px;
+        }
+        .privacy-modal h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin: 16px 0 8px;
+        }
+        .privacy-modal p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .privacy-modal ul {
+            margin: 8px 0 12px 20px;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .privacy-modal .btn-accept {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: var(--purple);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+        .privacy-modal .btn-accept:hover { background: var(--navy); }
+
+        /* ===== BACK TO TOP ===== */
+        .back-to-top {
+            position: fixed;
+            bottom: 28px; right: 28px;
+            width: 44px; height: 44px;
+            border-radius: 10px;
+            background: var(--purple);
+            color: #fff;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(91,79,207,0.3);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+            z-index: 800;
+        }
+        .back-to-top.visible { opacity: 1; pointer-events: auto; }
+        .back-to-top:hover { transform: translateY(-2px); background: var(--navy); }
+
+        /* ===== FOOTER ===== */
+        footer {
+            text-align: center;
+            padding: 32px 24px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ===== REVEAL ===== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="#" class="nav-brand">Sunny English</a>
+        <ul class="nav-links">
+            <li><a href="#goals">О нас</a></li>
+            <li><a href="#materials">Материалы</a></li>
+            <li><a href="#packages">Пакеты</a></li>
+            <li><a href="#teacher">Преподаватель</a></li>
+            <li><a href="#packages" class="nav-cta">Записаться</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="container">
+        <div class="hero-grid">
+            <div>
+                <div class="hero-tags">
+                    <span class="hero-tag">Summer Intensive</span>
+                    <span class="hero-tag">English for Kids</span>
+                </div>
+                <h1>Sunny English Летний интенсив по английскому</h1>
+                <p class="hero-desc">Яркая и увлекательная программа для учеников 1–2 класса: интерактивные занятия с сопровождением индивидуального ИИ персонажа, сгенерированным по образу ребенка, море игр, песен, движения и радостных открытий.</p>
+                <p class="hero-final">Вместе с ребёнком легко и с удовольствием подружимся с английским языком!</p>
+            </div>
+            <div>
+                <img src="img/2.png" alt="Sunny English" class="hero-image" style="border-radius:50%; aspect-ratio:1; object-fit:cover;">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- GOALS -->
+<section class="section" id="goals">
+    <div class="container">
+        <div class="goals-grid">
+            <div>
+                <span class="section-label reveal">Что нас ждёт</span>
+                <h2 class="section-title reveal">Цель интенсива</h2>
+                <p class="section-subtitle reveal">от 5 до 15 уроков по 40 минут — через день.</p>
+                <p class="section-subtitle reveal" style="margin-top:12px;">Интенсив построен на материалах <em>Family and Friends 2</em>. Мягкое и интересное вовлечение в язык через игры и творчество.</p>
+                <ul class="goals-list reveal">
+                    <li>Закрепить лексику: семья, игрушки, школа, животные, внешность, эмоции</li>
+                    <li>Продолжить развитие навыка понимания на слух</li>
+                    <li>Научиться читать от CVC (односложных слов) до простых предложений</li>
+                    <li>Развить еще больший интерес к языку</li>
+                </ul>
+            </div>
+            <div>
+                <img src="img/1.png" alt="Цель интенсива" class="goals-image reveal">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- LESSONS -->
+<section class="section lessons" id="lessons">
+    <div class="container">
+        <span class="section-label reveal">5–15 Lessons</span>
+        <h2 class="section-title reveal" style="text-align:center;">Структура уроков<br>на занятия 1–5*</h2>
+        <div class="lessons-grid">
+            <div class="lesson-card reveal">
+                <div class="lesson-num">01</div>
+                <h4>Starter lesson</h4>
+                <p>Повторение по темам: семья, внешность, дни недели, цвета, числа</p>
+                <p class="grammar">&#9660; тренировка чтения (CVC words)</p>
+            </div>
+            <div class="lesson-card reveal">
+                <div class="lesson-num">02</div>
+                <h4>Our new things</h4>
+                <p>Школьные принадлежности. Грамматика: составление простых предложений с конструкциями <em>This is/These are</em> <em>That is/Those are</em></p>
+                <p class="grammar">&#9660; тренировка чтения (CVC words)</p>
+            </div>
+            <div class="lesson-card reveal">
+                <div class="lesson-num">03</div>
+                <h4>We're happy now</h4>
+                <p>Наши чувства и эмоции. Выражаем свои, описываем чужие. Grammar: to be (от единственного до множественного числа по местоимениям)</p>
+                <p class="grammar">&#9660; тренировка чтения (многосложные слова)</p>
+            </div>
+            <div class="lesson-card reveal">
+                <div class="lesson-num">04</div>
+                <h4>Yes, I can!</h4>
+                <p>Что мы умеем и не умеем делать. Grammar: глагол can/cannot</p>
+                <p class="grammar">&#9660; тренировка чтения (простые предложения)</p>
+            </div>
+            <div class="lesson-card reveal">
+                <div class="lesson-num">05</div>
+                <h4>Fluency time + Review</h4>
+                <p>каждое 5-е занятие — смотрим сухой остаток по пройденному материалу. Тестируем навыки говорения, активного слушания и чтения по системе Cambridge exams</p>
+            </div>
+            <div class="lesson-card reveal" style="display:flex;align-items:center;">
+                <div>
+                    <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.7;">В дни без урока — digital tasks на Wordwall + песня по теме + handout materials. Лексика закрепляется легко и играючи!</p>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin-top:10px;">*При выборе пакета Bright boost или Star explorer родителям высылается подробный план занятий на весь интенсив</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- MATERIALS -->
+<section class="section" id="materials">
+    <div class="container">
+        <h2 class="section-title reveal">Учебник и материалы</h2>
+        <p class="section-subtitle reveal">Всё, что понадобится на занятиях — простое и наглядное.</p>
+        <div class="materials-grid">
+            <div class="material-card reveal">
+                <div class="material-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+                <h4>Family and Friends 2</h4>
+                <p>Основной учебник — яркие страницы, понятные задания, любимые герои. Учебник на занятиях демонстрируется через Flipbuilder. По желанию комплект Student book + Work book</p>
+                <a href="https://online.flipbuilder.com/sdtta/gjdj/" target="_blank" class="material-btn">Flipbuilder</a>
+            </div>
+            <div class="material-card reveal">
+                <div class="material-icon"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></div>
+                <h4>Miro board and Flashcards</h4>
+                <p>Занятия проходят на интерактивной доске Miro с использованием красочных карточек для запоминания новых слов через игры.</p>
+            </div>
+            <div class="material-card reveal">
+                <div class="material-icon"><svg viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></div>
+                <h4>Творческие задания</h4>
+                <p>Раскраски, обводилки и мини-проекты для маленьких ручек.</p>
+            </div>
+            <div class="material-card reveal">
+                <div class="material-icon"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+                <h4>Песни и Wordwall tasks</h4>
+                <p>Интерактивные игры и песни по темам — закрепляем между уроками.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PACKAGES -->
+<section class="section packages" id="packages">
+    <div class="container">
+        <h2 class="section-title reveal" style="text-align:center;">Выберите свой пакет</h2>
+        <div class="packages-grid">
+
+            <!-- Sunny Start -->
+            <div class="squishy-card card-indigo card-short reveal" onclick="selectPackage(this)" data-package="sunny-start">
+                <div class="card-bg">
+                    <svg viewBox="0 0 320 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle class="bg-shape bg-shape-1" cx="160" cy="114" r="101" fill="rgba(0,0,0,0.15)" style="transform-origin:center"/>
+                        <ellipse class="bg-shape bg-ellipse-1" cx="160" cy="265" rx="101" ry="43" fill="rgba(0,0,0,0.15)" style="transform-origin:center"/>
+                    </svg>
+                </div>
+                <div class="card-content">
+                    <span class="card-label">Мини-интенсив</span>
+                    <div class="card-price">12 500 <small>/ пакет</small></div>
+                    <ul class="card-features">
+                        <li>5 занятий по 40 мин через день</li>
+                        <li>игры на платформе</li>
+                        <li>message-отчет родителям после каждого урока</li>
+                    </ul>
+                    <a href="#" class="card-btn" onclick="event.preventDefault(); selectPackage(this.closest('.squishy-card'))">Выбрать пакет</a>
+                </div>
+            </div>
+
+            <!-- Bright Boost -->
+            <div class="squishy-card card-purple card-short reveal" onclick="selectPackage(this)" data-package="bright-boost">
+                <div class="card-bg">
+                    <svg viewBox="0 0 320 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect class="bg-shape bg-rect-1" x="14" y="12" width="153" height="153" rx="15" fill="rgba(0,0,0,0.15)" style="transform-origin:center"/>
+                        <rect class="bg-shape bg-rect-2" x="155" y="219" width="153" height="153" rx="15" fill="rgba(0,0,0,0.15)" style="transform-origin:center"/>
+                    </svg>
+                </div>
+                <div class="card-content">
+                    <span class="card-label">Популярный</span>
+                    <div class="card-price">25 000 <small>/ пакет</small></div>
+                    <ul class="card-features">
+                        <li>10 занятий по 40 мин через день</li>
+                        <li>задания на 2 платформах</li>
+                        <li>message-отчет родителям</li>
+                        <li>подробный план на весь интенсив</li>
+                        <li>video фрагменты урока</li>
+                        <li>Demo-version олимпиады Olimpis</li>
+                    </ul>
+                    <a href="#" class="card-btn" onclick="event.preventDefault(); selectPackage(this.closest('.squishy-card'))">Выбрать пакет</a>
+                </div>
+            </div>
+
+            <!-- Star Explorer -->
+            <div class="squishy-card card-pink card-tall reveal" onclick="selectPackage(this)" data-package="star-explorer">
+                <div class="card-bg">
+                    <svg viewBox="0 0 320 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path class="bg-shape bg-hex-1" d="M148.9 157.5c5.9-5.9 15.3-5.9 21.2 0l97.3 97.3c5.9 5.9 5.9 15.3 0 21.2l-48.6 48.6c-32.7 32.7-85.8 32.7-118.5 0L51.6 276c-5.9-5.9-5.9-15.3 0-21.2l97.3-97.3z" fill="rgba(0,0,0,0.15)" style="transform-origin:center"/>
+                        <path class="bg-shape bg-hex-2" d="M148.9 99.1c5.9-5.9 15.3-5.9 21.2 0l97.3 97.3c5.9 5.9 5.9 15.3 0 21.2l-48.6 48.6c-32.7 32.7-85.8 32.7-118.5 0L51.6 217.6c-5.9-5.9-5.9-15.3 0-21.2l97.3-97.3z" fill="rgba(0,0,0,0.15)" style="transform-origin:center"/>
+                        <path class="bg-shape bg-hex-3" d="M148.9 40.6c5.9-5.9 15.3-5.9 21.2 0l97.3 97.3c5.9 5.9 5.9 15.3 0 21.2l-48.6 48.6c-32.7 32.7-85.8 32.7-118.5 0L51.6 159.1c-5.9-5.9-5.9-15.3 0-21.2l97.3-97.3z" fill="rgba(0,0,0,0.15)" style="transform-origin:center"/>
+                    </svg>
+                </div>
+                <div class="card-content">
+                    <span class="card-label">Лучший</span>
+                    <div class="card-price">35 000 <small>/ пакет</small></div>
+                    <ul class="card-features">
+                        <li>3 недели занятий по 40 мин</li>
+                        <li>доступ к 3 платформам</li>
+                        <li>message-отчет родителям</li>
+                        <li>подробный план на весь интенсив</li>
+                        <li>video фрагменты урока</li>
+                        <li>Demo-version олимпиады Olimpis</li>
+                        <li>офлайн сопровождение преподавателя</li>
+                        <li>доп. handout materials</li>
+                        <li>Extra materials индивидуально</li>
+                    </ul>
+                    <a href="#" class="card-btn" onclick="event.preventDefault(); selectPackage(this.closest('.squishy-card'))">Выбрать пакет</a>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="result-payment">
+            <div class="result-block reveal">
+                <h3>Результат</h3>
+                <p>К концу любого выбранного Вами пакета интенсива ребёнок будет увереннее говорить устойчивые фразы, выучит новые слова по базовым темам, начнёт лучше понимать английскую речь и — главное — почувствует уверенность от владения иностранным языком!</p>
+                <p style="margin-top:12px;">По итогам интенсива пакетов Bright Boost и Star explorer — демо-версия олимпиады Olimpis (регистрация на осеннюю сессию начнется в октябре-ноябре)</p>
+            </div>
+            <div class="payment-block reveal">
+                <h4>Варианты оплаты</h4>
+                <ul>
+                    <li><strong>100% предоплата</strong> до начала интенсива</li>
+                    <li><strong>50% предоплата</strong> до начала интенсива и 50% в середине курса</li>
+                    <li>*При выборе пакета Star explorer возможна оплата 50%+25%+25% перед началом каждой недели</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- TEACHER -->
+<section class="section teacher" id="teacher">
+    <div class="container">
+        <h2 class="section-title reveal">Let's learn English together</h2>
+        <div class="teacher-grid">
+            <div class="teacher-left reveal">
+                <div class="teacher-avatar"></div>
+            </div>
+            <div class="teacher-bio reveal">
+                <div class="teacher-name">Мария Шишкина</div>
+                <div class="teacher-or">or Mary</div>
+                <div class="teacher-role">Преподаватель английского языка. Online tutor</div>
+                <p>Я работаю в тьюторстве с 2009 года и помогаю детям и подросткам уверенно двигаться к своим целям в английском языке.</p>
+                <p>Имею высшее педагогическое образование РГПУ им. А. И. Герцена, учитель первой категории, эксперт в онлайн-обучении и дистанционных форматах.</p>
+                <p>Мои ученики успешно выступают на конференциях, олимпиадах и экзаменах, а также готовятся к ОГЭ, ЕГЭ, IELTS и TOEFL.</p>
+                <p><strong>Для меня важно не только дать знания, но и помочь ребёнку поверить в себя, научиться говорить, выступать и добиваться результата.</strong></p>
+                <div class="teacher-contacts">
+                    <a href="mailto:mariamokh17@mail.ru">mariamokh17@mail.ru</a>
+                    <a href="tel:+79213220424">+79213220424 (Telegram/Max)</a>
+                    <a href="https://vk.com/maria_masha" target="_blank">https://vk.com/maria_masha</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <p>Sunny English &copy; 2026. Все права защищены.</p>
+    <p style="margin-top:12px; max-width:800px; margin-left:auto; margin-right:auto; font-size:0.78rem; line-height:1.6; color:var(--text-muted);">
+        Информация о персональных данных. Персональные данные пользователей (имя ребёнка, имя родителя, контактный телефон) собираются исключительно для связи с родителем (законным представителем) и организации образовательного процесса. Персональные данные не передаются третьим лицам и хранятся в защищённой базе данных с соблюдением мер безопасности, предусмотренных Федеральным законом от 27.07.2006 №152-ФЗ «О персональных данных», и удаляются после обработки заявки.         Подробнее — <a href="#" onclick="event.preventDefault(); openPrivacyModal();">Политика обработки персональных данных</a>.
+        <br><a href="#" onclick="event.preventDefault(); revokeConsent();" style="color:var(--purple);text-decoration:underline;">Отозвать согласие на обработку персональных данных</a>.
+    </p>
+</footer>
+
+<!-- BACK TO TOP -->
+<button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+    <div class="modal">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div id="formView">
+            <h2>Запись на курс</h2>
+            <p class="pkg-label" id="modalPackageName"></p>
+            <form id="regForm" onsubmit="submitForm(event)" novalidate>
+                <div class="form-group">
+                    <label for="childName">Имя ребёнка</label>
+                    <input type="text" id="childName" placeholder="Как зовут ребёнка?" required minlength="2">
+                    <div class="error-msg" id="childNameError">Введите имя (минимум 2 символа)</div>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Телефон</label>
+                    <input type="tel" id="phone" placeholder="+7 (___) ___-__-__" required>
+                    <div class="error-msg" id="phoneError">Введите полный номер телефона</div>
+                </div>
+                <div class="form-group">
+                    <label for="parentName">Имя родителя</label>
+                    <input type="text" id="parentName" placeholder="Ваше имя" required minlength="2">
+                    <div class="error-msg" id="parentNameError">Введите имя (минимум 2 символа)</div>
+                </div>
+                <div class="consent-group">
+                    <input type="checkbox" id="consentCheck">
+                    <label for="consentCheck">Я даю согласие на обработку персональных данных и принимаю <a onclick="event.preventDefault(); openPrivacyModal();">политику обработки персональных данных</a></label>
+                </div>
+                <div class="consent-error" id="consentError">Необходимо дать согласие на обработку персональных данных</div>
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    <span class="btn-text">Отправить заявку</span>
+                </button>
+            </form>
+        </div>
+        <div class="success-msg" id="successView">
+            <div class="check">&#10003;</div>
+            <h3>Заявка отправлена!</h3>
+            <p>Мария свяжется с вами в ближайшее время</p>
+        </div>
+    </div>
+</div>
+
+<!-- PRIVACY POLICY MODAL -->
+<div class="modal-overlay" id="privacyModal">
+    <div class="modal privacy-modal">
+        <button class="modal-close" onclick="closePrivacyModal()">&times;</button>
+        <h2>Политика обработки персональных данных</h2>
+
+        <h3>1. Общие положения</h3>
+        <p>Настоящая политика обработки персональных данных составлена в соответствии с требованиями Федерального закона от 27.07.2006 №152-ФЗ «О персональных данных» и определяет порядок обработки персональных данных и меры по обеспечению безопасности персональных данных Оператор (далее — Оператор).</p>
+        <p>Оператор ставит своей целью соблюдение прав и свобод человека и гражданина при обработке его персональных данных, в том числе защиты прав на неприкосновенность частной жизни, личную и семейную тайну.</p>
+
+        <h3>2. Основные понятия</h3>
+        <ul>
+            <li><strong>Персональные данные</strong> — любая информация, относящаяся к прямо или косвенно определённому или определяемому физическому лицу (субъекту персональных данных).</li>
+            <li><strong>Обработка персональных данных</strong> — любое действие (операция) или совокупность действий с персональными данными, включая сбор, запись, систематизацию, накопление, хранение, уточнение, извлечение, использование, передачу, обезличивание, блокирование, удаление, уничтожение.</li>
+            <li><strong>Конфиденциальность персональных данных</strong> — обязательное требование к Оператору не допускать распространения персональных данных без согласия субъекта.</li>
+        </ul>
+
+        <h3>3. Персональные данные, которые мы собираем</h3>
+        <p>В процессе заполнения формы записи на курс мы можем собирать следующие данные:</p>
+        <ul>
+            <li>Имя ребёнка</li>
+            <li>Имя родителя (законного представителя)</li>
+            <li>Контактный телефон</li>
+        </ul>
+
+        <h3>4. Цели обработки персональных данных</h3>
+        <p>Персональные данные обрабатываются в следующих целях:</p>
+        <ul>
+            <li>Связь с родителем (законным представителем) для уточнения деталей записи на курс</li>
+            <li>Организация и проведение образовательных занятий</li>
+            <li>Отправка информационных материалов о ходе обучения</li>
+        </ul>
+
+        <h3>5. Правовые основания обработки</h3>
+        <p>Обработка персональных данных осуществляется на основании:</p>
+        <ul>
+            <li>Согласия субъекта персональных данных на обработку его персональных данных</li>
+            <li>Исполнения договора, стороной которого является субъект персональных данных</li>
+        </ul>
+
+        <h3>6. Меры безопасности персональных данных</h3>
+        <p>Оператор принимает правовые, организационные и технические меры для защиты персональных данных от неправомерного или случайного доступа, уничтожения, изменения, блокирования, копирования, предоставления, распространения, а также от иных неправомерных действий.</p>
+
+        <h3>7. Передача персональных данных третьим лицам</h3>
+        <p>Оператор не передаёт персональные данные третьим лицам, за исключением случаев, необходимых для организации образовательного процесса (например, передача данных преподавателю для проведения занятий). Передача данных осуществляется на основании поручения на обработку персональных данных в соответствии со ст. 6 Федерального закона от 27.07.2006 №152-ФЗ. Третьи лица, получающие доступ к персональным данным, обязаны обеспечить их конфиденциальность и защиту в соответствии с требованиями законодательства Российской Федерации.</p>
+
+        <h3>8. Права субъекта персональных данных</h3>
+        <p>Субъект персональных данных имеет право:</p>
+        <ul>
+            <li>Получать информацию о факте обработки своих персональных данных</li>
+            <li>Требовать уточнения своих персональных данных, их блокирования или уничтожения</li>
+            <li>Отозвать согласие на обработку персональных данных. При отзыве согласия оператор обязуется прекратить обработку персональных данных и уничтожить их не позднее 30 рабочих дней, если иное не предусмотрено законодательством Российской Федерации</li>
+            <li>Обжаловать действия или бездействие Оператора в уполномоченный орган по защите прав субъектов персональных данных или в суд</li>
+        </ul>
+
+        <h3>9. Срок обработки и уничтожения персональных данных</h3>
+        <p>Персональные данные обрабатываются в течение срока, необходимого для достижения целей обработки, и не могут храниться дольше, чем этого требуют цели обработки. Персональные данные удаляются (уничтожаются) не позднее 30 рабочих дней после завершения обработки заявки и связи с родителем (законным представителем) либо после отзыва согласия субъектом персональных данных. Факт уничтожения фиксируется внутренним актом оператора.</p>
+
+        <h3>10. Контактная информация</h3>
+        <p>По всем вопросам, связанным с обработкой персональных данных, вы можете обращаться:</p>
+        <p>Оператор<br>
+        E-mail: mariamokh17@mail.ru<br>
+        Телефон: +7 (921) 322-04-24</p>
+
+        <button class="btn-accept" onclick="acceptPrivacy()">Принимаю</button>
+    </div>
+</div>
+
+<!-- REVOKE CONSENT MODAL -->
+<div class="modal-overlay" id="revokeModal">
+    <div class="modal">
+        <button class="modal-close" onclick="closeRevokeModal()">&times;</button>
+        <div id="revokeFormView">
+            <h2>Отзыв согласия на обработку персональных данных</h2>
+            <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:20px;">После отправки заявки ваши персональные данные будут уничтожены в течение 30 рабочих дней, а вам будет выдан акт об уничтожении.</p>
+            <form id="revokeForm" onsubmit="submitRevoke(event)" novalidate>
+                <div class="form-group">
+                    <label for="revokeName">ФИО родителя (законного представителя)</label>
+                    <input type="text" id="revokeName" placeholder="ФИО" required minlength="2">
+                    <div class="error-msg" id="revokeNameError">Введите ФИО</div>
+                </div>
+                <div class="form-group">
+                    <label for="revokePhone">Телефон, указанный при записи</label>
+                    <input type="tel" id="revokePhone" placeholder="+7 (___) ___-__-__" required>
+                    <div class="error-msg" id="revokePhoneError">Введите телефон</div>
+                </div>
+                <div class="form-group">
+                    <label for="revokeEmail">E-mail (необязательно)</label>
+                    <input type="email" id="revokeEmail" placeholder="email@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="revokeChild">Имя ребёнка (необязательно, для точного поиска)</label>
+                    <input type="text" id="revokeChild" placeholder="Имя ребёнка">
+                </div>
+                <button type="submit" class="btn-submit">
+                    <span class="btn-text">Отправить заявку на отзыв</span>
+                </button>
+            </form>
+        </div>
+        <div class="success-msg" id="revokeSuccessView">
+            <div class="check">&#10003;</div>
+            <h3>Заявка на отзыв отправлена!</h3>
+            <p>Мария свяжется с вами для подтверждения. Акт об уничтожении персональных данных будет направлен в ближайшее время.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    let TELEGRAM_BOT_TOKEN = null;
+    // Load token from backend at runtime (never hardcode secrets)
+    async function loadTelegramConfig() {
+        try {
+            const response = await fetch('/api/telegram-config');
+            if (response.ok) {
+                const data = await response.json();
+                TELEGRAM_BOT_TOKEN = data.token;
+            }
+        } catch (e) {
+            console.error('Failed to load Telegram config:', e);
+        }
+    }
+    loadTelegramConfig();
+
+    const TELEGRAM_CHAT_ID = '1139186144';
+    let selectedPackage = null;
+    const packageNames = {
+        'sunny-start': 'Sunny Start \u2014 12 500',
+        'bright-boost': 'Bright Boost \u2014 25 000',
+        'star-explorer': 'Star Explorer \u2014 35 000'
+    };
+
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObserver.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    window.addEventListener('scroll', () => {
+        document.getElementById('backToTop').classList.toggle('visible', window.scrollY > 400);
+    });
+
+    function selectPackage(card) {
+        document.querySelectorAll('.package-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedPackage = card.dataset.package;
+        document.getElementById('modalPackageName').textContent = packageNames[selectedPackage];
+        document.getElementById('formView').style.display = 'block';
+        document.getElementById('successView').style.display = 'none';
+        document.getElementById('regForm').reset();
+        clearErrors();
+        document.getElementById('modal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+        document.getElementById('modal').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeModal(); closePrivacyModal(); } });
+
+    function formatPhone(value) {
+        let d = value.replace(/\D/g, '');
+        if (d.length === 0) return '';
+        if (d[0] === '8') d = '7' + d.slice(1);
+        if (d[0] !== '7') d = '7' + d;
+        let f = '+7';
+        if (d.length > 1) f += ' (' + d.slice(1, 4);
+        if (d.length > 4) f += ') ' + d.slice(4, 7);
+        if (d.length > 7) f += '-' + d.slice(7, 9);
+        if (d.length > 9) f += '-' + d.slice(9, 11);
+        return f;
+    }
+    document.getElementById('phone').addEventListener('input', function() {
+        let pos = this.selectionStart, old = this.value.length;
+        this.value = formatPhone(this.value);
+        this.setSelectionRange(pos + (this.value.length - old), pos + (this.value.length - old));
+    });
+
+    function clearErrors() {
+        document.querySelectorAll('.form-group input').forEach(i => i.classList.remove('error'));
+        document.querySelectorAll('.error-msg').forEach(m => m.classList.remove('show'));
+        document.getElementById('consentError').classList.remove('show');
+    }
+    function validate() {
+        clearErrors();
+        let v = true;
+        const n = document.getElementById('childName');
+        if (n.value.trim().length < 2) { n.classList.add('error'); document.getElementById('childNameError').classList.add('show'); v = false; }
+        const p = document.getElementById('phone');
+        if (p.value.replace(/\D/g, '').length < 11) { p.classList.add('error'); document.getElementById('phoneError').classList.add('show'); v = false; }
+        const r = document.getElementById('parentName');
+        if (r.value.trim().length < 2) { r.classList.add('error'); document.getElementById('parentNameError').classList.add('show'); v = false; }
+        const c = document.getElementById('consentCheck');
+        if (!c.checked) { document.getElementById('consentError').classList.add('show'); v = false; }
+        return v;
+    }
+
+    async function submitForm(e) {
+        e.preventDefault();
+        if (!validate()) return;
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.textContent = '\u041E\u0442\u043F\u0440\u0430\u0432\u043A\u0430...';
+        const name = document.getElementById('childName').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const parent = document.getElementById('parentName').value.trim();
+        const pkg = packageNames[selectedPackage];
+        const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+        const msg = `\u2600\uFE0F *Новая заявка Sunny English*\n\n\uD83D\uDC64 Ребёнок: *${esc(name)}*\n\uD83D\uDC64 Родитель: *${esc(parent)}*\n\uD83D\uDCDE Телефон: *${esc(phone)}*\n\uD83D\uDCDA Пакет: *${esc(pkg)}*`;
+        try {
+            const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: 'Markdown' })
+            });
+            if (r.ok || TELEGRAM_BOT_TOKEN === 'YOUR_BOT_TOKEN') {
+                document.getElementById('formView').style.display = 'none';
+                document.getElementById('successView').style.display = 'block';
+            } else { throw 0; }
+        } catch { document.getElementById('formView').style.display = 'none'; document.getElementById('successView').style.display = 'block'; }
+        btn.disabled = false;
+        btn.textContent = '\u041E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0437\u0430\u044F\u0432\u043A\u0443';
+    }
+
+    // Privacy modal functions
+    function openPrivacyModal() {
+        document.getElementById('privacyModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePrivacyModal() {
+        document.getElementById('privacyModal').classList.remove('active');
+        if (!document.getElementById('modal').classList.contains('active')) {
+            document.body.style.overflow = '';
+        }
+    }
+
+    function acceptPrivacy() {
+        document.getElementById('consentCheck').checked = true;
+        document.getElementById('consentError').classList.remove('show');
+        closePrivacyModal();
+    }
+
+    function openRevokeModal() {
+        document.getElementById('revokeModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeRevokeModal() {
+        document.getElementById('revokeModal').classList.remove('active');
+        if (!document.getElementById('modal').classList.contains('active')) {
+            document.body.style.overflow = '';
+        }
+        document.getElementById('revokeFormView').style.display = 'block';
+        document.getElementById('revokeSuccessView').style.display = 'none';
+        document.getElementById('revokeForm').reset();
+    }
+
+    function revokeConsent() { openRevokeModal(); }
+
+    function submitRevoke(e) {
+        e.preventDefault();
+        const n = document.getElementById('revokeName');
+        const p = document.getElementById('revokePhone');
+        let v = true;
+        document.querySelectorAll('#revokeForm .error-msg').forEach(m => m.classList.remove('show'));
+        n.classList.remove('error');
+        p.classList.remove('error');
+        if (n.value.trim().length < 2) { n.classList.add('error'); document.getElementById('revokeNameError').classList.add('show'); v = false; }
+        if (p.value.replace(/\D/g, '').length < 11) { p.classList.add('error'); document.getElementById('revokePhoneError').classList.add('show'); v = false; }
+        if (!v) return;
+        const name = n.value.trim();
+        const phone = p.value.trim();
+        const email = document.getElementById('revokeEmail').value.trim() || 'не указан';
+        const child = document.getElementById('revokeChild').value.trim() || 'не указано';
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('ru-RU', {day:'numeric', month:'long', year:'numeric'});
+        const actNum = 'Акт-' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + '-' + Math.random().toString(36).substr(2,4).toUpperCase();
+        const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+        const msg = `\u26A0\uFE0F *Отзыв согласия на обработку ПДн*\n\n\uD83D\uDC64 Родитель: *${esc(name)}*\n\uD83D\uDCDE Телефон: *${esc(phone)}*\n\uD83D\uDCE7 E-mail: ${esc(email)}\n\uD83D\uDC76 Ребёнок: ${esc(child)}\n\nНеобходимо уничтожить персональные данные в течение 30 рабочих дней и направить акт.`;
+        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: 'Markdown' })
+        });
+        const actHtml = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Акт об уничтожении ПДн ${actNum}</title>
+<style>body{font-family:'Times New Roman',serif;max-width:700px;margin:40px auto;padding:20px;line-height:1.8;color:#000;}
+h1{font-size:1.3rem;text-align:center;margin-bottom:30px;}h2{font-size:1.1rem;margin:20px 0 10px;}p{margin:8px 0;}
+table{width:100%;border-collapse:collapse;margin:16px 0;}td{border:1px solid #000;padding:8px 12px;font-size:0.95rem;}
+.signature{margin-top:40px;display:flex;justify-content:space-between;}.signature div{width:45%;}
+.signature p{border-top:1px solid #000;margin-top:60px;padding-top:4px;font-size:0.9rem;}
+@media print{body{margin:0;padding:20mm;}}</style></head><body>
+<h1>АКТ<br>об уничтожении персональных данных</h1>
+<p><strong>г. ________________</strong> &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; <strong>${dateStr}</strong></p>
+<h2>1. Сведения о субъекте персональных данных</h2>
+<table><tr><td>ФИО родителя (законного представителя)</td><td>${esc(name)}</td></tr>
+<tr><td>Телефон</td><td>${esc(phone)}</td></tr>
+<tr><td>E-mail</td><td>${esc(email)}</td></tr>
+<tr><td>Имя ребёнка</td><td>${esc(child)}</td></tr></table>
+<h2>2. Основание для уничтожения</h2>
+<p>Отзыв согласия на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 №152-ФЗ «О персональных данных».</p>
+<h2>3. Перечень уничтоженных персональных данных</h2>
+<table><tr><td>Имя ребёнка</td><td>удалено</td></tr>
+<tr><td>Имя родителя (законного представителя)</td><td>удалено</td></tr>
+<tr><td>Контактный телефон</td><td>удалено</td></tr></table>
+<h2>4. Способ и срок уничтожения</h2>
+<p>Данные удалены из всех баз данных и систем Оператора без возможности восстановления. Уничтожение выполнено в день подписания настоящего акта.</p>
+<p>Номер акта: ${actNum}</p>
+<div class="signature">
+<div><p>Оператор<br><br>________________ / _______________ /</p></div>
+<div><p>Субъект персональных данных<br><br>________________ / ${esc(name)} /</p></div>
+</div></body></html>`;
+        const w = window.open('', '_blank');
+        w.document.write(actHtml);
+        w.document.close();
+        w.print();
+        document.getElementById('revokeFormView').style.display = 'none';
+        document.getElementById('revokeSuccessView').style.display = 'block';
+    }
+
+    document.getElementById('revokeModal').addEventListener('click', function(e) { if (e.target === this) closeRevokeModal(); });
+
+    document.getElementById('privacyModal').addEventListener('click', function(e) { if (e.target === this) closePrivacyModal(); });
+</script>
+</body>
+</html>
