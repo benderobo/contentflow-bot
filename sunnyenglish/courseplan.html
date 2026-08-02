@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'">
     <title>Sunny English — Программа курса</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☀️</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -393,6 +394,32 @@
             font-weight: 600;
         }
 
+        input[type="checkbox"][data-lesson-num] {
+            width: 20px;
+            height: 20px;
+            margin-left: 8px;
+            cursor: pointer;
+            accent-color: var(--purple);
+        }
+
+        #adminSaveBtn {
+            padding: 12px 24px;
+            background: var(--purple);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        #adminSaveBtn:hover {
+            background: var(--purple-light);
+            transform: translateY(-2px);
+        }
+
         @media (max-width: 700px) {
             .hero-inner { flex-direction: column-reverse; gap: 20px; }
             .hero-char { width: 200px; }
@@ -400,6 +427,18 @@
             .goals-img { width: 180px; height: 180px; }
             .lessons-grid { grid-template-columns: 1fr; }
             .nav-links { display: none; }
+
+            input[type="checkbox"][data-lesson-num] {
+                width: 24px;
+                height: 24px;
+                margin-left: 12px;
+            }
+
+            #adminSaveBtn {
+                width: 100%;
+                padding: 16px;
+                font-size: 1.1rem;
+            }
         }
     </style>
 </head>
@@ -493,23 +532,37 @@ const LESSONS = [
     { n:15, topic:"Course review + DEMO", focus:"Final check up", activities:"Final revision, reading, speaking, mini assessment, wrap-up", wordwall:[{t:"Olimpis DEMO",u:""}], handout:"Handout materials + useful links for the future" }
 ];
 
-const API_URL = "http://localhost:8089";
+const API_URL = window.location.origin;
 
 let doneLessons = [];
 let authRole = null;
 
-async function verifyCode() {
+function verifyCode() {
     const input = document.getElementById("codeInput").value.trim();
     const errorEl = document.getElementById("authError");
     if (!input) { errorEl.textContent = "Введите код или пароль"; errorEl.style.display = "block"; return; }
 
-    try {
-        let res = await fetch(API_URL + "/api/verify?password=" + encodeURIComponent(input));
-        let data = await res.json();
+    function tryVerify(paramName, paramValue) {
+        return new Promise((resolve) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", API_URL + "/api/verify?" + paramName + "=" + encodeURIComponent(paramValue), true);
+            xhr.onload = function() {
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    resolve(data);
+                } catch {
+                    resolve({ok: false});
+                }
+            };
+            xhr.onerror = function() { resolve({ok: false}); };
+            xhr.send();
+        });
+    }
 
+    (async function() {
+        let data = await tryVerify("password", input);
         if (!data.ok) {
-            res = await fetch(API_URL + "/api/verify?code=" + encodeURIComponent(input));
-            data = await res.json();
+            data = await tryVerify("code", input);
         }
 
         if (data.ok) {
@@ -528,14 +581,12 @@ async function verifyCode() {
             sessionStorage.setItem("sunny_auth", JSON.stringify({code: input, role: data.role, child: data.child}));
             sessionStorage.setItem("current_student", data.child || "milasha");
             fetchProgress();
+            render();
         } else {
             errorEl.textContent = "Неверный код или пароль";
             errorEl.style.display = "block";
         }
-    } catch {
-        errorEl.textContent = "Ошибка соединения с сервером";
-        errorEl.style.display = "block";
-    }
+    })();
 }
 
 function logout() {
@@ -566,12 +617,18 @@ document.getElementById("codeInput").addEventListener("keydown", function(e) { i
             authRole = auth.role;
             document.getElementById("authSection").style.display = "none";
             document.getElementById("mainSection").style.display = "";
+            document.getElementById("goalsSection").style.display = "";
+            document.getElementById("lessonsSection").style.display = "";
             if (auth.role === "parent" && auth.child) {
                 document.getElementById("mainTitle").textContent = "Программа для " + auth.child.replace(/а$/, "и");
                 document.getElementById("mainDesc").textContent = "15 уроков от стартового занятия до финальной олимпиады. Отмечай уроки через @sunny_englishbot!";
+            } else if (auth.role === "admin") {
+                document.getElementById("mainTitle").textContent = "Панель администратора";
+                document.getElementById("mainDesc").textContent = "Управление всеми студентами и их прогрессом";
             }
             sessionStorage.setItem("current_student", auth.child || "milasha");
             fetchProgress();
+            render();
         } catch {}
     }
 })();
@@ -603,6 +660,42 @@ async function fetchProgress() {
     }
 }
 
+function saveProgress() {
+    if (!confirm("Сохранить изменения в прогресс уроков?")) return;
+
+    const checkboxes = document.querySelectorAll("input[data-lesson-num]:checked");
+    const done = Array.from(checkboxes).map(cb => parseInt(cb.dataset.lessonNum));
+    const student = sessionStorage.getItem("current_student") || "milasha";
+    const auth = JSON.parse(sessionStorage.getItem("sunny_auth") || "{}");
+    const password = auth.code || auth.password || "";
+
+    console.log("Сохраняем:", {student, done, password});
+
+    const url = API_URL + "/api/update-progress?password=" + encodeURIComponent(password);
+    fetch(url, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({student, done})
+    })
+    .then(r => {
+        console.log("Ответ:", r.status);
+        return r.json();
+    })
+    .then(data => {
+        console.log("JSON:", data);
+        if (data.ok) {
+            alert("✅ Прогресс сохранён!");
+            fetchProgress();
+        } else {
+            alert("❌ Ошибка: " + (data.error || "неизвестная ошибка"));
+        }
+    })
+    .catch(e => {
+        console.error("Ошибка:", e);
+        alert("❌ Ошибка соединения: " + e);
+    });
+}
+
 function render() {
     const grid = document.getElementById("lessonsGrid");
     grid.innerHTML = "";
@@ -610,13 +703,16 @@ function render() {
         const isDone = doneLessons.includes(l.n);
         const card = document.createElement("div");
         card.className = "lesson-card" + (isDone ? " done" : "");
-        card.onclick = function() {
+        card.onclick = function(e) {
+            if (authRole === "admin" && e.target.tagName === "INPUT") return;
             if (!isDone) this.classList.toggle("expanded");
         };
+        const checkbox = authRole === "admin" ? `<input type="checkbox" data-lesson-num="${l.n}" ${isDone ? "checked" : ""} style="cursor: pointer;" onclick="event.stopPropagation()">` : "";
         card.innerHTML = `
             <div class="lesson-header">
                 <div class="lesson-num">${l.n}</div>
                 <div class="lesson-topic">${l.topic}</div>
+                ${checkbox}
             </div>
             <div class="lesson-focus">${l.focus}</div>
             <div class="lesson-activities">${l.activities}</div>
@@ -638,6 +734,24 @@ function render() {
     const pct = Math.round((doneLessons.length / LESSONS.length) * 100);
     document.getElementById("progressBar").style.width = pct + "%";
     document.getElementById("progressText").textContent = `${doneLessons.length} из ${LESSONS.length} уроков пройдено`;
+
+    if (authRole === "admin") {
+        let btn = document.getElementById("adminSaveBtn");
+        if (!btn) {
+            btn = document.createElement("button");
+            btn.id = "adminSaveBtn";
+            btn.textContent = "💾 Сохранить изменения";
+            document.getElementById("lessonsSection").appendChild(btn);
+        }
+        btn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            saveProgress();
+        };
+    } else {
+        const btn = document.getElementById("adminSaveBtn");
+        if (btn) btn.remove();
+    }
 }
 
 setInterval(fetchProgress, 3000);
