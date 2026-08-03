@@ -301,7 +301,7 @@ class Handler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
 
         if parsed.path == "/api/progress":
-            student = parse_qs(parsed.query).get("student", ["milasha"])[0]
+            student = parse_qs(parsed.query).get("student", ["milasha"])[0].lower()
             data = load_progress()
             response_data = data.get(student, {"done": [], "chat_id": ""})
             self.send_response(200)
@@ -397,7 +397,7 @@ class Handler(SimpleHTTPRequestHandler):
 
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
-            student = body.get("student", "milasha")
+            student = body.get("student", "milasha").lower()
             done_lessons = body.get("done", [])
 
             progress = load_progress()
