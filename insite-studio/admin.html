@@ -510,7 +510,7 @@ function showDetail() {
 }
 
 // ── Auth — nginx Basic Auth is the gate, in-page form removed ──
-const CREDS = { user: 'root', pass: 'S1h2i3s4h5@!' };
+const CREDS = null; // Login handled via POST /login endpoint with httpOnly session cookie
 const API_BASE = 'https://bendernostur.duckdns.org:88/insite/api';
 const REVS_KEY = 'insite_revisions';
 

@@ -6,8 +6,8 @@ set -a
 set +a
 
 echo "🚀 Starting Insite Studio..."
-[ -n "$TELEGRAM_BOT_TOKEN" ] && echo "📱 Telegram Bot: Configured" || echo "📱 Telegram Bot: NOT configured"
-[ -n "$GOOGLE_AI_API_KEY" ] && echo "🔑 Gemini API: Configured" || echo "🔑 Gemini API: NOT configured"
+echo "📱 Telegram Bot Token: ${TELEGRAM_BOT_TOKEN:0:20}..."
+echo "🔑 Gemini API Key: ${GOOGLE_AI_API_KEY:0:20}..."
 echo ""
 echo "📊 Running API server on port 9123..."
 echo "🌐 Access: http://localhost:9123"
