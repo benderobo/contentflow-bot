@@ -323,3 +323,61 @@ python3 -c "from dotenv import load_dotenv; load_dotenv('.env'); import config; 
 - ✅ Audit logging active
 - ✅ Git commits clean (secrets not in history)
 
+---
+
+## 2026-08-03: Website 504 Gateway Timeout & Bot 409 Conflict Fixes
+
+### Error #1: 504 Gateway Timeout on Sunny English Website
+**Symptom:** Accessing https://127.0.0.1:8088 returned "504 Gateway Time-out"
+
+**Root Cause:** nginx config `/etc/nginx/sites-enabled/sunnyenglish-proxy`
+- `location /` was proxying to remote `http://100.112.44.14:8088`
+- This remote server was unreachable/not responding
+- HTTP server was actually on `127.0.0.1:8787` but in wrong directory
+
+**Solution:**
+1. Changed nginx proxy from `100.112.44.14:8088` → `127.0.0.1:8787`
+2. Restarted http.server from correct path: `/root/sunny-english` (not `/root/telegram-brain/miniapp`)
+3. Reloaded nginx: `systemctl reload nginx`
+
+**Files Modified:**
+- `/etc/nginx/sites-enabled/sunnyenglish-proxy` (line 116)
+- Process management: killed stray http.server, restarted correctly
+
+**Verification:** `curl -k https://127.0.0.1:8088` → HTTP/2 200 ✅
+
+---
+
+### Error #2: 409 Conflict in lessons_server.py (Telegram Bot)
+**Symptom:** Logs showed repeated "Poll error: HTTP Error 409: Conflict"
+- Error: "terminated by other getUpdates request; make sure that only one bot instance is running"
+
+**Root Cause:** `lessons_server.py` was using **two conflicting modes simultaneously:**
+1. Webhook mode: `/api/webhook` endpoint on port 8089 (HTTP server)
+2. Polling mode: `poll_loop()` thread calling `getUpdates()` every 2 seconds
+
+**Telegram API limitation:** Only one active method allowed at a time
+
+**Solution:**
+- Removed polling loop initialization (lines 450-451 in lessons_server.py)
+- Kept webhook-only mode for cleaner architecture
+- Restarted service
+
+**Files Modified:**
+- `/root/sunnyenglish/lessons_server.py` (removed `poll_loop()` thread)
+
+**Git Commit:** `46dadf1` "fix: Fix website 504 timeout and bot 409 conflicts"
+
+**Verification:**
+- No more 409 errors in logs ✅
+- `curl http://127.0.0.1:8089` → accepts connections ✅
+- Webhook still functional ✅
+
+---
+
+### Lessons Learned:
+1. **nginx config direction:** Always verify proxy_pass targets exist locally before assuming remote server
+2. **Telegram bot modes:** Polling + Webhook simultaneously = 409 conflict. Choose one.
+3. **Process paths:** HTTP server working directory matters for relative paths and file serving
+4. **Duplicate processes:** Kill old instances before starting new ones to avoid port conflicts
+
