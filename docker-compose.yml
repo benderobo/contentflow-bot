@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: telegram-games-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: telegram-games
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - telegram-games-net
+
+  backend:
+    build: ./backend
+    container_name: telegram-games-backend
+    ports:
+      - "3001:3001"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/telegram-games
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      NODE_ENV: development
+      CORS_ORIGIN: http://localhost:3000
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - telegram-games-net
+    command: npm run dev
+
+  frontend:
+    build: ./frontend
+    container_name: telegram-games-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_WS_URL: ws://localhost:3001
+      REACT_APP_API_URL: http://localhost:3001
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - telegram-games-net
+    command: npm start
+
+volumes:
+  mongodb_data:
+
+networks:
+  telegram-games-net:
+    driver: bridge

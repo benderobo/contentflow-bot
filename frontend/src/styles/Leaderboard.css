@@ -1,0 +1,136 @@
+.leaderboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.leaderboard-header {
+  text-align: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(0, 212, 255, 0.1));
+  border-radius: 12px;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+}
+
+.leaderboard-header h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  color: #fbbf24;
+}
+
+.leaderboard-header p {
+  opacity: 0.7;
+  font-size: 0.95rem;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(124, 58, 237, 0.05));
+  border: 1px solid rgba(124, 58, 255, 0.2);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.leaderboard-item:hover {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(124, 58, 237, 0.1));
+  border-color: rgba(124, 58, 237, 0.5);
+  transform: translateX(4px);
+}
+
+.leaderboard-item.top-3 {
+  border: 2px solid rgba(249, 115, 22, 0.4);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(124, 58, 237, 0.05));
+}
+
+.rank {
+  font-size: 1.5rem;
+  font-weight: bold;
+  min-width: 40px;
+  text-align: center;
+}
+
+.player-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.player-name {
+  font-weight: 600;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.games-count {
+  opacity: 0.6;
+  font-size: 0.85rem;
+  color: #00d4ff;
+}
+
+.player-score {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 700;
+  color: #fff;
+  font-size: 1.1rem;
+  text-align: right;
+  min-width: 100px;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  opacity: 0.7;
+  font-size: 1.1rem;
+  color: #00d4ff;
+}
+
+.no-data {
+  text-align: center;
+  padding: 2rem;
+  opacity: 0.7;
+  font-size: 1rem;
+  color: #ccc;
+}
+
+.btn-back {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: #fff;
+  padding: 0.8rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+  box-shadow: 0 8px 16px rgba(124, 58, 237, 0.4);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .leaderboard-item {
+    flex-wrap: wrap;
+  }
+
+  .player-info {
+    flex: 0 1 calc(100% - 50px);
+  }
+
+  .player-score {
+    flex: 0 1 100%;
+    text-align: center;
+    min-width: auto;
+  }
+}

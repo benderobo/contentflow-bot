@@ -1,0 +1,223 @@
+.rhyme-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.rhyme-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(0, 212, 255, 0.1));
+  border-radius: 12px;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  text-align: center;
+}
+
+.rhyme-header h2 {
+  color: #00d4ff;
+  font-size: 1.5rem;
+}
+
+.word-display p {
+  opacity: 0.7;
+  margin-bottom: 0.5rem;
+}
+
+.word-display h3 {
+  font-size: 2rem;
+  color: #4ade80;
+  font-weight: bold;
+}
+
+.timer {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: bold;
+  color: #fff;
+  font-size: 1.2rem;
+  display: inline-block;
+  margin: 0 auto;
+}
+
+.rhyme-input {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(124, 58, 237, 0.05));
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 12px;
+}
+
+.rhyme-input input {
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.rhyme-input input:focus {
+  outline: none;
+  border-color: rgba(124, 58, 237, 0.8);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+.rhyme-input input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.rhyme-input input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-submit {
+  width: 100%;
+  background: linear-gradient(135deg, #00d4ff, #7c3aed);
+  color: #fff;
+  padding: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.btn-submit:hover {
+  box-shadow: 0 8px 16px rgba(124, 58, 237, 0.4);
+  transform: translateY(-2px);
+}
+
+.waiting {
+  color: #f97316;
+  font-style: italic;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.voting-phase {
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(124, 58, 237, 0.05));
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 12px;
+}
+
+.voting-phase h3 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #00d4ff;
+  font-size: 1.2rem;
+}
+
+.rhymes-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.rhyme-item {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.rhyme-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  min-height: 30px;
+}
+
+.rhyme-votes {
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  padding: 0.5rem;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: bold;
+  color: #fff;
+}
+
+.btn-vote {
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  color: #fff;
+  padding: 0.6rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.btn-vote:hover {
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.4);
+  transform: scale(1.05);
+}
+
+.leaderboard-mini {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(124, 58, 237, 0.05));
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.leaderboard-mini h4 {
+  margin-bottom: 1rem;
+  color: #00d4ff;
+  font-size: 1.1rem;
+}
+
+.scores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.score-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.score-item span:first-child {
+  font-weight: 600;
+  color: #fff;
+}
+
+.score {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.btn-quit {
+  background: rgba(255, 0, 0, 0.1);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  color: #ff6b6b;
+  padding: 0.8rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-quit:hover {
+  background: rgba(255, 0, 0, 0.2);
+  border-color: rgba(255, 0, 0, 0.6);
+}
