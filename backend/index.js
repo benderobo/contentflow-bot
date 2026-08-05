@@ -5,6 +5,7 @@ const WebSocket = require('ws');
 const http = require('http');
 const mongoose = require('mongoose');
 const TelegramBot = require('node-telegram-bot-api');
+const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,8 +14,38 @@ const wss = new WebSocket.Server({ server });
 // Telegram Bot initialization
 const bot = process.env.TELEGRAM_BOT_TOKEN ? new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true }) : null;
 
-app.use(cors());
+// Restrict CORS to frontend origin
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
+
+// Validate Telegram WebApp initData signature
+function validateTelegramData(initData, botToken) {
+  if (!initData) return null;
+  const data = new URLSearchParams(initData);
+  const hash = data.get('hash');
+  if (!hash) return null;
+
+  data.delete('hash');
+  const dataCheckString = Array.from(data.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+
+  const secretKey = crypto
+    .createHmac('sha256', 'WebAppData')
+    .update(botToken)
+    .digest();
+
+  const calculatedHash = crypto
+    .createHmac('sha256', secretKey)
+    .update(dataCheckString)
+    .digest('hex');
+
+  return calculatedHash === hash ? JSON.parse(data.get('user') || '{}') : null;
+}
 
 // Подключение к MongoDB
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/telegram-games';
@@ -38,7 +69,8 @@ const clients = new Map();
 const gameSessions = new Map();
 
 // Утилиты для игр
-const generateGameId = () => 'game_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+const generateGameId = () => 'game_' + crypto.randomBytes(16).toString('hex');
+const generateClientId = () => crypto.randomBytes(16).toString('hex');
 
 // Quiz Game Logic
 const createQuizGame = () => ({
@@ -70,23 +102,36 @@ const createRhymeGame = () => ({
 });
 
 // WebSocket connections
-wss.on('connection', (ws) => {
-  const clientId = generateGameId();
-  clients.set(clientId, { ws, userId: null, gameId: null });
+wss.on('connection', (ws, req) => {
+  const clientId = generateClientId();
+  clients.set(clientId, { ws, userId: null, gameId: null, authenticated: false });
 
   ws.on('message', async (message) => {
     try {
       const data = JSON.parse(message);
       const client = clients.get(clientId);
 
+      if (!client) return;
+
       switch (data.type) {
         case 'init':
-          client.userId = data.userId;
-          client.username = data.username;
+          // Validate Telegram data signature
+          const user = validateTelegramData(data.initData, process.env.TELEGRAM_BOT_TOKEN);
+          if (!user || !user.id) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid authentication' }));
+            ws.close();
+            return;
+          }
+          client.userId = String(user.id);
+          client.username = user.username || user.first_name || 'Unknown';
+          client.authenticated = true;
           ws.send(JSON.stringify({ type: 'connected', clientId }));
           break;
 
         case 'create_game':
+          if (!client.authenticated) return;
+          if (!data.gameType || !['quiz', 'tic-tac-toe', 'rhyme'].includes(data.gameType)) return;
+
           const gameId = generateGameId();
           const newSession = {
             gameId,
@@ -107,8 +152,11 @@ wss.on('connection', (ws) => {
           break;
 
         case 'join_game':
+          if (!client.authenticated) return;
+          if (typeof data.gameId !== 'string' || data.gameId.length < 10) return;
+
           const session = gameSessions.get(data.gameId);
-          if (session && session.players.length < 8) {
+          if (session && session.players.length < 8 && !session.players.some(p => p.userId === client.userId)) {
             session.players.push({ userId: client.userId, username: client.username, score: 0, status: 'joined' });
             client.gameId = data.gameId;
             broadcastToGame(data.gameId, { type: 'player_joined', players: session.players });
@@ -116,69 +164,95 @@ wss.on('connection', (ws) => {
           break;
 
         case 'start_game':
+          if (!client.authenticated) return;
           const game = gameSessions.get(data.gameId);
-          if (game) {
+          if (game && game.players.some(p => p.userId === client.userId)) {
             game.state.started = true;
             broadcastToGame(data.gameId, { type: 'game_started', state: game.state });
           }
           break;
 
         case 'quiz_answer':
+          if (!client.authenticated) return;
           const quizGame = gameSessions.get(data.gameId);
-          if (quizGame && quizGame.gameType === 'quiz') {
-            const q = quizGame.state.questions[quizGame.state.currentQuestion];
-            const isCorrect = q.answers.includes(data.answer.toLowerCase());
+          if (!quizGame || quizGame.gameType !== 'quiz' || !quizGame.players.some(p => p.userId === client.userId)) return;
+          if (typeof data.answer !== 'string' || data.answer.length > 100) return;
+          if (quizGame.state.answered?.[client.userId]) return;
 
-            if (isCorrect) {
-              const pointsMap = { 1: 3, 2: 2, 3: 1 };
-              const score = pointsMap[Object.keys(quizGame.state.answered).length + 1] || 0;
-              quizGame.state.scores[client.userId] = (quizGame.state.scores[client.userId] || 0) + score;
-              broadcastToGame(data.gameId, { type: 'correct_answer', userId: client.userId, score });
-            }
+          const q = quizGame.state.questions[quizGame.state.currentQuestion];
+          const isCorrect = q.answers.includes(data.answer.toLowerCase().trim());
 
-            quizGame.state.answered[client.userId] = true;
-            if (Object.keys(quizGame.state.answered).length === quizGame.state.players?.length) {
-              quizGame.state.currentQuestion++;
+          if (isCorrect) {
+            const pointsMap = { 1: 3, 2: 2, 3: 1 };
+            const score = pointsMap[Object.keys(quizGame.state.answered).length + 1] || 0;
+            quizGame.state.scores[client.userId] = (quizGame.state.scores[client.userId] || 0) + score;
+            broadcastToGame(data.gameId, { type: 'correct_answer', userId: client.userId, score });
+          }
+
+          quizGame.state.answered[client.userId] = true;
+          if (Object.keys(quizGame.state.answered).length === quizGame.players?.length) {
+            quizGame.state.currentQuestion++;
+            if (quizGame.state.currentQuestion < quizGame.state.questions.length) {
               broadcastToGame(data.gameId, { type: 'next_question', question: quizGame.state.questions[quizGame.state.currentQuestion] });
+            } else {
+              broadcastToGame(data.gameId, { type: 'quiz_complete' });
             }
           }
           break;
 
         case 'tic_move':
+          if (!client.authenticated) return;
           const tictacGame = gameSessions.get(data.gameId);
-          if (tictacGame && tictacGame.gameType === 'tic-tac-toe') {
-            tictacGame.state.board[data.position] = data.symbol;
-            tictacGame.state.moves.push({ position: data.position, symbol: data.symbol });
-            tictacGame.state.currentPlayer = 1 - tictacGame.state.currentPlayer;
-            broadcastToGame(data.gameId, { type: 'board_updated', board: tictacGame.state.board, currentPlayer: tictacGame.state.currentPlayer });
-          }
+          if (!tictacGame || tictacGame.gameType !== 'tic-tac-toe') return;
+          if (!tictacGame.players.some(p => p.userId === client.userId)) return;
+
+          // Validate position and symbol
+          if (!Number.isInteger(data.position) || data.position < 0 || data.position > 24) return;
+          if ((data.symbol !== 'X' && data.symbol !== 'O') || tictacGame.state.board[data.position] !== null) return;
+
+          // Verify it's the correct player's turn
+          const currentPlayerId = tictacGame.players[tictacGame.state.currentPlayer]?.userId;
+          if (currentPlayerId !== client.userId) return;
+
+          tictacGame.state.board[data.position] = data.symbol;
+          tictacGame.state.moves.push({ position: data.position, symbol: data.symbol, userId: client.userId });
+          tictacGame.state.currentPlayer = 1 - tictacGame.state.currentPlayer;
+          broadcastToGame(data.gameId, { type: 'board_updated', board: tictacGame.state.board, currentPlayer: tictacGame.state.currentPlayer });
           break;
 
         case 'rhyme_submit':
+          if (!client.authenticated) return;
           const rhymeGame = gameSessions.get(data.gameId);
-          if (rhymeGame && rhymeGame.gameType === 'rhyme') {
-            rhymeGame.state.rhymes[client.userId] = data.rhyme;
-            broadcastToGame(data.gameId, { type: 'rhyme_submitted', count: Object.keys(rhymeGame.state.rhymes).length });
-          }
+          if (!rhymeGame || rhymeGame.gameType !== 'rhyme' || !rhymeGame.players.some(p => p.userId === client.userId)) return;
+          if (typeof data.rhyme !== 'string' || data.rhyme.length < 1 || data.rhyme.length > 100) return;
+          if (rhymeGame.state.rhymes?.[client.userId]) return;
+
+          rhymeGame.state.rhymes[client.userId] = data.rhyme.trim();
+          broadcastToGame(data.gameId, { type: 'rhyme_submitted', count: Object.keys(rhymeGame.state.rhymes).length });
           break;
 
         case 'vote_rhyme':
+          if (!client.authenticated) return;
           const voteGame = gameSessions.get(data.gameId);
-          if (voteGame && voteGame.gameType === 'rhyme') {
-            if (!voteGame.state.votes[data.rhymeUserId]) voteGame.state.votes[data.rhymeUserId] = 0;
-            voteGame.state.votes[data.rhymeUserId]++;
-            broadcastToGame(data.gameId, { type: 'rhyme_voted', userId: data.rhymeUserId, votes: voteGame.state.votes[data.rhymeUserId] });
-          }
+          if (!voteGame || voteGame.gameType !== 'rhyme' || !voteGame.players.some(p => p.userId === client.userId)) return;
+          if (typeof data.rhymeUserId !== 'string' || !voteGame.players.some(p => p.userId === data.rhymeUserId)) return;
+          if (data.rhymeUserId === client.userId) return; // Can't vote for yourself
+
+          if (!voteGame.state.votes[data.rhymeUserId]) voteGame.state.votes[data.rhymeUserId] = 0;
+          voteGame.state.votes[data.rhymeUserId]++;
+          broadcastToGame(data.gameId, { type: 'rhyme_voted', userId: data.rhymeUserId, votes: voteGame.state.votes[data.rhymeUserId] });
           break;
 
         case 'end_game':
+          if (!client.authenticated) return;
           const endGame = gameSessions.get(data.gameId);
-          if (endGame) {
-            endGame.completedAt = new Date();
-            endGame.results = endGame.players.map((p, i) => ({ userId: p.userId, score: endGame.state.scores?.[p.userId] || 0, place: i + 1 })).sort((a, b) => b.score - a.score);
-            broadcastToGame(data.gameId, { type: 'game_ended', results: endGame.results });
-            await GameSession.findByIdAndUpdate(endGame._id, endGame);
-          }
+          if (!endGame || !endGame.players.some(p => p.userId === client.userId)) return;
+
+          endGame.completedAt = new Date();
+          endGame.results = endGame.players.map((p, i) => ({ userId: p.userId, score: endGame.state.scores?.[p.userId] || 0, place: i + 1 })).sort((a, b) => b.score - a.score);
+          broadcastToGame(data.gameId, { type: 'game_ended', results: endGame.results });
+          await new GameSession(endGame).save();
+          gameSessions.delete(data.gameId);
           break;
       }
     } catch (err) {
