@@ -44,12 +44,26 @@ echo "Visit https://railway.app and add MongoDB plugin to your project"
 # Step 5: Configure environment variables
 echo ""
 echo "⚙️  Step 5: Setting environment variables"
-echo "Run these commands or set them in Railway dashboard:"
+echo "You need your Telegram Bot Token. Get it from @BotFather"
 echo ""
-echo "railway variable set TELEGRAM_BOT_TOKEN '8570031817:AAGgBlOIDZS9hWGpayZnd1nsCQgnJgLVvqw'"
-echo "railway variable set NODE_ENV 'production'"
-echo "railway variable set CORS_ORIGIN 'https://your-frontend-domain.vercel.app'"
-echo "railway variable set WEB_APP_URL 'https://your-frontend-domain.vercel.app'"
+read -p "Enter your Telegram Bot Token: " TELEGRAM_BOT_TOKEN
+export TELEGRAM_BOT_TOKEN
+
+if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+    echo "❌ Bot token is required!"
+    exit 1
+fi
+
+echo ""
+echo "Setting environment variables in Railway..."
+railway variable set TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN"
+railway variable set NODE_ENV "production"
+
+read -p "Enter your Vercel frontend domain (e.g., my-app.vercel.app): " FRONTEND_DOMAIN
+railway variable set CORS_ORIGIN "https://$FRONTEND_DOMAIN"
+railway variable set WEB_APP_URL "https://$FRONTEND_DOMAIN"
+
+echo "✅ Environment variables set!"
 echo ""
 
 # Step 6: Get Backend URL
