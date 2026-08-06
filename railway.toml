@@ -1,0 +1,16 @@
+[build]
+builder = "dockerfile"
+dockerfile = "backend/Dockerfile"
+
+[deploy]
+numReplicas = 1
+restartPolicyMaxRetries = 5
+
+[[services]]
+name = "backend"
+dockerfile = "backend/Dockerfile"
+port = 3001
+
+[services.environment]
+NODE_ENV = "production"
+PORT = "3001"
