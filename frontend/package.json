@@ -1,7 +1,7 @@
 {
-  "name": "telegram-games-frontend",
+  "name": "shishka-vpn-games-frontend",
   "version": "1.0.0",
-  "description": "Telegram Mini App Games Frontend",
+  "description": "SHISHKA_VPN Telegram Mini App - Multiplayer Games",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",

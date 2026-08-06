@@ -1,7 +1,7 @@
 {
-  "name": "telegram-games-backend",
+  "name": "shishka-vpn-games-backend",
   "version": "1.0.0",
-  "description": "Telegram Mini App Games Backend",
+  "description": "SHISHKA_VPN Telegram Mini App - Backend & API",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

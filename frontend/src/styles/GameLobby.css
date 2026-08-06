@@ -8,10 +8,27 @@
   text-align: center;
 }
 
+.lobby-brand {
+  margin-bottom: 1rem;
+}
+
+.brand-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #ff006e, #7c3aed);
+  color: #fff;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  letter-spacing: 1px;
+}
+
 .lobby-header h2 {
   font-size: 1.8rem;
   margin-bottom: 0.5rem;
-  color: #00d4ff;
+  color: #ff006e;
+  font-weight: 700;
 }
 
 .lobby-header p {

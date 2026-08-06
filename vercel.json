@@ -1,0 +1,16 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "framework": "create-react-app",
+  "env": {
+    "REACT_APP_WS_URL": "@react_app_ws_url",
+    "REACT_APP_API_URL": "@react_app_api_url",
+    "REACT_APP_BOT_USERNAME": "@react_app_bot_username"
+  },
+  "regions": ["iad1", "cdg1", "sfo1"],
+  "functions": {
+    "api/**": {
+      "maxDuration": 60
+    }
+  }
+}

@@ -32,7 +32,10 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🎮 Telegram Games</h1>
+        <div className="app-brand">
+          <h1>🎮 SHISHKA_VPN Games</h1>
+          <p className="brand-tagline">Multiplayer Fun & Speed</p>
+        </div>
         {tgUser && <p className="user-info">@{tgUser.username || tgUser.id}</p>}
       </header>
 

@@ -35,7 +35,10 @@ function GameLobby() {
   return (
     <div className="lobby">
       <div className="lobby-header">
-        <h2>Выберите игру</h2>
+        <div className="lobby-brand">
+          <span className="brand-badge">🔓 SHISHKA_VPN</span>
+          <h2>Выберите игру</h2>
+        </div>
         <p>Создайте сессию или присоединитесь к друзьям</p>
       </div>
 
