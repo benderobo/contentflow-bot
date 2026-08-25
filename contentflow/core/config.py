@@ -1,6 +1,6 @@
 from functools import lru_cache
 from typing import Optional, Any, List
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 from ipaddress import ip_address
 import os
@@ -90,6 +90,20 @@ class Settings(BaseSettings):
     # Celery
     celery_broker_url: Optional[str] = None
     celery_result_backend: Optional[str] = None
+
+    @field_validator('telegram_api_id', mode='before')
+    @classmethod
+    def parse_telegram_api_id(cls, v):
+        if v == '' or v == '0':
+            return None
+        return v
+
+    @field_validator('openai_api_key', 'anthropic_api_key', 'openrouter_api_key', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v):
+        if v == '':
+            return None
+        return v
 
     class Config:
         env_file = ".env"
