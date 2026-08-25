@@ -79,7 +79,13 @@ async def get_stats_overview(
     """Get overview statistics for user."""
     from utils.auth import verify_user_id
 
-    user_id = request.query_params.get("user_id", type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
     user_signature = request.query_params.get("user_signature")
 
     if not user_id or not user_signature:
@@ -139,7 +145,13 @@ async def get_stats_timeline(
     """Get timeline statistics."""
     from utils.auth import verify_user_id
 
-    user_id = request.query_params.get("user_id", type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
     user_signature = request.query_params.get("user_signature")
     period = request.query_params.get("period", "7d")
 
@@ -196,7 +208,13 @@ async def get_stats_by_channel(
     """Get statistics grouped by channel."""
     from utils.auth import verify_user_id
 
-    user_id = request.query_params.get("user_id", type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
     user_signature = request.query_params.get("user_signature")
 
     if not user_id or not user_signature:
@@ -248,7 +266,13 @@ async def get_stats_by_source(
     """Get statistics grouped by source."""
     from utils.auth import verify_user_id
 
-    user_id = request.query_params.get("user_id", type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
     user_signature = request.query_params.get("user_signature")
 
     if not user_id or not user_signature:

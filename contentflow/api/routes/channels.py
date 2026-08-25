@@ -47,7 +47,13 @@ async def list_channels(
     _: bool = Depends(verify_service_auth),
 ):
     """List channels for a user."""
-    user_id = request.query_params.get("user_id", type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id required")
 
@@ -102,7 +108,13 @@ async def get_channel(
     _: bool = Depends(verify_service_auth),
 ):
     """Get a specific channel."""
-    user_id = request.query_params.get("user_id", type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id required")
 
@@ -124,7 +136,13 @@ async def update_channel(
     _: bool = Depends(verify_service_auth),
 ):
     """Update a channel."""
-    user_id = request.query_params.get("user_id", type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id required")
 

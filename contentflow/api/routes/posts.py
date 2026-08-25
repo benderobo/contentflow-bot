@@ -342,7 +342,13 @@ async def get_scheduled_posts(
     """Get scheduled posts for user."""
     from utils.auth import verify_user_id
 
-    user_id = request.query_params.get("user_id", type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
     user_signature = request.query_params.get("user_signature")
 
     if not user_id or not user_signature:

@@ -78,7 +78,13 @@ async def get_source(
     _: bool = Depends(verify_service_auth),
 ):
     """Get a specific source."""
-    user_id = request.query_params.get("user_id", type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id required")
 
@@ -136,7 +142,13 @@ async def update_source(
     _: bool = Depends(verify_service_auth),
 ):
     """Update a source."""
-    user_id = request.query_params.get("user_id", type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id required")
 
@@ -165,7 +177,13 @@ async def delete_source(
     _: bool = Depends(verify_service_auth),
 ):
     """Delete a source."""
-    user_id = request.query_params.get("user_id", type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id required")
 
@@ -188,8 +206,18 @@ async def get_unanalyzed_items(
     _: bool = Depends(verify_service_auth),
 ):
     """Get unanalyzed source items for a user."""
-    user_id = request.query_params.get("user_id", type=int)
-    limit = request.query_params.get("limit", default=5, type=int)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
+    limit_str = request.query_params.get("limit", "5")
+    try:
+        limit = int(limit_str)
+    except ValueError:
+        limit = 5
 
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id required")
