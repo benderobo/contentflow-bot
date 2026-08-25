@@ -111,7 +111,7 @@ async def create_source(
 
     # Validate through Pydantic model
     try:
-        source_input = SourceCreate(**{k: v for k, v in body.items() if k not in ["user_signature"]})
+        source_input = SourceCreate(**{k: v for k, v in body.items() if k not in ["user_id", "user_signature"]})
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
