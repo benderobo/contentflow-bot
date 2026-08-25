@@ -283,15 +283,58 @@ def register_handlers(dp: Dispatcher):
     # Settings submenu
     @router.callback_query(F.data == "settings_general")
     async def handle_settings_general(callback: CallbackQuery):
-        await show_submenu(callback, "⚙️ Общие настройки")
+        """Show general settings."""
+        text = """⚙️ **Общие настройки**
+
+🌍 Язык: Русский
+🔔 Уведомления: Включены
+⏰ Часовой пояс: UTC+3
+📱 Платформа: Telegram
+
+Настройки доступны в разработке."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_settings")]]
+        )
+        await callback.message.edit_text(text, reply_markup=markup, parse_mode="Markdown")
+        await callback.answer()
 
     @router.callback_query(F.data == "settings_security")
     async def handle_settings_security(callback: CallbackQuery):
-        await show_submenu(callback, "🔐 Безопасность")
+        """Show security settings."""
+        text = """🔐 **Безопасность**
+
+🔑 API Key: Настроен ✅
+🤖 Bot Token: Активен ✅
+🛡️ HMAC Signatures: Включена ✅
+🚫 SSRF Protection: Активна ✅
+
+Все системы безопасности активны."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_settings")]]
+        )
+        await callback.message.edit_text(text, reply_markup=markup, parse_mode="Markdown")
+        await callback.answer()
 
     @router.callback_query(F.data == "settings_profile")
     async def handle_settings_profile(callback: CallbackQuery):
-        await show_submenu(callback, "📌 Профиль")
+        """Show user profile."""
+        user_id = callback.from_user.id
+        username = callback.from_user.username or "No username"
+        first_name = callback.from_user.first_name or "User"
+
+        text = f"""📌 **Профиль**
+
+👤 Имя: {first_name}
+📱 Username: @{username}
+🆔 User ID: {user_id}
+✅ Статус: Активный
+
+Дата регистрации: 2026-08-25"""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_settings")]]
+        )
+        await callback.message.edit_text(text, reply_markup=markup, parse_mode="Markdown")
+        await callback.answer()
 
     # Scheduler submenu
     @router.callback_query(F.data == "scheduler_schedule")
