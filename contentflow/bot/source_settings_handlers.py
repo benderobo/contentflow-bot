@@ -187,12 +187,26 @@ async def process_new_interval(message: Message, state: FSMContext):
         source_id = data.get("editing_source_id")
         interval_seconds = interval_minutes * 60
 
-        # Here you would make an API call to update the interval
-        # For now, just show confirmation
-        await message.answer(
-            f"✅ Интервал обновлен на {interval_minutes} минут!\n\n"
-            f"({interval_seconds} секунд)"
-        )
+        try:
+            response = await make_authenticated_request(
+                "PATCH",
+                f"/api/sources/{source_id}?user_id={message.from_user.id}",
+                user_id=message.from_user.id,
+                json={"user_id": message.from_user.id, "parse_interval": interval_seconds}
+            )
+
+            if response and response.status_code == 200:
+                await message.answer(
+                    f"✅ Интервал обновлен на {interval_minutes} минут!\n\n"
+                    f"({interval_seconds} секунд)"
+                )
+            else:
+                error = response.text if response else "Ошибка подключения"
+                await message.answer(f"❌ Ошибка: {error}")
+        except Exception as e:
+            logger.error(f"Error updating interval: {e}")
+            await message.answer(f"❌ Ошибка: {str(e)}")
+
         await state.clear()
 
     except ValueError:
@@ -231,9 +245,30 @@ async def process_max_posts(message: Message, state: FSMContext):
             )
             return
 
-        await message.answer(
-            f"✅ Максимум постов установлен на {max_posts}!"
-        )
+        data = await state.get_data()
+        source_id = data.get("editing_source_id")
+
+        try:
+            parser_config = {"max_posts": max_posts}
+
+            response = await make_authenticated_request(
+                "PATCH",
+                f"/api/sources/{source_id}?user_id={message.from_user.id}",
+                user_id=message.from_user.id,
+                json={"user_id": message.from_user.id, "parser_config": parser_config}
+            )
+
+            if response and response.status_code == 200:
+                await message.answer(
+                    f"✅ Максимум постов установлен на {max_posts}!"
+                )
+            else:
+                error = response.text if response else "Ошибка подключения"
+                await message.answer(f"❌ Ошибка: {error}")
+        except Exception as e:
+            logger.error(f"Error updating max_posts: {e}")
+            await message.answer(f"❌ Ошибка: {str(e)}")
+
         await state.clear()
 
     except ValueError:
@@ -262,15 +297,35 @@ async def handle_edit_keywords(callback: CallbackQuery, state: FSMContext):
 @source_settings_router.message(SourceSettingsStates.editing_keywords)
 async def process_keywords(message: Message, state: FSMContext):
     """Process keywords input."""
-    keywords = [k.strip() for k in message.text.split(",") if k.strip()]
+    keywords = [k.strip().lower() for k in message.text.split(",") if k.strip()]
 
-    if keywords:
-        await message.answer(
-            f"✅ Ключевые слова установлены:\n\n"
-            f"{', '.join(keywords)}"
+    data = await state.get_data()
+    source_id = data.get("editing_source_id")
+
+    try:
+        filters = {"keywords": keywords} if keywords else {}
+
+        response = await make_authenticated_request(
+            "PATCH",
+            f"/api/sources/{source_id}?user_id={message.from_user.id}",
+            user_id=message.from_user.id,
+            json={"user_id": message.from_user.id, "filters": filters}
         )
-    else:
-        await message.answer("✅ Фильтр ключевых слов отключен")
+
+        if response and response.status_code == 200:
+            if keywords:
+                await message.answer(
+                    f"✅ Ключевые слова установлены:\n\n"
+                    f"{', '.join(keywords)}"
+                )
+            else:
+                await message.answer("✅ Фильтр ключевых слов отключен")
+        else:
+            error = response.text if response else "Ошибка подключения"
+            await message.answer(f"❌ Ошибка: {error}")
+    except Exception as e:
+        logger.error(f"Error updating keywords: {e}")
+        await message.answer(f"❌ Ошибка: {str(e)}")
 
     await state.clear()
 
@@ -296,30 +351,65 @@ async def handle_edit_exclusions(callback: CallbackQuery, state: FSMContext):
 @source_settings_router.message(SourceSettingsStates.editing_exclusions)
 async def process_exclusions(message: Message, state: FSMContext):
     """Process exclusion words input."""
-    exclusions = [w.strip() for w in message.text.split(",") if w.strip()]
+    exclusions = [w.strip().lower() for w in message.text.split(",") if w.strip()]
 
-    if exclusions:
-        await message.answer(
-            f"✅ Слова исключения установлены:\n\n"
-            f"{', '.join(exclusions)}"
+    data = await state.get_data()
+    source_id = data.get("editing_source_id")
+
+    try:
+        filters = {"exclusions": exclusions} if exclusions else {}
+
+        response = await make_authenticated_request(
+            "PATCH",
+            f"/api/sources/{source_id}?user_id={message.from_user.id}",
+            user_id=message.from_user.id,
+            json={"user_id": message.from_user.id, "filters": filters}
         )
-    else:
-        await message.answer("✅ Фильтр исключения отключен")
+
+        if response and response.status_code == 200:
+            if exclusions:
+                await message.answer(
+                    f"✅ Слова исключения установлены:\n\n"
+                    f"{', '.join(exclusions)}"
+                )
+            else:
+                await message.answer("✅ Фильтр исключения отключен")
+        else:
+            error = response.text if response else "Ошибка подключения"
+            await message.answer(f"❌ Ошибка: {error}")
+    except Exception as e:
+        logger.error(f"Error updating exclusions: {e}")
+        await message.answer(f"❌ Ошибка: {str(e)}")
 
     await state.clear()
 
 
 @source_settings_router.callback_query(F.data.startswith("source_toggle_"))
-async def handle_toggle_source(callback: CallbackQuery):
+async def handle_toggle_source(callback: CallbackQuery, state: FSMContext):
     """Enable/disable source."""
     source_id = int(callback.data.split("_")[-1])
 
     try:
-        # API call to toggle source
-        # response = await make_authenticated_request(...)
-        await callback.message.edit_text(
-            f"✅ Источник (ID: {source_id}) переключен!"
+        data = await state.get_data()
+        source_data = data.get("source_data", {})
+        current_enabled = source_data.get("enabled", True)
+        new_enabled = not current_enabled
+
+        response = await make_authenticated_request(
+            "PATCH",
+            f"/api/sources/{source_id}?user_id={callback.from_user.id}",
+            user_id=callback.from_user.id,
+            json={"user_id": callback.from_user.id, "enabled": new_enabled}
         )
+
+        if response and response.status_code == 200:
+            status_text = "✅ Включен" if new_enabled else "⛔ Отключен"
+            await callback.message.edit_text(
+                f"✅ Источник {status_text}!"
+            )
+        else:
+            error = response.text if response else "Ошибка подключения"
+            await callback.message.edit_text(f"❌ Ошибка: {error}")
     except Exception as e:
         logger.error(f"Error toggling source: {e}")
         await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
@@ -351,13 +441,23 @@ async def handle_delete_confirm(callback: CallbackQuery):
     source_id = int(callback.data.split("_")[-1])
 
     try:
-        # API call to delete source
-        await callback.message.edit_text(
-            f"✅ Источник (ID: {source_id}) удален!",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[[InlineKeyboardButton(text="📋 К источникам", callback_data="source_manage_list")]]
-            )
+        response = await make_authenticated_request(
+            "DELETE",
+            f"/api/sources/{source_id}?user_id={callback.from_user.id}",
+            user_id=callback.from_user.id,
+            json={"user_id": callback.from_user.id}
         )
+
+        if response and response.status_code == 200:
+            await callback.message.edit_text(
+                f"✅ Источник удален!",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[[InlineKeyboardButton(text="📋 К источникам", callback_data="source_manage_list")]]
+                )
+            )
+        else:
+            error = response.text if response else "Ошибка подключения"
+            await callback.message.edit_text(f"❌ Ошибка: {error}")
     except Exception as e:
         logger.error(f"Error deleting source: {e}")
         await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
