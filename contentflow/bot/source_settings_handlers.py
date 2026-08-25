@@ -284,13 +284,104 @@ async def handle_edit_keywords(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(editing_source_id=source_id)
     await callback.message.edit_text(
-        "🔑 Введите ключевые слова для фильтрации (разделите запятыми):\n\n"
+        "🔑 Выберите готовый фильтр или введите свои ключевые слова:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="💻 IT & Технологии", callback_data="keyword_it")],
+                [InlineKeyboardButton(text="📰 Новости", callback_data="keyword_news")],
+                [InlineKeyboardButton(text="💰 Бизнес & Финансы", callback_data="keyword_business")],
+                [InlineKeyboardButton(text="📱 Социальные сети", callback_data="keyword_social")],
+                [InlineKeyboardButton(text="✏️ Свои слова", callback_data="keyword_custom")],
+                [InlineKeyboardButton(text="❌ Отключить фильтр", callback_data="keyword_disable")],
+                [InlineKeyboardButton(text="◀️ Отмена", callback_data="source_manage_list")],
+            ]
+        )
+    )
+    await callback.answer()
+
+
+@source_settings_router.callback_query(F.data == "keyword_custom")
+async def handle_custom_keywords(callback: CallbackQuery, state: FSMContext):
+    """Handle custom keyword input."""
+    await callback.message.edit_text(
+        "✏️ Введите ключевые слова для фильтрации (разделите запятыми):\n\n"
         "Примеры:\n"
         "• python, javascript, golang\n"
         "• технология, новости, события\n\n"
         "Оставьте пусто для отключения фильтра"
     )
     await state.set_state(SourceSettingsStates.editing_keywords)
+    await callback.answer()
+
+
+# Preset keyword filters
+PRESET_KEYWORDS = {
+    "keyword_it": ["python", "javascript", "golang", "kotlin", "rust", "devops", "cloud", "ai"],
+    "keyword_news": ["новости", "события", "происшествия", "сообщает", "объявил"],
+    "keyword_business": ["бизнес", "компания", "стартап", "финансы", "инвестиции", "сделка"],
+    "keyword_social": ["instagram", "tiktok", "facebook", "twitter", "telegram", "social"],
+}
+
+
+@source_settings_router.callback_query(F.data.in_(["keyword_it", "keyword_news", "keyword_business", "keyword_social"]))
+async def handle_preset_keywords(callback: CallbackQuery, state: FSMContext):
+    """Apply preset keywords."""
+    filter_type = callback.data
+    keywords = PRESET_KEYWORDS.get(filter_type, [])
+
+    data = await state.get_data()
+    source_id = data.get("editing_source_id")
+
+    try:
+        filters = {"keywords": keywords}
+
+        response = await make_authenticated_request(
+            "PATCH",
+            f"/api/sources/{source_id}?user_id={callback.from_user.id}",
+            user_id=callback.from_user.id,
+            json={"user_id": callback.from_user.id, "filters": filters}
+        )
+
+        if response and response.status_code == 200:
+            await callback.message.edit_text(
+                f"✅ Фильтр применен:\n\n"
+                f"{', '.join(keywords)}"
+            )
+        else:
+            error = response.text if response else "Ошибка подключения"
+            await callback.message.edit_text(f"❌ Ошибка: {error}")
+    except Exception as e:
+        logger.error(f"Error applying preset keywords: {e}")
+        await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+    await state.clear()
+    await callback.answer()
+
+
+@source_settings_router.callback_query(F.data == "keyword_disable")
+async def handle_disable_keywords(callback: CallbackQuery, state: FSMContext):
+    """Disable keywords filter."""
+    data = await state.get_data()
+    source_id = data.get("editing_source_id")
+
+    try:
+        response = await make_authenticated_request(
+            "PATCH",
+            f"/api/sources/{source_id}?user_id={callback.from_user.id}",
+            user_id=callback.from_user.id,
+            json={"user_id": callback.from_user.id, "filters": {}}
+        )
+
+        if response and response.status_code == 200:
+            await callback.message.edit_text("✅ Фильтр ключевых слов отключен")
+        else:
+            error = response.text if response else "Ошибка подключения"
+            await callback.message.edit_text(f"❌ Ошибка: {error}")
+    except Exception as e:
+        logger.error(f"Error disabling keywords: {e}")
+        await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+    await state.clear()
     await callback.answer()
 
 
@@ -337,14 +428,104 @@ async def handle_edit_exclusions(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(editing_source_id=source_id)
     await callback.message.edit_text(
+        "❌ Выберите готовый фильтр исключения или введите свои слова:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🚫 Спам & Реклама", callback_data="exclusion_spam")],
+                [InlineKeyboardButton(text="⚠️ Некачественный контент", callback_data="exclusion_low_quality")],
+                [InlineKeyboardButton(text="🔞 NSFW", callback_data="exclusion_nsfw")],
+                [InlineKeyboardButton(text="📢 Дублированное", callback_data="exclusion_duplicate")],
+                [InlineKeyboardButton(text="✏️ Свои слова", callback_data="exclusion_custom")],
+                [InlineKeyboardButton(text="❌ Отключить фильтр", callback_data="exclusion_disable")],
+                [InlineKeyboardButton(text="◀️ Отмена", callback_data="source_manage_list")],
+            ]
+        )
+    )
+    await callback.answer()
+
+
+@source_settings_router.callback_query(F.data == "exclusion_custom")
+async def handle_custom_exclusions(callback: CallbackQuery, state: FSMContext):
+    """Handle custom exclusion input."""
+    await callback.message.edit_text(
         "❌ Введите слова для исключения (разделите запятыми):\n\n"
         "Примеры:\n"
         "• спам, реклама, фейк\n"
         "• неработающие, старые\n\n"
-        "Посты с этими словами будут пропущены.\n"
-        "Оставьте пусто для отключения"
+        "Посты с этими словами будут пропущены."
     )
     await state.set_state(SourceSettingsStates.editing_exclusions)
+    await callback.answer()
+
+
+# Preset exclusion filters
+PRESET_EXCLUSIONS = {
+    "exclusion_spam": ["спам", "реклама", "рекламный", "маркетинг", "промо"],
+    "exclusion_low_quality": ["фейк", "фальшивый", "неправда", "ложь", "несостоятельный"],
+    "exclusion_nsfw": ["18+", "adult", "xxx", "explicit", "pornography"],
+    "exclusion_duplicate": ["дублирован", "повтор", "скопирован", "копия", "переход"],
+}
+
+
+@source_settings_router.callback_query(F.data.in_(["exclusion_spam", "exclusion_low_quality", "exclusion_nsfw", "exclusion_duplicate"]))
+async def handle_preset_exclusions(callback: CallbackQuery, state: FSMContext):
+    """Apply preset exclusions."""
+    filter_type = callback.data
+    exclusions = PRESET_EXCLUSIONS.get(filter_type, [])
+
+    data = await state.get_data()
+    source_id = data.get("editing_source_id")
+
+    try:
+        filters = {"exclusions": exclusions}
+
+        response = await make_authenticated_request(
+            "PATCH",
+            f"/api/sources/{source_id}?user_id={callback.from_user.id}",
+            user_id=callback.from_user.id,
+            json={"user_id": callback.from_user.id, "filters": filters}
+        )
+
+        if response and response.status_code == 200:
+            await callback.message.edit_text(
+                f"✅ Фильтр исключения применен:\n\n"
+                f"{', '.join(exclusions)}"
+            )
+        else:
+            error = response.text if response else "Ошибка подключения"
+            await callback.message.edit_text(f"❌ Ошибка: {error}")
+    except Exception as e:
+        logger.error(f"Error applying preset exclusions: {e}")
+        await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+    await state.clear()
+    await callback.answer()
+
+
+@source_settings_router.callback_query(F.data == "exclusion_disable")
+async def handle_disable_exclusions(callback: CallbackQuery, state: FSMContext):
+    """Disable exclusion filter."""
+    data = await state.get_data()
+    source_id = data.get("editing_source_id")
+
+    try:
+        response = await make_authenticated_request(
+            "PATCH",
+            f"/api/sources/{source_id}?user_id={callback.from_user.id}",
+            user_id=callback.from_user.id,
+            json={"user_id": callback.from_user.id, "filters": {}}
+        )
+
+        if response and response.status_code == 200:
+            await callback.message.edit_text("✅ Фильтр исключения отключен")
+        else:
+            error = response.text if response else "Ошибка подключения"
+            await callback.message.edit_text(f"❌ Ошибка: {error}")
+    except Exception as e:
+        logger.error(f"Error disabling exclusions: {e}")
+        await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+    await state.clear()
     await callback.answer()
 
 
