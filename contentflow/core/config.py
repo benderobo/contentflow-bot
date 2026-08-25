@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     admin_telegram_ids: str = ""
     telegram_api_id: Optional[int] = None
     telegram_api_hash: Optional[str] = None
+    telegram_phone: Optional[str] = None
 
     # Database
     database_url: str

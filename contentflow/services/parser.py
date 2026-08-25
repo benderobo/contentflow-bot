@@ -172,7 +172,14 @@ class WebsiteParser(BaseParser):
 
 class TelegramParser(BaseParser):
     async def parse(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
-        channel_username = config.get("username")
+        # config can be URL (username) or full config dict with is_private flag
+        if isinstance(config, str):
+            channel_username = config
+            is_private = False
+        else:
+            channel_username = config.get("username") or config.get("url")
+            is_private = config.get("is_private", False)
+
         if not channel_username:
             logger.error("Telegram parser: username is required")
             return []
@@ -186,25 +193,37 @@ class TelegramParser(BaseParser):
                 logger.error("Telegram API credentials not configured")
                 return []
 
-            client = TelegramClient('anon', settings.telegram_api_id, settings.telegram_api_hash)
+            # For private channels, use authenticated session; for public, use anonymous
+            if is_private and settings.telegram_phone:
+                session_name = f'session_{settings.telegram_phone}'
+                client = TelegramClient(session_name, settings.telegram_api_id, settings.telegram_api_hash)
 
-            async with client:
-                entity = await client.get_entity(channel_username)
-                messages = await client.get_messages(entity, limit=20)
+                async with client:
+                    if not client.is_user_authorized():
+                        await client.start(phone=settings.telegram_phone)
 
-                items = []
-                for msg in messages:
-                    if msg.text:
-                        item = {
-                            "title": msg.text[:100] if msg.text else "Telegram message",
-                            "description": msg.text[:1000] if msg.text else "",
-                            "url": f"https://t.me/{channel_username}/{msg.id}",
-                            "author": channel_username,
-                            "published_at": msg.date,
-                        }
-                        items.append(item)
+                    entity = await client.get_entity(channel_username)
+                    messages = await client.get_messages(entity, limit=20)
+            else:
+                client = TelegramClient('anon', settings.telegram_api_id, settings.telegram_api_hash)
 
-                return items
+                async with client:
+                    entity = await client.get_entity(channel_username)
+                    messages = await client.get_messages(entity, limit=20)
+
+            items = []
+            for msg in messages:
+                if msg.text:
+                    item = {
+                        "title": msg.text[:100] if msg.text else "Telegram message",
+                        "description": msg.text[:1000] if msg.text else "",
+                        "url": f"https://t.me/{channel_username}/{msg.id}",
+                        "author": channel_username,
+                        "published_at": msg.date,
+                    }
+                    items.append(item)
+
+            return items
         except Exception as e:
             logger.error(f"Telegram parse error: {e}")
             return []

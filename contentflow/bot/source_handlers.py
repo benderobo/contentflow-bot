@@ -26,7 +26,8 @@ async def handle_source_add(callback: CallbackQuery, state: FSMContext):
             inline_keyboard=[
                 [InlineKeyboardButton(text="🔗 RSS", callback_data="source_type_rss")],
                 [InlineKeyboardButton(text="🌐 Веб-сайт", callback_data="source_type_website")],
-                [InlineKeyboardButton(text="✈️ Telegram канал", callback_data="source_type_telegram")],
+                [InlineKeyboardButton(text="✈️ Telegram (открытый)", callback_data="source_type_telegram_public")],
+                [InlineKeyboardButton(text="🔐 Telegram (закрытый)", callback_data="source_type_telegram_private")],
                 [InlineKeyboardButton(text="◀️ Отмена", callback_data="menu_sources")]
             ]
         )
@@ -38,16 +39,23 @@ async def handle_source_add(callback: CallbackQuery, state: FSMContext):
 @source_router.callback_query(F.data.startswith("source_type_"))
 async def handle_source_type(callback: CallbackQuery, state: FSMContext):
     """Handle source type selection."""
-    source_type = callback.data.split("_")[-1]
-    type_names = {
-        "rss": "RSS",
-        "website": "Веб-сайт",
-        "telegram": "Telegram канал"
-    }
+    callback_data = callback.data
+    is_private = "private" in callback_data
 
-    await state.update_data(source_type=source_type)
+    if "telegram" in callback_data:
+        source_type = "telegram"
+        type_name = "Telegram (закрытый)" if is_private else "Telegram (открытый)"
+    else:
+        source_type = callback_data.split("_")[-1]
+        type_names = {
+            "rss": "RSS",
+            "website": "Веб-сайт",
+        }
+        type_name = type_names.get(source_type, source_type)
+
+    await state.update_data(source_type=source_type, is_private=is_private)
     await callback.message.edit_text(
-        f"📡 Добавить {type_names.get(source_type)}\n\n"
+        f"📡 Добавить {type_name}\n\n"
         "Отправьте название источника:",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text="◀️ Отмена", callback_data="menu_sources")]]
@@ -67,7 +75,11 @@ async def process_source_name(message: Message, state: FSMContext):
 
     # Different prompts for different types
     if source_type == "telegram":
-        prompt = "Укажите username канала (@habr_ru или t.me/habr_ru):"
+        is_private = data.get("is_private", False)
+        if is_private:
+            prompt = "🔐 Укажите username закрытого канала (@private_channel)\n\n⚠️ Убедитесь, что добавили номер телефона в TELEGRAM_PHONE для доступа к закрытым каналам."
+        else:
+            prompt = "Укажите username открытого канала (@habr_ru или t.me/habr_ru):"
     elif source_type == "rss":
         prompt = "Укажите RSS URL (https://example.com/feed.xml):"
     else:  # website
@@ -124,20 +136,27 @@ async def handle_parse_interval(callback: CallbackQuery, state: FSMContext):
     source_name = data.get("source_name")
     source_url = data.get("source_url")
     source_type = data.get("source_type")
+    is_private = data.get("is_private", False)
 
     try:
+        payload = {
+            "name": source_name,
+            "type": source_type,
+            "url": source_url,
+            "parse_interval": interval,
+            "enabled": True,
+            "user_id": callback.from_user.id
+        }
+
+        # For Telegram sources, include is_private flag in parser_config
+        if source_type == "telegram":
+            payload["parser_config"] = {"is_private": is_private}
+
         response = await make_authenticated_request(
             "POST",
             "/api/sources",
             user_id=callback.from_user.id,
-            json={
-                "name": source_name,
-                "type": source_type,
-                "url": source_url,
-                "parse_interval": interval,
-                "enabled": True,
-                "user_id": callback.from_user.id
-            }
+            json=payload
         )
 
         if response and response.status_code == 200:
