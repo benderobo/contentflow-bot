@@ -1,7 +1,7 @@
 import logging
 from aiogram import Dispatcher, F, Router
 from aiogram.filters.command import Command
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 from core.config import get_settings
 from bot.auth import make_authenticated_request
 
@@ -63,22 +63,24 @@ def register_handlers(dp: Dispatcher):
                     )
                 except Exception as e:
                     logger.error(f"Failed to notify admin: {e}")
-        inline_keyboard = [
-            [InlineKeyboardButton(text="📥 Источники", callback_data="menu_sources")],
-            [InlineKeyboardButton(text="📝 Посты", callback_data="menu_posts")],
-            [InlineKeyboardButton(text="🤖 AI", callback_data="menu_ai")],
-            [InlineKeyboardButton(text="📅 Планировщик", callback_data="menu_scheduler")],
-            [InlineKeyboardButton(text="📢 Каналы", callback_data="menu_channels")],
-            [InlineKeyboardButton(text="📊 Статистика", callback_data="menu_stats")],
-            [InlineKeyboardButton(text="⚙️ Настройки", callback_data="menu_settings")],
+
+        keyboard_buttons = [
+            [KeyboardButton(text="📥 Источники"), KeyboardButton(text="📝 Посты")],
+            [KeyboardButton(text="🤖 AI"), KeyboardButton(text="📅 Планировщик")],
+            [KeyboardButton(text="📢 Каналы"), KeyboardButton(text="📊 Статистика")],
+            [KeyboardButton(text="⚙️ Настройки"), KeyboardButton(text="ℹ️ Помощь")],
         ]
 
         if message.from_user and message.from_user.id == 5264530602:
-            inline_keyboard.append(
-                [InlineKeyboardButton(text="✨ Редактор", web_app=WebAppInfo(url="http://localhost:3000"))]
+            keyboard_buttons.append(
+                [KeyboardButton(text="✨ Редактор")]
             )
 
-        markup = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
+        markup = ReplyKeyboardMarkup(
+            keyboard=keyboard_buttons,
+            resize_keyboard=True,
+            one_time_keyboard=False
+        )
         await message.answer(
             "🎯 ContentFlow Bot\n\n"
             "Автоматическая система управления контентом для Telegram-каналов.\n\n"
@@ -98,6 +100,158 @@ def register_handlers(dp: Dispatcher):
 /stats - Статистика
 """
         await message.answer(help_text)
+
+    # Text button handlers
+    @router.message(F.text == "📥 Источники")
+    async def handle_sources_button(message: Message):
+        """Handle sources button."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")],
+                [InlineKeyboardButton(text="📋 Список", callback_data="source_list")],
+                [InlineKeyboardButton(text="⚙️ Настройки", callback_data="source_settings")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
+            ]
+        )
+        await message.answer("📥 Управление источниками\n\nДобавьте новые источники контента.", reply_markup=markup)
+
+    @router.message(F.text == "📝 Посты")
+    async def handle_posts_button(message: Message):
+        """Handle posts button."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🆕 Новые", callback_data="post_new")],
+                [InlineKeyboardButton(text="✏️ Черновики", callback_data="post_drafts")],
+                [InlineKeyboardButton(text="🔍 На проверке", callback_data="post_review")],
+                [InlineKeyboardButton(text="📅 Запланированные", callback_data="post_scheduled")],
+                [InlineKeyboardButton(text="✅ Опубликованные", callback_data="post_published")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
+            ]
+        )
+        await message.answer("📝 Управление постами\n\nПросмотрите и управляйте постами.", reply_markup=markup)
+
+    @router.message(F.text == "🤖 AI")
+    async def handle_ai_button(message: Message):
+        """Handle AI button."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="⚙️ Провайдер", callback_data="ai_provider")],
+                [InlineKeyboardButton(text="📝 Шаблоны", callback_data="ai_templates")],
+                [InlineKeyboardButton(text="📊 Статистика", callback_data="ai_stats")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
+            ]
+        )
+        await message.answer("🤖 Настройки AI\n\nНастройте провайдера и модели для переписывания.", reply_markup=markup)
+
+    @router.message(F.text == "📅 Планировщик")
+    async def handle_scheduler_button(message: Message):
+        """Handle scheduler button."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="⏰ Расписание", callback_data="scheduler_schedule")],
+                [InlineKeyboardButton(text="📅 Календарь", callback_data="scheduler_calendar")],
+                [InlineKeyboardButton(text="📊 История", callback_data="scheduler_history")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
+            ]
+        )
+        await message.answer("📅 Планировщик публикаций\n\nУправляйте расписанием публикаций.", reply_markup=markup)
+
+    @router.message(F.text == "📢 Каналы")
+    async def handle_channels_button(message: Message):
+        """Handle channels button."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="➕ Добавить канал", callback_data="channel_add")],
+                [InlineKeyboardButton(text="📋 Мои каналы", callback_data="channel_list")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
+            ]
+        )
+        await message.answer("📢 Управление каналами\n\nНастройте Telegram-каналы для публикации.", reply_markup=markup)
+
+    @router.message(F.text == "📊 Статистика")
+    async def handle_stats_button(message: Message):
+        """Handle stats button."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📊 Основные", callback_data="stats_general")],
+                [InlineKeyboardButton(text="💰 AI стоимость", callback_data="stats_ai_cost")],
+                [InlineKeyboardButton(text="📈 Тренды", callback_data="stats_trends")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
+            ]
+        )
+        await message.answer("📊 Статистика\n\nПросмотрите аналитику вашей активности.", reply_markup=markup)
+
+    @router.message(F.text == "⚙️ Настройки")
+    async def handle_settings_button(message: Message):
+        """Handle settings button."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="👤 Профиль", callback_data="settings_profile")],
+                [InlineKeyboardButton(text="🔧 Общие", callback_data="settings_general")],
+                [InlineKeyboardButton(text="🔒 Безопасность", callback_data="settings_security")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
+            ]
+        )
+        await message.answer("⚙️ Настройки\n\nУправляйте параметрами вашего аккаунта.", reply_markup=markup)
+
+    @router.message(F.text == "ℹ️ Помощь")
+    async def handle_help_button(message: Message):
+        """Handle help button."""
+        help_text = """📚 **Справка по ContentFlow Bot**
+
+🚀 **Основные функции:**
+• 📥 Источники - добавление RSS, веб-сайтов и Telegram каналов
+• 📝 Посты - управление контентом в разных статусах
+• 🤖 AI - настройка искусственного интеллекта для переписывания
+• 📅 Планировщик - расписание автоматических публикаций
+• 📢 Каналы - связь с вашими Telegram каналами
+• 📊 Статистика - аналитика и отчеты
+
+💡 **Советы:**
+1. Начните с добавления источника контента
+2. Настройте AI провайдера для переписывания текстов
+3. Добавьте каналы для публикации
+4. Создайте расписание автоматических постов
+
+❓ **Вопросы?**
+/start - вернуться в главное меню
+"""
+        await message.answer(help_text)
+
+    @router.message(F.text == "✨ Редактор")
+    async def handle_editor_button(message: Message):
+        """Handle editor button."""
+        if message.from_user.id == 5264530602:
+            markup = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(text="🔗 Открыть редактор", web_app=WebAppInfo(url="http://localhost:3000"))]
+                ]
+            )
+            await message.answer("✨ Редактор контента\n\nНажмите кнопку для открытия редактора:", reply_markup=markup)
+        else:
+            await message.answer("❌ У вас нет доступа к редактору.")
+
+    @router.callback_query(F.data == "menu_main")
+    async def handle_menu_main(callback: CallbackQuery):
+        """Return to main menu."""
+        keyboard_buttons = [
+            [KeyboardButton(text="📥 Источники"), KeyboardButton(text="📝 Посты")],
+            [KeyboardButton(text="🤖 AI"), KeyboardButton(text="📅 Планировщик")],
+            [KeyboardButton(text="📢 Каналы"), KeyboardButton(text="📊 Статистика")],
+            [KeyboardButton(text="⚙️ Настройки"), KeyboardButton(text="ℹ️ Помощь")],
+        ]
+
+        if callback.from_user.id == 5264530602:
+            keyboard_buttons.append([KeyboardButton(text="✨ Редактор")])
+
+        markup = ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True)
+        await callback.message.edit_text(
+            "🎯 ContentFlow Bot\n\n"
+            "Автоматическая система управления контентом для Telegram-каналов.\n\n"
+            "Выберите действие:"
+        )
+        await callback.message.answer("👇 Выберите опцию:", reply_markup=markup)
+        await callback.answer()
 
     @router.callback_query(F.data == "menu_sources")
     async def handle_sources_menu(callback: CallbackQuery):
