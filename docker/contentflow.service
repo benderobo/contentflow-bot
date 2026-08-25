@@ -1,0 +1,17 @@
+[Unit]
+Description=ContentFlow Bot - Telegram Content Management System
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/.claude/worktrees/contentflow-bot/contentflow
+ExecStartPre=/usr/bin/docker compose pull
+ExecStart=/usr/local/bin/docker-compose up --no-recreate
+ExecStop=/usr/local/bin/docker-compose down
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
