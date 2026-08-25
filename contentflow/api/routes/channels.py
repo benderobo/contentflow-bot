@@ -83,7 +83,7 @@ async def create_channel(
 
     # Validate through Pydantic model
     try:
-        channel_input = ChannelCreate(**{k: v for k, v in body.items() if k not in ["user_signature"]})
+        channel_input = ChannelCreate(**{k: v for k, v in body.items() if k not in ["user_id", "user_signature"]})
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
