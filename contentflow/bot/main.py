@@ -1,12 +1,14 @@
 import logging
 import asyncio
 from aiogram import Bot, Dispatcher, F
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Update
 from aiogram.filters.command import Command
 
 from core.config import get_settings
 from core.database import init_db, close_db
 from bot.handlers import register_handlers
+from bot.channel_handlers import channel_router
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -18,12 +20,14 @@ async def main():
     # Initialize database
     await init_db()
 
-    # Create bot and dispatcher
+    # Create bot and dispatcher with FSM storage
     bot = Bot(token=settings.bot_token)
-    dp = Dispatcher()
+    storage = MemoryStorage()
+    dp = Dispatcher(storage=storage)
 
     # Register handlers
     register_handlers(dp)
+    dp.include_router(channel_router)
 
     # Start polling
     logger.info("Bot started")
