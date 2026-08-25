@@ -3,7 +3,7 @@ import os
 from typing import Optional
 
 API_URL = os.getenv("API_URL", "http://api:8000")
-API_KEY = os.getenv("API_KEY", "internal-bot-key")
+API_KEY = os.environ["API_KEY"]
 
 
 async def make_authenticated_request(
