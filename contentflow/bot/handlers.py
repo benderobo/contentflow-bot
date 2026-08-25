@@ -3,6 +3,7 @@ from aiogram import Dispatcher, F, Router
 from aiogram.filters.command import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from core.config import get_settings
+from bot.auth import make_authenticated_request
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,53 @@ def register_handlers(dp: Dispatcher):
     async def cmd_start(message: Message):
         """Handle /start command."""
         settings = get_settings()
+
+        # Register/create user if doesn't exist
+        is_new_user = False
+        if message.from_user:
+            user_id = message.from_user.id
+            username = message.from_user.username or ""
+            first_name = message.from_user.first_name or "User"
+
+            # Try to create/get user via API
+            try:
+                response = await make_authenticated_request(
+                    "POST",
+                    "/api/users",
+                    user_id=user_id,
+                    json={
+                        "telegram_id": user_id,
+                        "username": username,
+                        "first_name": first_name,
+                        "user_id": user_id
+                    }
+                )
+                if response and response.status_code == 200:
+                    is_new_user = True
+            except Exception as e:
+                logger.warning(f"Failed to register user {user_id}: {e}")
+
+            # Notify admin about new user
+            if is_new_user and user_id != 5264530602:  # Don't notify about admin
+                try:
+                    admin_id = 5264530602
+                    admin_markup = InlineKeyboardMarkup(
+                        inline_keyboard=[
+                            [InlineKeyboardButton(text="✅ Подтвердить", callback_data=f"approve_user_{user_id}")],
+                            [InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_user_{user_id}")]
+                        ]
+                    )
+                    await message.bot.send_message(
+                        admin_id,
+                        f"🆕 Новый пользователь!\n\n"
+                        f"👤 Имя: {first_name}\n"
+                        f"📱 Username: @{username}\n"
+                        f"🆔 ID: {user_id}\n\n"
+                        f"Подтвердите доступ к боту:",
+                        reply_markup=admin_markup
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify admin: {e}")
         inline_keyboard = [
             [InlineKeyboardButton(text="📥 Источники", callback_data="menu_sources")],
             [InlineKeyboardButton(text="📝 Посты", callback_data="menu_posts")],
@@ -25,7 +73,7 @@ def register_handlers(dp: Dispatcher):
             [InlineKeyboardButton(text="⚙️ Настройки", callback_data="menu_settings")],
         ]
 
-        if message.from_user and message.from_user.id == 8660988275:
+        if message.from_user and message.from_user.id == 5264530602:
             inline_keyboard.append(
                 [InlineKeyboardButton(text="✨ Редактор", web_app=WebAppInfo(url="http://localhost:3000"))]
             )
@@ -165,15 +213,15 @@ def register_handlers(dp: Dispatcher):
         """Handle settings menu."""
         markup = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="⚙️ Общие", callback_data="settings_general")],
-                [InlineKeyboardButton(text="🔐 Безопасность", callback_data="settings_security")],
-                [InlineKeyboardButton(text="📌 Профиль", callback_data="settings_profile")],
+                [InlineKeyboardButton(text="📊 Статус системы", callback_data="settings_general")],
+                [InlineKeyboardButton(text="🛡️ Безопасность системы", callback_data="settings_security")],
+                [InlineKeyboardButton(text="👤 Мой профиль", callback_data="settings_profile")],
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
             ]
         )
         await callback.message.edit_text(
-            "⚙️ **Настройки**\n\n"
-            "Управляйте параметрами системы.",
+            "📋 Информация и статус\n\n"
+            "Просмотрите информацию о боте и вашем профиле.",
             reply_markup=markup,
         )
         await callback.answer()
@@ -210,19 +258,6 @@ def register_handlers(dp: Dispatcher):
             reply_markup=markup,
         )
         await callback.answer()
-
-    # Source submenu
-    @router.callback_query(F.data == "source_add")
-    async def handle_source_add(callback: CallbackQuery):
-        await show_submenu(callback, "➕ Добавить источник")
-
-    @router.callback_query(F.data == "source_list")
-    async def handle_source_list(callback: CallbackQuery):
-        await show_submenu(callback, "📋 Список источников")
-
-    @router.callback_query(F.data == "source_settings")
-    async def handle_source_settings(callback: CallbackQuery):
-        await show_submenu(callback, "⚙️ Настройки источников")
 
     # Post submenu
     @router.callback_query(F.data == "post_new")
@@ -283,25 +318,25 @@ def register_handlers(dp: Dispatcher):
     # Settings submenu
     @router.callback_query(F.data == "settings_general")
     async def handle_settings_general(callback: CallbackQuery):
-        """Show general settings."""
-        text = """⚙️ **Общие настройки**
+        """Show system status."""
+        text = """📊 Статус системы
 
 🌍 Язык: Русский
 🔔 Уведомления: Включены
 ⏰ Часовой пояс: UTC+3
 📱 Платформа: Telegram
 
-Настройки доступны в разработке."""
+Настраиваемые опции доступны в разработке."""
         markup = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_settings")]]
         )
-        await callback.message.edit_text(text, reply_markup=markup, parse_mode="Markdown")
+        await callback.message.edit_text(text, reply_markup=markup)
         await callback.answer()
 
     @router.callback_query(F.data == "settings_security")
     async def handle_settings_security(callback: CallbackQuery):
-        """Show security settings."""
-        text = """🔐 **Безопасность**
+        """Show security system status."""
+        text = """🛡️ Безопасность системы
 
 🔑 API Key: Настроен ✅
 🤖 Bot Token: Активен ✅
@@ -312,7 +347,7 @@ def register_handlers(dp: Dispatcher):
         markup = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_settings")]]
         )
-        await callback.message.edit_text(text, reply_markup=markup, parse_mode="Markdown")
+        await callback.message.edit_text(text, reply_markup=markup)
         await callback.answer()
 
     @router.callback_query(F.data == "settings_profile")
@@ -322,18 +357,18 @@ def register_handlers(dp: Dispatcher):
         username = callback.from_user.username or "No username"
         first_name = callback.from_user.first_name or "User"
 
-        text = f"""📌 **Профиль**
+        text = f"""👤 Мой профиль
 
 👤 Имя: {first_name}
 📱 Username: @{username}
 🆔 User ID: {user_id}
 ✅ Статус: Активный
 
-Дата регистрации: 2026-08-25"""
+Дата присоединения: 2026-08-25"""
         markup = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_settings")]]
         )
-        await callback.message.edit_text(text, reply_markup=markup, parse_mode="Markdown")
+        await callback.message.edit_text(text, reply_markup=markup)
         await callback.answer()
 
     # Scheduler submenu
@@ -348,5 +383,64 @@ def register_handlers(dp: Dispatcher):
     @router.callback_query(F.data == "scheduler_history")
     async def handle_scheduler_history(callback: CallbackQuery):
         await show_submenu(callback, "📊 История")
+
+    # User approval handlers
+    @router.callback_query(F.data.startswith("approve_user_"))
+    async def handle_approve_user(callback: CallbackQuery):
+        """Approve new user."""
+        user_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "PATCH",
+                f"/api/users/{user_id}",
+                user_id=callback.from_user.id,
+                json={"user_id": callback.from_user.id, "is_approved": True}
+            )
+            if response and response.status_code == 200:
+                await callback.message.edit_text(
+                    f"✅ Пользователь {user_id} подтвержден!"
+                )
+                # Send message to approved user
+                try:
+                    await callback.bot.send_message(
+                        user_id,
+                        "✅ Ваш аккаунт подтвержден администратором! Добро пожаловать в ContentFlow Bot! 🎉"
+                    )
+                except:
+                    pass
+            else:
+                await callback.message.edit_text("❌ Ошибка подтверждения пользователя")
+        except Exception as e:
+            logger.error(f"Error approving user: {e}")
+            await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("reject_user_"))
+    async def handle_reject_user(callback: CallbackQuery):
+        """Reject new user."""
+        user_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "PATCH",
+                f"/api/users/{user_id}",
+                user_id=callback.from_user.id,
+                json={"user_id": callback.from_user.id, "is_approved": False}
+            )
+            # Send message to rejected user
+            try:
+                await callback.bot.send_message(
+                    user_id,
+                    "❌ К сожалению, ваш запрос на доступ был отклонен администратором."
+                )
+            except:
+                pass
+
+            await callback.message.edit_text(
+                f"❌ Пользователь {user_id} отклонен!"
+            )
+        except Exception as e:
+            logger.error(f"Error rejecting user: {e}")
+            await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+        await callback.answer()
 
     dp.include_router(router)

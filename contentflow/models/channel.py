@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, JSON, BigInteger
 from core.database import Base
 
 
@@ -7,7 +7,7 @@ class Channel(Base):
     __tablename__ = "channels"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     telegram_id = Column(String(255), nullable=False)
     username = Column(String(255), nullable=True)

@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from aiogram import Bot, Dispatcher, F
-from aiogram.fsm.storage.redis import RedisStorage
+from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram.types import Update
 from aiogram.filters.command import Command
 from redis.asyncio import Redis
@@ -36,7 +36,7 @@ async def main():
         port=redis_url.port or 6379,
         db=int(redis_url.path.lstrip("/")) if redis_url.path else 0
     )
-    storage = RedisStorage(redis=redis, key_builder=lambda key: f"fsm:{key}")
+    storage = RedisStorage(redis=redis, key_builder=DefaultKeyBuilder())
     dp = Dispatcher(storage=storage)
 
     # Register handlers

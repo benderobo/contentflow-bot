@@ -47,7 +47,7 @@ async def handle_source_type(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(source_type=source_type)
     await callback.message.edit_text(
-        f"📡 **Добавить {type_names.get(source_type)}**\n\n"
+        f"📡 Добавить {type_names.get(source_type)}\n\n"
         "Отправьте название источника:",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text="◀️ Отмена", callback_data="menu_sources")]]
@@ -60,9 +60,21 @@ async def handle_source_type(callback: CallbackQuery, state: FSMContext):
 @source_router.message(SourceStates.waiting_for_name)
 async def process_source_name(message: Message, state: FSMContext):
     """Process source name."""
+    data = await state.get_data()
+    source_type = data.get("source_type")
+
     await state.update_data(source_name=message.text)
+
+    # Different prompts for different types
+    if source_type == "telegram":
+        prompt = "Укажите username канала (@habr_ru или t.me/habr_ru):"
+    elif source_type == "rss":
+        prompt = "Укажите RSS URL (https://example.com/feed.xml):"
+    else:  # website
+        prompt = "Укажите URL сайта (https://example.com):"
+
     await message.answer(
-        "Отправьте URL источника:",
+        prompt,
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text="◀️ Отмена", callback_data="menu_sources")]]
         )
@@ -76,10 +88,17 @@ async def process_source_url(message: Message, state: FSMContext):
     data = await state.get_data()
     source_type = data.get("source_type")
 
-    # Validate URL
-    if not message.text.startswith(("http://", "https://")):
-        await message.answer("❌ URL должен начинаться с http:// или https://")
-        return
+    # Validate based on type
+    if source_type == "telegram":
+        # For Telegram, accept @username or t.me/username
+        if not (message.text.startswith("@") or message.text.startswith("t.me/") or message.text.startswith("https://t.me/")):
+            await message.answer("❌ Укажите username канала (@habr_ru) или ссылку (t.me/habr_ru)")
+            return
+    else:
+        # For RSS and Website, validate URL
+        if not message.text.startswith(("http://", "https://")):
+            await message.answer("❌ URL должен начинаться с http:// или https://")
+            return
 
     await state.update_data(source_url=message.text)
     await message.answer(
@@ -134,8 +153,9 @@ async def handle_parse_interval(callback: CallbackQuery, state: FSMContext):
                 )
             )
         else:
+            error_text = response.text if response else "Ошибка подключения к API"
             await callback.message.edit_text(
-                f"❌ Ошибка: {response.text}",
+                f"❌ Ошибка: {error_text}",
                 reply_markup=InlineKeyboardMarkup(
                     inline_keyboard=[[InlineKeyboardButton(text="📡 К источникам", callback_data="menu_sources")]]
                 )
@@ -192,4 +212,20 @@ async def handle_source_list(callback: CallbackQuery):
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=markup)
     )
+    await callback.answer()
+
+
+@source_router.callback_query(F.data == "source_settings")
+async def handle_source_settings(callback: CallbackQuery):
+    """Show source settings."""
+    text = "⚙️ Настройки источников\n\n" \
+           "📋 Управление парсингом и интервалами обновления\n\n" \
+           "Настройки доступны в разработке."
+
+    markup = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]
+        ]
+    )
+    await callback.message.edit_text(text, reply_markup=markup)
     await callback.answer()

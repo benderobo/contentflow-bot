@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float, Date
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float, Date, BigInteger
 from core.database import Base
 
 
@@ -7,7 +7,7 @@ class AIUsage(Base):
     __tablename__ = "ai_usage"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
     model = Column(String(255), nullable=False)
     requests = Column(Integer, default=0)

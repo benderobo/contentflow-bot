@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Float
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Float, BigInteger
 from core.database import Base
 
 
@@ -7,7 +7,7 @@ class AIPrompt(Base):
     __tablename__ = "ai_prompts"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     system_prompt = Column(Text, nullable=False)

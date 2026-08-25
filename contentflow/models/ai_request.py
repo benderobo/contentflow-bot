@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON, BigInteger
 from core.database import Base
 
 
@@ -7,7 +7,7 @@ class AIRequest(Base):
     __tablename__ = "ai_requests"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=True)
     prompt_id = Column(Integer, ForeignKey("ai_prompts.id"), nullable=True)
     request_type = Column(String(50), nullable=False)  # rewrite, analyze, etc.

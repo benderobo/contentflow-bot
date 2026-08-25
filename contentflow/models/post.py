@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, JSON, BigInteger
 from core.database import Base
 
 
@@ -7,7 +7,7 @@ class Post(Base):
     __tablename__ = "posts"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)
     source_item_id = Column(Integer, ForeignKey("source_items.id"), nullable=True)
     original_url = Column(String(2048), nullable=True)
     original_text = Column(Text, nullable=True)

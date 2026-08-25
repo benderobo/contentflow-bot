@@ -1,7 +1,10 @@
 import httpx
 import os
+import logging
 from typing import Optional
 from utils.auth import sign_user_id
+
+logger = logging.getLogger(__name__)
 
 API_URL = os.getenv("API_URL", "http://api:8000")
 API_KEY = os.environ["API_KEY"]
@@ -23,10 +26,11 @@ async def make_authenticated_request(
         kwargs["json"]["user_signature"] = sign_user_id(user_id)
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             url = f"{API_URL}{endpoint}"
+            logger.debug(f"API request: {method} {url}")
             response = await client.request(method, url, headers=headers, **kwargs)
             return response
     except Exception as e:
-        print(f"API request error: {e}")
+        logger.error(f"API request error: {method} {endpoint} - {type(e).__name__}: {e}")
         return None

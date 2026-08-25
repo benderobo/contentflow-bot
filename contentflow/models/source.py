@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON, ForeignKey, BigInteger
 from core.database import Base
 
 
@@ -7,10 +7,11 @@ class Source(Base):
     __tablename__ = "sources"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False)  # telegram, rss, website, html, api
     url = Column(String(2048), nullable=True)
+    status = Column(String(50), default="pending")  # pending, active, rejected
     enabled = Column(Boolean, default=True)
     parse_interval = Column(Integer, default=3600)  # seconds
     parser_config = Column(JSON, default={})
