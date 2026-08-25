@@ -54,9 +54,14 @@ async def list_sources(
 ):
     """List all sources for a user."""
     # Get user_id from query params
-    user_id = request.query_params.get("user_id", type=int)
-    if not user_id:
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
         raise HTTPException(status_code=400, detail="user_id required")
+
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
 
     result = await db.execute(
         select(Source).where(Source.user_id == user_id).order_by(Source.created_at.desc())
