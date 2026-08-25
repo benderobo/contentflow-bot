@@ -85,12 +85,29 @@ async def get_source(
 
 @router.post("/")
 async def create_source(
-    source: SourceCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     _: bool = Depends(verify_service_auth),
 ):
     """Create a new source."""
-    db_source = Source(**source.dict())
+    from utils.auth import verify_user_id
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    user_id = body.get("user_id")
+    user_signature = body.get("user_signature")
+
+    if not user_id or not user_signature:
+        raise HTTPException(status_code=400, detail="user_id and user_signature required")
+
+    if not verify_user_id(int(user_id), user_signature):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+
+    source_data = {k: v for k, v in body.items() if k not in ["user_signature"]}
+    db_source = Source(**source_data)
     db.add(db_source)
     await db.commit()
     await db.refresh(db_source)

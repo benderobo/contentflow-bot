@@ -56,9 +56,10 @@ async def process_post_content(message: Message, state: FSMContext):
         response = await make_authenticated_request(
             "POST",
             "/api/posts",
+            user_id=message.from_user.id,
             json={
                 "title": title,
-                "content": content,
+                "body": content,
                 "status": "draft",
                 "user_id": message.from_user.id
             }

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
@@ -6,8 +6,7 @@ from typing import Optional
 
 from core.database import get_db
 from models.channel import Channel
-from models.user import User
-from api.dependencies import get_current_user
+from api.dependencies import verify_service_auth
 
 router = APIRouter()
 
@@ -18,6 +17,7 @@ class ChannelCreate(BaseModel):
     username: Optional[str] = None
     bot_token: Optional[str] = None
     enabled: bool = True
+    user_id: int
 
 
 class ChannelUpdate(BaseModel):
@@ -40,12 +40,17 @@ class ChannelResponse(BaseModel):
 
 @router.get("/")
 async def list_channels(
-    current_user: User = Depends(get_current_user),
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
 ):
-    """List channels for current user."""
+    """List channels for a user."""
+    user_id = request.query_params.get("user_id", type=int)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id required")
+
     result = await db.execute(
-        select(Channel).where(Channel.user_id == current_user.id).order_by(Channel.created_at.desc())
+        select(Channel).where(Channel.user_id == user_id).order_by(Channel.created_at.desc())
     )
     channels = result.scalars().all()
     return [ChannelResponse.from_orm(c) for c in channels]
@@ -53,12 +58,29 @@ async def list_channels(
 
 @router.post("/")
 async def create_channel(
-    channel: ChannelCreate,
-    current_user: User = Depends(get_current_user),
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
 ):
     """Create a new channel."""
-    db_channel = Channel(**channel.dict(), user_id=current_user.id)
+    from utils.auth import verify_user_id
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    user_id = body.get("user_id")
+    user_signature = body.get("user_signature")
+
+    if not user_id or not user_signature:
+        raise HTTPException(status_code=400, detail="user_id and user_signature required")
+
+    if not verify_user_id(int(user_id), user_signature):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+
+    channel_data = {k: v for k, v in body.items() if k not in ["user_signature"]}
+    db_channel = Channel(**channel_data)
     db.add(db_channel)
     await db.commit()
     await db.refresh(db_channel)
@@ -68,15 +90,20 @@ async def create_channel(
 @router.get("/{channel_id}")
 async def get_channel(
     channel_id: int,
-    current_user: User = Depends(get_current_user),
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
 ):
     """Get a specific channel."""
+    user_id = request.query_params.get("user_id", type=int)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id required")
+
     result = await db.execute(select(Channel).where(Channel.id == channel_id))
     channel = result.scalar_one_or_none()
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    if channel.user_id != current_user.id:
+    if channel.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     return ChannelResponse.from_orm(channel)
 
@@ -85,15 +112,20 @@ async def get_channel(
 async def update_channel(
     channel_id: int,
     updates: ChannelUpdate,
-    current_user: User = Depends(get_current_user),
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
 ):
     """Update a channel."""
+    user_id = request.query_params.get("user_id", type=int)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id required")
+
     result = await db.execute(select(Channel).where(Channel.id == channel_id))
     channel = result.scalar_one_or_none()
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    if channel.user_id != current_user.id:
+    if channel.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
     # Only update whitelisted fields

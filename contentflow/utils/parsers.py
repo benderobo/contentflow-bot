@@ -1,12 +1,51 @@
 import httpx
 import hashlib
+import socket
+import ipaddress
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+from urllib.parse import urlparse
 import feedparser
 from bs4 import BeautifulSoup
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def validate_public_url(url: str) -> bool:
+    """Validate URL to prevent SSRF attacks."""
+    try:
+        parsed = urlparse(url)
+
+        # Only allow http and https
+        if parsed.scheme not in ("http", "https"):
+            logger.warning(f"SSRF blocked: Invalid scheme in {url}")
+            return False
+
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+
+        # Resolve hostname and check if it's a private IP
+        try:
+            addrinfo = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+            for family, type_, proto, canonname, sockaddr in addrinfo:
+                ip_str = sockaddr[0]
+                ip = ipaddress.ip_address(ip_str)
+
+                # Reject private, loopback, link-local, multicast, reserved
+                if (ip.is_private or ip.is_loopback or ip.is_link_local or
+                    ip.is_multicast or ip.is_reserved):
+                    logger.warning(f"SSRF blocked: Private IP {ip} for {url}")
+                    return False
+        except (socket.gaierror, ValueError):
+            logger.warning(f"SSRF blocked: Could not resolve {hostname}")
+            return False
+
+        return True
+    except Exception as e:
+        logger.error(f"URL validation error: {e}")
+        return False
 
 
 class ParserResult:
@@ -26,8 +65,12 @@ class RSSParser:
     @staticmethod
     async def parse(url: str) -> List[ParserResult]:
         """Parse RSS feed and return list of articles."""
+        if not validate_public_url(url):
+            logger.warning(f"RSS feed URL blocked by SSRF protection: {url}")
+            return []
+
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(follow_redirects=False) as client:
                 response = await client.get(url, timeout=10)
                 response.raise_for_status()
 
@@ -72,8 +115,12 @@ class WebsiteParser:
     @staticmethod
     async def parse(url: str) -> List[ParserResult]:
         """Parse website and extract article content."""
+        if not validate_public_url(url):
+            logger.warning(f"Website URL blocked by SSRF protection: {url}")
+            return []
+
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(follow_redirects=False) as client:
                 response = await client.get(url, timeout=10)
                 response.raise_for_status()
 

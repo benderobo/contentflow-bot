@@ -56,6 +56,7 @@ async def process_channel_telegram_id(message: Message, state: FSMContext):
         response = await make_authenticated_request(
             "POST",
             "/api/channels",
+            user_id=message.from_user.id,
             json={
                 "name": channel_name,
                 "telegram_id": telegram_id,
@@ -90,8 +91,7 @@ async def handle_channel_list(callback: CallbackQuery):
     try:
         response = await make_authenticated_request(
             "GET",
-            "/api/channels",
-            params={"user_id": callback.from_user.id}
+            f"/api/channels?user_id={callback.from_user.id}"
         )
 
         if response and response.status_code == 200:

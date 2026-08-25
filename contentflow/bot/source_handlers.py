@@ -110,6 +110,7 @@ async def handle_parse_interval(callback: CallbackQuery, state: FSMContext):
         response = await make_authenticated_request(
             "POST",
             "/api/sources",
+            user_id=callback.from_user.id,
             json={
                 "name": source_name,
                 "type": source_type,

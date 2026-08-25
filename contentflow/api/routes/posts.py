@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
@@ -7,8 +7,7 @@ from datetime import datetime
 
 from core.database import get_db
 from models.post import Post
-from models.user import User
-from api.dependencies import get_current_user
+from api.dependencies import verify_service_auth
 
 router = APIRouter()
 
@@ -76,12 +75,29 @@ async def get_post(
 
 @router.post("/")
 async def create_post(
-    post: PostCreate,
-    current_user: User = Depends(get_current_user),
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
 ):
     """Create a new post."""
-    db_post = Post(**post.dict(), user_id=current_user.id)
+    from utils.auth import verify_user_id
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    user_id = body.get("user_id")
+    user_signature = body.get("user_signature")
+
+    if not user_id or not user_signature:
+        raise HTTPException(status_code=400, detail="user_id and user_signature required")
+
+    if not verify_user_id(int(user_id), user_signature):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+
+    post_data = {k: v for k, v in body.items() if k not in ["user_signature"]}
+    db_post = Post(**post_data)
     db.add(db_post)
     await db.commit()
     await db.refresh(db_post)
