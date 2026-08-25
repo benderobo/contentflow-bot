@@ -53,9 +53,14 @@ async def _parse_source_async(source_id: int):
                 logger.warning(f"No parser for type: {source.type}")
                 return
 
-            items = await parser.parse(source.parser_config)
+            # Build parser config with URL
+            parser_config = source.parser_config.copy() if source.parser_config else {}
+            parser_config["url"] = source.url
+
+            items = await parser.parse(parser_config)
             source.last_check = datetime.utcnow()
 
+            saved_count = 0
             for item in items:
                 # Check if URL already exists
                 url_result = await db.execute(
@@ -64,7 +69,7 @@ async def _parse_source_async(source_id: int):
                 existing = url_result.scalar_one_or_none()
 
                 if existing:
-                    logger.info(f"Item already exists: {item.get('url')}")
+                    logger.debug(f"Item already exists: {item.get('url')}")
                     continue
 
                 # Create new source item
@@ -81,16 +86,17 @@ async def _parse_source_async(source_id: int):
                     published_at=item.get("published_at"),
                 )
                 db.add(source_item)
+                saved_count += 1
 
             source.last_success = datetime.utcnow()
             source.error_count = 0
             db.add(source)
             await db.commit()
 
-            logger.info(f"Parsed {len(items)} items from source {source_id}")
+            logger.info(f"Parsed {len(items)} items, saved {saved_count} new items from source {source_id}")
         except Exception as e:
             logger.error(f"Error parsing source {source_id}: {e}")
-            source.last_error = str(e)
+            source.last_error = str(e)[:1000]
             source.error_count += 1
             db.add(source)
             await db.commit()

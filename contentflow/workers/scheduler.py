@@ -5,13 +5,14 @@ from sqlalchemy import select
 
 from core.database import AsyncSessionLocal
 from models.publish_job import PublishJob
-from workers.tasks import publish_post
+from models.source import Source
+from workers.tasks import publish_post, parse_source
 
 logger = logging.getLogger(__name__)
 
 
 async def run_scheduler():
-    """Main scheduler loop to check and publish scheduled posts."""
+    """Main scheduler loop to check and publish scheduled posts, and parse sources."""
     while True:
         try:
             async with AsyncSessionLocal() as db:
@@ -31,6 +32,28 @@ async def run_scheduler():
 
                     job.status = "publishing"
                     db.add(job)
+
+                # Find sources that need parsing
+                result = await db.execute(
+                    select(Source).where(Source.enabled == True)
+                )
+                sources = result.scalars().all()
+
+                for source in sources:
+                    should_parse = False
+
+                    # Check if source has never been parsed
+                    if source.last_check is None:
+                        should_parse = True
+                    else:
+                        # Check if enough time has passed since last check
+                        elapsed = (datetime.utcnow() - source.last_check).total_seconds()
+                        if elapsed >= source.parse_interval:
+                            should_parse = True
+
+                    if should_parse:
+                        parse_source.delay(source.id)
+                        logger.info(f"Queued parse task for source {source.id} ({source.name})")
 
                 await db.commit()
         except Exception as e:
