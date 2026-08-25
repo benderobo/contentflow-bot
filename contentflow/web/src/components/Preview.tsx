@@ -1,6 +1,18 @@
 import React from 'react';
 import './Preview.css';
 
+// Safe HTML escaping
+const escapeHtml = (text: string): string => {
+  const map: { [key: string]: string } = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+};
+
 interface Post {
   title: string;
   body: string;
@@ -14,12 +26,15 @@ interface PreviewProps {
 
 export default function Preview({ post }: PreviewProps) {
   const renderContent = (text: string) => {
-    // Simple markdown to HTML conversion
-    let html = text
+    // Escape HTML first to prevent XSS
+    let escaped = escapeHtml(text);
+
+    // Then apply markdown transformations
+    let html = escaped
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/`(.*?)`/g, '<code>$1</code>')
-      .replace(/> (.*?)(?=\n|$)/g, '<blockquote>$1</blockquote>')
+      .replace(/&gt; (.*?)(?=\n|$)/g, '<blockquote>$1</blockquote>')
       .replace(/\n/g, '<br />');
 
     return html;
