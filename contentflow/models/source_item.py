@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, JSON
 from core.database import Base
 
 
@@ -16,6 +16,7 @@ class SourceItem(Base):
     content_hash = Column(String(64), nullable=True, index=True)
     author = Column(String(255), nullable=True)
     published_at = Column(DateTime, nullable=True)
+    ai_analysis = Column(JSON, nullable=True)
     is_duplicate = Column(Boolean, default=False, index=True)
     duplicate_of = Column(Integer, ForeignKey("source_items.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)

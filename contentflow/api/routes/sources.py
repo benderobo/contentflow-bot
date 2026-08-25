@@ -5,6 +5,7 @@ from typing import Optional
 
 from core.database import get_db
 from models.source import Source
+from models.source_item import SourceItem
 from pydantic import BaseModel
 from api.dependencies import verify_service_auth
 
@@ -173,3 +174,46 @@ async def delete_source(
     await db.delete(source)
     await db.commit()
     return {"message": "Source deleted"}
+
+
+@router.get("/items/unanalyzed")
+async def get_unanalyzed_items(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
+):
+    """Get unanalyzed source items for a user."""
+    user_id = request.query_params.get("user_id", type=int)
+    limit = request.query_params.get("limit", default=5, type=int)
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id required")
+
+    # Get sources for user
+    sources_result = await db.execute(
+        select(Source).where(Source.user_id == user_id)
+    )
+    sources = sources_result.scalars().all()
+    source_ids = [s.id for s in sources]
+
+    if not source_ids:
+        return []
+
+    # Get unanalyzed items from user's sources
+    result = await db.execute(
+        select(SourceItem).where(
+            SourceItem.source_id.in_(source_ids),
+            SourceItem.ai_analysis == None
+        ).order_by(SourceItem.created_at.desc()).limit(limit)
+    )
+    items = result.scalars().all()
+
+    return [
+        {
+            "id": item.id,
+            "title": item.title,
+            "description": item.description[:200] if item.description else "",
+            "source_id": item.source_id,
+        }
+        for item in items
+    ]

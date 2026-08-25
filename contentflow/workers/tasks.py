@@ -118,23 +118,46 @@ async def _analyze_content_async(source_item_id: int):
             return
 
         try:
-            # TODO: Initialize AI service with user's provider
-            logger.info(f"Analyzing content {source_item_id}")
+            from services.ai import AIService, OpenAIProvider
+            from models.source import Source
 
-            # TODO: Implement AI analysis
-            # analysis = await ai_service.analyze_content(item.description)
+            # Get source to find user
+            source_result = await db.execute(select(Source).where(Source.id == item.source_id))
+            source = source_result.scalar_one_or_none()
 
-            # Create post from analyzed content
-            post = Post(
-                user_id=1,  # TODO: Get from source owner
-                source_item_id=item.id,
-                original_url=item.original_url,
-                title=item.title,
-                body=item.description,
-                status="draft",
-            )
-            db.add(post)
+            if not source:
+                return
+
+            # Initialize AI service if configured
+            if settings.openai_api_key:
+                ai_provider = OpenAIProvider(settings.openai_api_key, settings.ai_model)
+                ai_service = AIService(ai_provider)
+                analysis = await ai_service.analyze_content(item.description or item.title or "")
+            else:
+                analysis = {"relevant": True, "importance": 5}
+
+            # Update source item with analysis
+            item.ai_analysis = analysis
+            db.add(item)
+
+            # Create post from analyzed content if relevant
+            if analysis.get("relevant", True):
+                post = Post(
+                    user_id=source.user_id,
+                    source_item_id=item.id,
+                    original_url=item.original_url,
+                    title=item.title,
+                    body=item.description or item.title,
+                    status="draft",
+                    ai_analysis=analysis,
+                    category=analysis.get("category"),
+                    importance=analysis.get("importance", 5),
+                    clickbait=analysis.get("clickbait", False),
+                )
+                db.add(post)
+
             await db.commit()
+            logger.info(f"Analyzed content {source_item_id}, importance: {analysis.get('importance', 5)}")
         except Exception as e:
             logger.error(f"Error analyzing content {source_item_id}: {e}")
 

@@ -11,6 +11,7 @@ from bot.handlers import register_handlers
 from bot.channel_handlers import channel_router
 from bot.post_handlers import post_router
 from bot.source_handlers import source_router
+from bot.ai_handlers import ai_router
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -32,6 +33,7 @@ async def main():
     dp.include_router(channel_router)
     dp.include_router(post_router)
     dp.include_router(source_router)
+    dp.include_router(ai_router)
 
     # Start polling
     logger.info("Bot started")

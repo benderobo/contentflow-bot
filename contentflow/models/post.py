@@ -25,6 +25,8 @@ class Post(Base):
     category = Column(String(100), nullable=True)
     importance = Column(Integer, nullable=True)  # 1-10
     clickbait = Column(Boolean, default=False)
+    rewrite_original = Column(Text, nullable=True)
+    rewrite_candidate = Column(Text, nullable=True)
     scheduled_at = Column(DateTime, nullable=True, index=True)
     published_at = Column(DateTime, nullable=True, index=True)
     rejected_reason = Column(String(500), nullable=True)

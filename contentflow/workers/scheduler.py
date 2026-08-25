@@ -6,7 +6,8 @@ from sqlalchemy import select
 from core.database import AsyncSessionLocal
 from models.publish_job import PublishJob
 from models.source import Source
-from workers.tasks import publish_post, parse_source
+from models.source_item import SourceItem
+from workers.tasks import publish_post, parse_source, analyze_content
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,18 @@ async def run_scheduler():
                     if should_parse:
                         parse_source.delay(source.id)
                         logger.info(f"Queued parse task for source {source.id} ({source.name})")
+
+                # Find source items without analysis
+                result = await db.execute(
+                    select(SourceItem).where(
+                        SourceItem.ai_analysis == None
+                    ).limit(10)
+                )
+                unanalyzed = result.scalars().all()
+
+                for item in unanalyzed:
+                    analyze_content.delay(item.id)
+                    logger.info(f"Queued analysis for source item {item.id}")
 
                 await db.commit()
         except Exception as e:
