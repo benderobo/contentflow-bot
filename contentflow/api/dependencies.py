@@ -1,5 +1,4 @@
 from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import jwt
@@ -9,8 +8,6 @@ import hmac
 from core.config import get_settings
 from core.database import get_db
 from models.user import User
-
-security = HTTPBearer()
 settings = get_settings()
 API_KEY = os.environ["API_KEY"]  # Fail hard if not set
 
@@ -31,12 +28,17 @@ async def verify_service_auth(request: Request) -> bool:
 
 
 async def get_current_user(
-    credentials: HTTPAuthCredentials = Depends(security),
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Get current user from JWT token."""
+    """Get current user from JWT token in Authorization header."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    token = auth_header[7:]
     try:
-        payload = jwt.decode(credentials.credentials, settings.secret_key, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
         user_id: int = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)

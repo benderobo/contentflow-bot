@@ -8,6 +8,8 @@ from datetime import datetime
 from core.database import get_db
 from models.post import Post
 from models.publish_job import PublishJob
+from models.user import User
+from api.dependencies import get_current_user
 from models.channel import Channel
 from api.dependencies import verify_service_auth
 
