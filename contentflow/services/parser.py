@@ -3,7 +3,7 @@ import hashlib
 import asyncio
 import socket
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from urllib.parse import urlparse
 import aiohttp
 import feedparser
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseParser:
-    async def parse(self, config: Dict[str, Any]) -> list[Dict[str, Any]]:
+    async def parse(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
         raise NotImplementedError
 
 
@@ -47,7 +47,7 @@ class RSSParser(BaseParser):
             logger.error(f"URL validation error: {e}")
             return False
 
-    async def parse(self, config: Dict[str, Any]) -> list[Dict[str, Any]]:
+    async def parse(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
         url = config.get("url")
         if not url or not self._validate_url(url):
             return []
@@ -110,7 +110,7 @@ class WebsiteParser(BaseParser):
             logger.error(f"URL validation error: {e}")
             return False
 
-    async def parse(self, config: Dict[str, Any]) -> list[Dict[str, Any]]:
+    async def parse(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
         url = config.get("url")
         if not url or not self._validate_url(url):
             return []
@@ -171,7 +171,7 @@ class WebsiteParser(BaseParser):
 
 
 class TelegramParser(BaseParser):
-    async def parse(self, config: Dict[str, Any]) -> list[Dict[str, Any]]:
+    async def parse(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
         channel_username = config.get("username")
         if not channel_username:
             logger.error("Telegram parser: username is required")

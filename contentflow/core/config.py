@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Optional, Any
+from typing import Optional, Any, List
 from pydantic import Field
 from pydantic_settings import BaseSettings
 from ipaddress import ip_address
@@ -19,7 +19,7 @@ def is_private_ip(ip_str: str) -> bool:
         return False
 
 
-def _parse_admin_ids(value: Any) -> list[int]:
+def _parse_admin_ids(value: Any) -> List[int]:
     if isinstance(value, list):
         return [int(x) for x in value if isinstance(x, int)]
     if isinstance(value, int):
