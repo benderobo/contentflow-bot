@@ -260,13 +260,144 @@ def register_handlers(dp: Dispatcher):
             inline_keyboard=[
                 [InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")],
                 [InlineKeyboardButton(text="📋 Список", callback_data="source_list")],
+                [InlineKeyboardButton(text="🔍 Фильтры", callback_data="source_filters_menu")],
                 [InlineKeyboardButton(text="⚙️ Настройки", callback_data="source_settings")],
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
             ]
         )
         await callback.message.edit_text(
-            "📥 **Управление источниками**\n\n"
-            "Добавьте новые источники контента.",
+            "📥 Управление источниками\n\n"
+            "Добавьте новые источники контента, настройте фильтры и параметры.",
+            reply_markup=markup,
+        )
+        await callback.answer()
+
+    @router.callback_query(F.data == "source_filters_menu")
+    async def handle_source_filters_menu(callback: CallbackQuery):
+        """Show filters menu."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🔑 Ключевые слова", callback_data="global_keywords")],
+                [InlineKeyboardButton(text="❌ Исключить слова", callback_data="global_exclusions")],
+                [InlineKeyboardButton(text="📚 Готовые фильтры", callback_data="preset_filters_list")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")],
+            ]
+        )
+        await callback.message.edit_text(
+            "🔍 Фильтры для источников\n\n"
+            "Настройте глобальные фильтры для парсинга.\n"
+            "Или перейдите в Настройки для фильтров конкретного источника.",
+            reply_markup=markup,
+        )
+        await callback.answer()
+
+    @router.callback_query(F.data == "preset_filters_list")
+    async def handle_preset_filters_list(callback: CallbackQuery):
+        """Show preset filters."""
+        preset_text = """📚 Готовые фильтры:
+
+**Ключевые слова:**
+💻 IT & Технологии
+📰 Новости
+💰 Бизнес & Финансы
+📱 Социальные сети
+
+**Исключения:**
+🚫 Спам & Реклама
+⚠️ Некачественный контент
+🔞 NSFW
+📢 Дублированное
+
+Применяйте их при добавлении или редактировании источников в Настройках!"""
+
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="source_filters_menu")],
+            ]
+        )
+        await callback.message.edit_text(preset_text, reply_markup=markup)
+        await callback.answer()
+
+    @router.callback_query(F.data == "global_keywords")
+    async def handle_global_keywords(callback: CallbackQuery):
+        """Info about global keywords."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📝 Примеры", callback_data="keywords_examples")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="source_filters_menu")],
+            ]
+        )
+        await callback.message.edit_text(
+            "🔑 Ключевые слова (Include)\n\n"
+            "Используются для ВКЛЮЧЕНИЯ постов.\n"
+            "Парсятся только посты, которые содержат ВСЕ указанные слова.\n\n"
+            "Примеры:\n"
+            "• python, java → только посты с обоими словами\n"
+            "• новости, технология → посты с обоими словами\n\n"
+            "⚡ Применяется при редактировании каждого источника!",
+            reply_markup=markup,
+        )
+        await callback.answer()
+
+    @router.callback_query(F.data == "global_exclusions")
+    async def handle_global_exclusions(callback: CallbackQuery):
+        """Info about global exclusions."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📝 Примеры", callback_data="exclusions_examples")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="source_filters_menu")],
+            ]
+        )
+        await callback.message.edit_text(
+            "❌ Исключение слов (Exclude)\n\n"
+            "Используются для ИСКЛЮЧЕНИЯ постов.\n"
+            "Пропускаются посты, которые содержат ЛЮБое из указанных слов.\n\n"
+            "Примеры:\n"
+            "• спам, реклама → посты со спамом или рекламой пропускаются\n"
+            "• фейк, ложь → посты с фейком или ложью пропускаются\n\n"
+            "⚡ Применяется при редактировании каждого источника!",
+            reply_markup=markup,
+        )
+        await callback.answer()
+
+    @router.callback_query(F.data == "keywords_examples")
+    async def handle_keywords_examples(callback: CallbackQuery):
+        """Show keywords examples."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="global_keywords")],
+            ]
+        )
+        await callback.message.edit_text(
+            "📚 Примеры использования ключевых слов:\n\n"
+            "**Быстрые фильтры:**\n"
+            "💻 IT: python, javascript, golang, rust, devops, cloud\n"
+            "📰 Новости: события, происшествия, объявил, сообщает\n"
+            "💰 Финансы: компания, стартап, инвестиции, сделка\n"
+            "📱 Соцсети: instagram, tiktok, facebook, telegram\n\n"
+            "**Кастомные:**\n"
+            "Вводите слова через запятую в Настройках каждого источника!",
+            reply_markup=markup,
+        )
+        await callback.answer()
+
+    @router.callback_query(F.data == "exclusions_examples")
+    async def handle_exclusions_examples(callback: CallbackQuery):
+        """Show exclusions examples."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="global_exclusions")],
+            ]
+        )
+        await callback.message.edit_text(
+            "📚 Примеры использования исключений:\n\n"
+            "**Быстрые фильтры:**\n"
+            "🚫 Спам: спам, реклама, маркетинг, промо\n"
+            "⚠️ Качество: фейк, ложь, неправда, некорректно\n"
+            "🔞 NSFW: 18+, adult, xxx, explicit\n"
+            "📢 Дубли: дублирован, копия, скопирован\n\n"
+            "**Кастомные:**\n"
+            "Вводите слова через запятую в Настройках каждого источника!",
             reply_markup=markup,
         )
         await callback.answer()
