@@ -3,8 +3,8 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-import httpx
 import os
+from bot.auth import make_authenticated_request
 
 logger = logging.getLogger(__name__)
 
@@ -53,21 +53,18 @@ async def process_channel_telegram_id(message: Message, state: FSMContext):
         # Validate telegram_id format
         int(telegram_id)
 
-        api_url = os.getenv("API_URL", "http://api:8000")
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{api_url}/api/channels",
-                json={
-                    "name": channel_name,
-                    "telegram_id": telegram_id,
-                    "enabled": True
-                },
-                headers={
-                    "Authorization": f"Bearer {message.from_user.id}"
-                }
-            )
+        response = await make_authenticated_request(
+            "POST",
+            "/api/channels",
+            json={
+                "name": channel_name,
+                "telegram_id": telegram_id,
+                "enabled": True,
+                "user_id": message.from_user.id
+            }
+        )
 
-        if response.status_code == 200:
+        if response and response.status_code == 200:
             await message.answer(
                 f"✅ Канал '{channel_name}' успешно добавлен!",
                 reply_markup=InlineKeyboardMarkup(
@@ -90,17 +87,14 @@ async def process_channel_telegram_id(message: Message, state: FSMContext):
 @channel_router.callback_query(F.data == "channel_list")
 async def handle_channel_list(callback: CallbackQuery):
     """Handle channel list."""
-    api_url = os.getenv("API_URL", "http://api:8000")
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{api_url}/api/channels",
-                headers={
-                    "Authorization": f"Bearer {callback.from_user.id}"
-                }
-            )
+        response = await make_authenticated_request(
+            "GET",
+            "/api/channels",
+            params={"user_id": callback.from_user.id}
+        )
 
-        if response.status_code == 200:
+        if response and response.status_code == 200:
             channels = response.json()
             if not channels:
                 text = "📢 **Мои каналы**\n\n" \
