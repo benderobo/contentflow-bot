@@ -67,6 +67,7 @@ def register_handlers(dp: Dispatcher):
             "Добавьте новые источники контента.",
             reply_markup=markup,
         )
+        await callback.answer()
 
     @router.callback_query(F.data == "menu_posts")
     async def handle_posts_menu(callback: CallbackQuery):
@@ -86,6 +87,7 @@ def register_handlers(dp: Dispatcher):
             "Просмотрите и управляйте постами.",
             reply_markup=markup,
         )
+        await callback.answer()
 
     @router.callback_query(F.data == "menu_channels")
     async def handle_channels_menu(callback: CallbackQuery):
@@ -102,6 +104,25 @@ def register_handlers(dp: Dispatcher):
             "Настройте Telegram-каналы для публикации.",
             reply_markup=markup,
         )
+        await callback.answer()
+
+    @router.callback_query(F.data == "menu_scheduler")
+    async def handle_scheduler_menu(callback: CallbackQuery):
+        """Handle scheduler menu."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="⏰ Расписание", callback_data="scheduler_schedule")],
+                [InlineKeyboardButton(text="📅 Календарь", callback_data="scheduler_calendar")],
+                [InlineKeyboardButton(text="📊 История", callback_data="scheduler_history")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
+            ]
+        )
+        await callback.message.edit_text(
+            "📅 **Планировщик публикаций**\n\n"
+            "Управляйте расписанием публикаций.",
+            reply_markup=markup,
+        )
+        await callback.answer()
 
     @router.callback_query(F.data == "menu_ai")
     async def handle_ai_menu(callback: CallbackQuery):
@@ -119,6 +140,7 @@ def register_handlers(dp: Dispatcher):
             "Настройте провайдера и модели для переписывания.",
             reply_markup=markup,
         )
+        await callback.answer()
 
     @router.callback_query(F.data == "menu_stats")
     async def handle_stats_menu(callback: CallbackQuery):
@@ -136,6 +158,7 @@ def register_handlers(dp: Dispatcher):
             "Просмотрите статистику работы системы.",
             reply_markup=markup,
         )
+        await callback.answer()
 
     @router.callback_query(F.data == "menu_settings")
     async def handle_settings_menu(callback: CallbackQuery):
@@ -153,6 +176,7 @@ def register_handlers(dp: Dispatcher):
             "Управляйте параметрами системы.",
             reply_markup=markup,
         )
+        await callback.answer()
 
     @router.callback_query(F.data == "menu_main")
     async def handle_back_to_main(callback: CallbackQuery):
@@ -173,5 +197,48 @@ def register_handlers(dp: Dispatcher):
             "Выберите действие:",
             reply_markup=markup,
         )
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("source_") | F.data.startswith("post_") |
+                          F.data.startswith("channel_") | F.data.startswith("ai_") |
+                          F.data.startswith("stats_") | F.data.startswith("settings_") |
+                          F.data.startswith("scheduler_"))
+    async def handle_submenu(callback: CallbackQuery):
+        """Handle submenu items."""
+        action_map = {
+            "source_add": "➕ Добавить источник",
+            "source_list": "📋 Список источников",
+            "source_settings": "⚙️ Настройки источников",
+            "post_new": "🆕 Новые посты",
+            "post_drafts": "✏️ Черновики",
+            "post_review": "🔍 На проверке",
+            "post_scheduled": "📅 Запланированные",
+            "post_published": "✅ Опубликованные",
+            "channel_add": "➕ Добавить канал",
+            "channel_list": "📋 Мои каналы",
+            "ai_provider": "⚙️ Выбор провайдера",
+            "ai_templates": "📝 Шаблоны",
+            "ai_stats": "📊 Статистика AI",
+            "stats_general": "📊 Общая статистика",
+            "stats_ai_cost": "💰 Стоимость AI",
+            "stats_trends": "📈 Тренды",
+            "settings_general": "⚙️ Общие настройки",
+            "settings_security": "🔐 Безопасность",
+            "settings_profile": "📌 Профиль",
+            "scheduler_schedule": "⏰ Расписание",
+            "scheduler_calendar": "📅 Календарь",
+            "scheduler_history": "📊 История",
+        }
+
+        title = action_map.get(callback.data, callback.data)
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")]]
+        )
+
+        await callback.message.edit_text(
+            f"{title}\n\n⏳ Функция в разработке",
+            reply_markup=markup,
+        )
+        await callback.answer()
 
     dp.include_router(router)
