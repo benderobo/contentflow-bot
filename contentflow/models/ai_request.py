@@ -20,7 +20,7 @@ class AIRequest(Base):
     cost = Column(String(50), nullable=True)
     status = Column(String(50), default="pending")  # pending, completed, failed
     error_message = Column(String(500), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    request_metadata = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     completed_at = Column(DateTime, nullable=True)
 
