@@ -1,7 +1,10 @@
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Any
+from pydantic import Field
 from pydantic_settings import BaseSettings
-from ipaddress import ip_address, IPv4Address, IPv6Address
+from ipaddress import ip_address
+import os
+import json
 
 
 def is_private_ip(ip_str: str) -> bool:
@@ -16,11 +19,32 @@ def is_private_ip(ip_str: str) -> bool:
         return False
 
 
+def _parse_admin_ids(value: Any) -> list[int]:
+    if isinstance(value, list):
+        return [int(x) for x in value if isinstance(x, int)]
+    if isinstance(value, int):
+        return [value]
+    if isinstance(value, str):
+        if not value:
+            return []
+        if value.startswith("[") and value.endswith("]"):
+            try:
+                ids = json.loads(value)
+                return [int(x) for x in ids if isinstance(x, int)]
+            except (json.JSONDecodeError, TypeError):
+                pass
+        if value.isdigit():
+            return [int(value)]
+        if "," in value:
+            return [int(x.strip()) for x in value.split(",") if x.strip().isdigit()]
+    return []
+
+
 class Settings(BaseSettings):
     # Telegram
     bot_token: str
     webhook_url: Optional[str] = None
-    admin_telegram_ids: list[int] = []
+    admin_telegram_ids: str = ""
 
     # Database
     database_url: str
@@ -30,7 +54,7 @@ class Settings(BaseSettings):
     redis_url: str
 
     # AI
-    ai_provider: str = "openrouter"  # openrouter, openai, anthropic, ollama
+    ai_provider: str = "openrouter"
     ai_model: str = "openrouter/auto"
     openai_api_key: Optional[str] = None
     openrouter_api_key: Optional[str] = None
@@ -67,8 +91,20 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"
 
+
+class SettingsWithAdminIds:
+    """Wrapper to provide parsed admin_telegram_ids."""
+    def __init__(self):
+        self._settings = Settings()
+        self._admin_ids = _parse_admin_ids(self._settings.admin_telegram_ids)
+
+    def __getattr__(self, name):
+        if name == "admin_telegram_ids":
+            return self._admin_ids
+        return getattr(self._settings, name)
 
 @lru_cache()
 def get_settings() -> Settings:
-    return Settings()
+    return SettingsWithAdminIds()  # type: ignore

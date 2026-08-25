@@ -1,7 +1,8 @@
 import logging
 from aiogram import Dispatcher, F, Router
 from aiogram.filters.command import Command
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -13,17 +14,23 @@ def register_handlers(dp: Dispatcher):
     @router.message(Command("start"))
     async def cmd_start(message: Message):
         """Handle /start command."""
-        markup = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text="📥 Источники", callback_data="menu_sources")],
-                [InlineKeyboardButton(text="📝 Посты", callback_data="menu_posts")],
-                [InlineKeyboardButton(text="🤖 AI", callback_data="menu_ai")],
-                [InlineKeyboardButton(text="📅 Планировщик", callback_data="menu_scheduler")],
-                [InlineKeyboardButton(text="📢 Каналы", callback_data="menu_channels")],
-                [InlineKeyboardButton(text="📊 Статистика", callback_data="menu_stats")],
-                [InlineKeyboardButton(text="⚙️ Настройки", callback_data="menu_settings")],
-            ]
-        )
+        settings = get_settings()
+        inline_keyboard = [
+            [InlineKeyboardButton(text="📥 Источники", callback_data="menu_sources")],
+            [InlineKeyboardButton(text="📝 Посты", callback_data="menu_posts")],
+            [InlineKeyboardButton(text="🤖 AI", callback_data="menu_ai")],
+            [InlineKeyboardButton(text="📅 Планировщик", callback_data="menu_scheduler")],
+            [InlineKeyboardButton(text="📢 Каналы", callback_data="menu_channels")],
+            [InlineKeyboardButton(text="📊 Статистика", callback_data="menu_stats")],
+            [InlineKeyboardButton(text="⚙️ Настройки", callback_data="menu_settings")],
+        ]
+
+        if message.from_user and message.from_user.id == 8660988275:
+            inline_keyboard.append(
+                [InlineKeyboardButton(text="✨ Редактор", web_app=WebAppInfo(url="http://localhost:3000"))]
+            )
+
+        markup = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
         await message.answer(
             "🎯 ContentFlow Bot\n\n"
             "Автоматическая система управления контентом для Telegram-каналов.\n\n"

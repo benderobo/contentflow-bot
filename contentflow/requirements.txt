@@ -12,6 +12,7 @@ aiohttp==3.9.1
 sqlalchemy==2.0.23
 alembic==1.12.1
 psycopg[binary]==3.3.4
+asyncpg==0.29.0
 
 # Task Queue
 celery==5.3.4

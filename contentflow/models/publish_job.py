@@ -15,7 +15,7 @@ class PublishJob(Base):
     error_message = Column(String(500), nullable=True)
     retry_count = Column(Integer, default=0)
     max_retries = Column(Integer, default=3)
-    metadata = Column(JSON, nullable=True)
+    job_metadata = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
