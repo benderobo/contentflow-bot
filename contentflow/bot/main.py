@@ -9,6 +9,7 @@ from core.config import get_settings
 from core.database import init_db, close_db
 from bot.handlers import register_handlers
 from bot.channel_handlers import channel_router
+from bot.post_handlers import post_router
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -28,6 +29,7 @@ async def main():
     # Register handlers
     register_handlers(dp)
     dp.include_router(channel_router)
+    dp.include_router(post_router)
 
     # Start polling
     logger.info("Bot started")
