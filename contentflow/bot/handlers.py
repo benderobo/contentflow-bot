@@ -199,12 +199,9 @@ def register_handlers(dp: Dispatcher):
         )
         await callback.answer()
 
-    @router.callback_query(F.data.startswith("source_") | F.data.startswith("post_") |
-                          F.data.startswith("channel_") | F.data.startswith("ai_") |
-                          F.data.startswith("stats_") | F.data.startswith("settings_") |
-                          F.data.startswith("scheduler_"))
-    async def handle_submenu(callback: CallbackQuery):
-        """Handle submenu items."""
+    @router.callback_query()
+    async def handle_any_callback(callback: CallbackQuery):
+        """Handle any unmatched callback query."""
         action_map = {
             "source_add": "➕ Добавить источник",
             "source_list": "📋 Список источников",
