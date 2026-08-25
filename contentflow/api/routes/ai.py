@@ -64,8 +64,22 @@ async def get_ai_requests(user_id: int, limit: int = 50, db: AsyncSession = Depe
 
 
 @router.post("/analyze")
-async def analyze_content(user_id: int, text: str, db: AsyncSession = Depends(get_db)):
+async def analyze_content(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
+):
     """Analyze content using AI."""
+    from api.dependencies import verify_user_id_signature
+
+    user_id = await verify_user_id_signature(request)
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    text = body.get("text")
     if not text or len(text) < 10:
         raise HTTPException(status_code=400, detail="Text must be at least 10 characters")
 
@@ -214,8 +228,24 @@ async def use_rewrite_post(
 
 
 @router.post("/rewrite")
-async def rewrite_content(user_id: int, text: str, style: str = "neutral", db: AsyncSession = Depends(get_db)):
+async def rewrite_content(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
+):
     """Rewrite content using AI."""
+    from api.dependencies import verify_user_id_signature
+
+    user_id = await verify_user_id_signature(request)
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    text = body.get("text")
+    style = body.get("style", "neutral")
+
     if not text or len(text) < 10:
         raise HTTPException(status_code=400, detail="Text must be at least 10 characters")
 
