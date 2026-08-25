@@ -162,22 +162,22 @@ async def _analyze_content_async(source_item_id: int):
             logger.error(f"Error analyzing content {source_item_id}: {e}")
 
 
-@celery_app.task(name="publish_post")
-def publish_post(post_id: int, channel_id: int):
+@celery_app.task(name="publish_post", bind=True, autoretry_for=(Exception,), max_retries=5)
+def publish_post(self, post_id: int, channel_id: int):
     """Publish a post to a Telegram channel."""
-    asyncio.run(_publish_post_async(post_id, channel_id))
+    asyncio.run(_publish_post_async(post_id, channel_id, self.request.retries))
 
 
-async def _publish_post_async(post_id: int, channel_id: int):
-    """Async implementation of post publishing."""
+async def _publish_post_async(post_id: int, channel_id: int, retry_attempt: int = 0):
+    """Async implementation of post publishing with retry support."""
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(Post).where(Post.id == post_id))
         post = result.scalar_one_or_none()
 
         if not post:
+            logger.error(f"Post {post_id} not found")
             return
 
-        # Get channel info
         from models.channel import Channel
         channel_result = await db.execute(select(Channel).where(Channel.id == channel_id))
         channel = channel_result.scalar_one_or_none()
@@ -187,69 +187,70 @@ async def _publish_post_async(post_id: int, channel_id: int):
             return
 
         try:
-            from aiogram import Bot
+            from services.telegram_bot import get_bot, is_retryable_error
+            from aiogram.exceptions import TelegramAPIError
 
-            # Send message to Telegram channel
-            bot = Bot(token=settings.bot_token)
+            bot = get_bot()
 
-            # Format post message
             message_text = f"📝 <b>{post.title}</b>\n\n"
             message_text += post.body
 
             if post.original_url:
                 message_text += f"\n\n🔗 <a href='{post.original_url}'>Источник</a>"
 
-            # Send to channel
             await bot.send_message(
                 chat_id=channel.telegram_id,
                 text=message_text,
                 parse_mode="HTML"
             )
 
-            # Update post status
             post.status = "published"
             post.published_at = datetime.utcnow()
             db.add(post)
 
-            # Update publish job
             from models.publish_job import PublishJob
             job_result = await db.execute(
                 select(PublishJob).where(
                     PublishJob.post_id == post_id,
-                    PublishJob.channel_id == channel_id,
-                    PublishJob.status == "publishing"
+                    PublishJob.channel_id == channel_id
                 )
             )
             job = job_result.scalar_one_or_none()
             if job:
                 job.status = "published"
                 job.published_at = datetime.utcnow()
+                job.retry_count = retry_attempt
                 db.add(job)
 
             await db.commit()
             logger.info(f"Published post {post_id} to channel {channel_id} ({channel.name})")
-        except Exception as e:
-            logger.error(f"Error publishing post {post_id}: {e}")
 
-            # Update job with error
+        except Exception as e:
+            logger.error(f"Error publishing post {post_id} (attempt {retry_attempt + 1}): {e}")
+
             from models.publish_job import PublishJob
             job_result = await db.execute(
                 select(PublishJob).where(
                     PublishJob.post_id == post_id,
-                    PublishJob.channel_id == channel_id,
-                    PublishJob.status == "publishing"
+                    PublishJob.channel_id == channel_id
                 )
             )
             job = job_result.scalar_one_or_none()
-            if job:
-                job.status = "failed"
-                job.error_message = str(e)
-                job.retry_count += 1
 
-                # Retry if not exceeded max retries
-                if job.retry_count < job.max_retries:
+            if job:
+                job.retry_count = retry_attempt + 1
+                job.error_message = str(e)[:500]
+
+                from services.telegram_bot import is_retryable_error
+                if is_retryable_error(e) and job.retry_count < job.max_retries:
                     job.status = "pending"
-                    logger.info(f"Retrying publish job {job.id} (attempt {job.retry_count})")
+                    logger.info(f"Scheduling retry for publish job {job.id} (attempt {job.retry_count})")
+                    from services.telegram_bot import get_retry_delay
+                    delay = get_retry_delay(job.retry_count - 1)
+                    job.scheduled_at = datetime.utcnow() + __import__('datetime').timedelta(seconds=delay)
+                else:
+                    job.status = "failed"
+                    logger.error(f"Publish job {job.id} failed permanently after {job.retry_count} attempts")
 
                 db.add(job)
                 await db.commit()

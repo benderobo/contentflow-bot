@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     bot_token: str
     webhook_url: Optional[str] = None
     admin_telegram_ids: str = ""
+    telegram_api_id: Optional[int] = None
+    telegram_api_hash: Optional[str] = None
 
     # Database
     database_url: str

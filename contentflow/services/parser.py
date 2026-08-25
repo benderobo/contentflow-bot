@@ -170,10 +170,51 @@ class WebsiteParser(BaseParser):
             return []
 
 
+class TelegramParser(BaseParser):
+    async def parse(self, config: Dict[str, Any]) -> list[Dict[str, Any]]:
+        channel_username = config.get("username")
+        if not channel_username:
+            logger.error("Telegram parser: username is required")
+            return []
+
+        try:
+            from telethon import TelegramClient
+            from core.config import get_settings
+
+            settings = get_settings()
+            if not settings.telegram_api_id or not settings.telegram_api_hash:
+                logger.error("Telegram API credentials not configured")
+                return []
+
+            client = TelegramClient('anon', settings.telegram_api_id, settings.telegram_api_hash)
+
+            async with client:
+                entity = await client.get_entity(channel_username)
+                messages = await client.get_messages(entity, limit=20)
+
+                items = []
+                for msg in messages:
+                    if msg.text:
+                        item = {
+                            "title": msg.text[:100] if msg.text else "Telegram message",
+                            "description": msg.text[:1000] if msg.text else "",
+                            "url": f"https://t.me/{channel_username}/{msg.id}",
+                            "author": channel_username,
+                            "published_at": msg.date,
+                        }
+                        items.append(item)
+
+                return items
+        except Exception as e:
+            logger.error(f"Telegram parse error: {e}")
+            return []
+
+
 class ParserFactory:
     _parsers = {
         "rss": RSSParser,
         "website": WebsiteParser,
+        "telegram": TelegramParser,
     }
 
     @classmethod

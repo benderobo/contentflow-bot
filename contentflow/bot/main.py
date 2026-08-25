@@ -1,9 +1,10 @@
 import logging
 import asyncio
 from aiogram import Bot, Dispatcher, F
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import Update
 from aiogram.filters.command import Command
+from redis.asyncio import Redis
 
 from core.config import get_settings
 from core.database import init_db, close_db
@@ -25,9 +26,17 @@ async def main():
     # Initialize database
     await init_db()
 
-    # Create bot and dispatcher with FSM storage
+    # Create bot and dispatcher with Redis FSM storage
     bot = Bot(token=settings.bot_token)
-    storage = MemoryStorage()
+
+    from urllib.parse import urlparse
+    redis_url = urlparse(settings.redis_url)
+    redis = Redis(
+        host=redis_url.hostname or "localhost",
+        port=redis_url.port or 6379,
+        db=int(redis_url.path.lstrip("/")) if redis_url.path else 0
+    )
+    storage = RedisStorage(redis=redis, key_builder=lambda key: f"fsm:{key}")
     dp = Dispatcher(storage=storage)
 
     # Register handlers

@@ -31,13 +31,21 @@ class AIUsageResponse(BaseModel):
 @router.get("/usage")
 async def get_ai_usage(user_id: int, period: str = "today", db: AsyncSession = Depends(get_db)):
     """Get AI usage statistics for a period."""
-    # TODO: Implement period filtering
-    result = await db.execute(
-        select(AIUsage)
-        .where(AIUsage.user_id == user_id)
-        .order_by(AIUsage.date.desc())
-        .limit(30)
-    )
+    from datetime import datetime, timedelta
+
+    query = select(AIUsage).where(AIUsage.user_id == user_id)
+
+    if period == "today":
+        start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        query = query.where(AIUsage.date >= start)
+    elif period == "week":
+        start = datetime.utcnow() - timedelta(days=7)
+        query = query.where(AIUsage.date >= start)
+    elif period == "month":
+        start = datetime.utcnow() - timedelta(days=30)
+        query = query.where(AIUsage.date >= start)
+
+    result = await db.execute(query.order_by(AIUsage.date.desc()).limit(100))
     usage = result.scalars().all()
     return [AIUsageResponse.from_orm(u) for u in usage]
 
@@ -58,8 +66,28 @@ async def get_ai_requests(user_id: int, limit: int = 50, db: AsyncSession = Depe
 @router.post("/analyze")
 async def analyze_content(user_id: int, text: str, db: AsyncSession = Depends(get_db)):
     """Analyze content using AI."""
-    # TODO: Queue AI analysis task
-    return {"message": "Analysis queued"}
+    if not text or len(text) < 10:
+        raise HTTPException(status_code=400, detail="Text must be at least 10 characters")
+
+    try:
+        ai_service = get_ai_provider()
+        analysis = await ai_service.analyze_content(text)
+
+        ai_request = AIRequest(
+            user_id=user_id,
+            endpoint="/analyze",
+            input_text=text[:1000],
+            output_text=str(analysis)[:1000],
+            model=settings.ai_model,
+            tokens_used=0
+        )
+        db.add(ai_request)
+        await db.commit()
+
+        return analysis
+    except Exception as e:
+        logger.error(f"Analysis error: {e}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
 def get_ai_provider() -> AIService:
@@ -188,5 +216,28 @@ async def use_rewrite_post(
 @router.post("/rewrite")
 async def rewrite_content(user_id: int, text: str, style: str = "neutral", db: AsyncSession = Depends(get_db)):
     """Rewrite content using AI."""
-    # TODO: Queue AI rewrite task
-    return {"message": "Rewrite queued"}
+    if not text or len(text) < 10:
+        raise HTTPException(status_code=400, detail="Text must be at least 10 characters")
+
+    if style not in ["neutral", "engaging", "informative", "professional"]:
+        raise HTTPException(status_code=400, detail="Invalid style. Must be one of: neutral, engaging, informative, professional")
+
+    try:
+        ai_service = get_ai_provider()
+        rewritten = await ai_service.rewrite_content(text, style=style)
+
+        ai_request = AIRequest(
+            user_id=user_id,
+            endpoint="/rewrite",
+            input_text=text[:1000],
+            output_text=rewritten[:1000],
+            model=settings.ai_model,
+            tokens_used=0
+        )
+        db.add(ai_request)
+        await db.commit()
+
+        return {"original": text, "rewritten": rewritten, "style": style}
+    except Exception as e:
+        logger.error(f"Rewrite error: {e}")
+        raise HTTPException(status_code=500, detail=f"Rewrite failed: {str(e)}")

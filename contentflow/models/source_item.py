@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, JSON, UniqueConstraint
 from core.database import Base
 
 
@@ -8,7 +8,7 @@ class SourceItem(Base):
 
     id = Column(Integer, primary_key=True)
     source_id = Column(Integer, ForeignKey("sources.id"), nullable=False, index=True)
-    original_url = Column(String(2048), unique=True, nullable=False, index=True)
+    original_url = Column(String(2048), nullable=False, index=True)
     canonical_url = Column(String(2048), nullable=True)
     title = Column(String(500), nullable=True)
     description = Column(Text, nullable=True)
@@ -20,6 +20,11 @@ class SourceItem(Base):
     is_duplicate = Column(Boolean, default=False, index=True)
     duplicate_of = Column(Integer, ForeignKey("source_items.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    __table_args__ = (
+        UniqueConstraint('original_url', name='uq_source_item_original_url'),
+        UniqueConstraint('source_id', 'content_hash', name='uq_source_item_content_hash'),
+    )
 
     def __repr__(self):
         return f"<SourceItem {self.original_url}>"
