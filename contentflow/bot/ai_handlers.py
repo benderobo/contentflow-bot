@@ -17,10 +17,15 @@ class AIStates(StatesGroup):
 @ai_router.callback_query(F.data == "ai_rewrite")
 async def handle_ai_rewrite(callback: CallbackQuery, state: FSMContext):
     """Handle AI rewriting - list draft posts."""
+    from utils.auth import sign_user_id
+
+    user_id = callback.from_user.id
+    user_signature = sign_user_id(user_id)
+
     try:
         response = await make_authenticated_request(
             "GET",
-            f"/api/posts?status=draft&user_id={callback.from_user.id}"
+            f"/api/posts?status=draft&user_id={user_id}&user_signature={user_signature}"
         )
 
         if response and response.status_code == 200:
@@ -186,11 +191,16 @@ async def handle_use_rewrite(callback: CallbackQuery):
 @ai_router.callback_query(F.data == "ai_analyze")
 async def handle_ai_analyze(callback: CallbackQuery):
     """Show AI analysis of recent source items."""
+    from utils.auth import sign_user_id
+
+    user_id = callback.from_user.id
+    user_signature = sign_user_id(user_id)
+
     try:
         # Get recent unanalyzed source items
         response = await make_authenticated_request(
             "GET",
-            f"/api/sources/items/unanalyzed?user_id={callback.from_user.id}&limit=5"
+            f"/api/sources/items/unanalyzed?user_id={user_id}&user_signature={user_signature}&limit=5"
         )
 
         if response and response.status_code == 200:

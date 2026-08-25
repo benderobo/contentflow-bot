@@ -23,10 +23,15 @@ class PublishScheduleStates(StatesGroup):
 @scheduler_router.callback_query(F.data == "schedule_publish")
 async def handle_schedule_publish(callback: CallbackQuery, state: FSMContext):
     """Handle publish scheduling - list draft posts."""
+    from utils.auth import sign_user_id
+
+    user_id = callback.from_user.id
+    user_signature = sign_user_id(user_id)
+
     try:
         response = await make_authenticated_request(
             "GET",
-            f"/api/posts?status=draft&user_id={callback.from_user.id}"
+            f"/api/posts?status=draft&user_id={user_id}&user_signature={user_signature}"
         )
 
         if response and response.status_code == 200:
@@ -72,9 +77,14 @@ async def handle_select_post_for_schedule(callback: CallbackQuery, state: FSMCon
     await state.update_data(post_id=post_id)
 
     try:
+        from utils.auth import sign_user_id
+
+        user_id = callback.from_user.id
+        user_signature = sign_user_id(user_id)
+
         response = await make_authenticated_request(
             "GET",
-            f"/api/channels?user_id={callback.from_user.id}"
+            f"/api/channels?user_id={user_id}&user_signature={user_signature}"
         )
 
         if response and response.status_code == 200:

@@ -154,13 +154,16 @@ async def handle_post_drafts(callback: CallbackQuery):
 @post_router.callback_query(F.data.startswith("post_publish_"))
 async def handle_post_publish(callback: CallbackQuery):
     """Show channels for publishing."""
+    from utils.auth import sign_user_id
+
     post_id = callback.data.split("_")[-1]
+    user_id = callback.from_user.id
+    user_signature = sign_user_id(user_id)
 
     try:
         channels_response = await make_authenticated_request(
             "GET",
-            "/api/channels",
-            params={"user_id": callback.from_user.id}
+            f"/api/channels?user_id={user_id}&user_signature={user_signature}"
         )
 
         if channels_response and channels_response.status_code == 200:
@@ -214,6 +217,7 @@ async def handle_confirm_publish(callback: CallbackQuery):
         response = await make_authenticated_request(
             "POST",
             f"/api/posts/{post_id}/publish",
+            user_id=callback.from_user.id,
             json={
                 "channel_id": int(channel_id),
                 "user_id": callback.from_user.id
