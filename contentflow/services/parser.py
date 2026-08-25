@@ -1,11 +1,14 @@
 import logging
 import hashlib
 import asyncio
+import socket
 from datetime import datetime
 from typing import Optional, Dict, Any
+from urllib.parse import urlparse
 import aiohttp
 import feedparser
 from bs4 import BeautifulSoup
+from core.config import is_private_ip
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +19,37 @@ class BaseParser:
 
 
 class RSSParser(BaseParser):
+    @staticmethod
+    def _validate_url(url: str) -> bool:
+        """Validate URL to prevent SSRF attacks."""
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme not in ("http", "https"):
+                return False
+
+            hostname = parsed.hostname
+            if not hostname:
+                return False
+
+            # Resolve hostname and check if it's private
+            try:
+                ip_info = socket.getaddrinfo(hostname, 80, socket.AF_UNSPEC, socket.SOCK_STREAM)
+                for family, type_, proto, canonname, sockaddr in ip_info:
+                    ip = sockaddr[0]
+                    if is_private_ip(ip):
+                        logger.warning(f"SSRF attempt blocked for URL: {url}")
+                        return False
+            except socket.gaierror:
+                return False
+
+            return True
+        except Exception as e:
+            logger.error(f"URL validation error: {e}")
+            return False
+
     async def parse(self, config: Dict[str, Any]) -> list[Dict[str, Any]]:
         url = config.get("url")
-        if not url:
+        if not url or not self._validate_url(url):
             return []
 
         try:
@@ -51,9 +82,37 @@ class RSSParser(BaseParser):
 
 
 class WebsiteParser(BaseParser):
+    @staticmethod
+    def _validate_url(url: str) -> bool:
+        """Validate URL to prevent SSRF attacks."""
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme not in ("http", "https"):
+                return False
+
+            hostname = parsed.hostname
+            if not hostname:
+                return False
+
+            # Resolve hostname and check if it's private
+            try:
+                ip_info = socket.getaddrinfo(hostname, 80, socket.AF_UNSPEC, socket.SOCK_STREAM)
+                for family, type_, proto, canonname, sockaddr in ip_info:
+                    ip = sockaddr[0]
+                    if is_private_ip(ip):
+                        logger.warning(f"SSRF attempt blocked for URL: {url}")
+                        return False
+            except socket.gaierror:
+                return False
+
+            return True
+        except Exception as e:
+            logger.error(f"URL validation error: {e}")
+            return False
+
     async def parse(self, config: Dict[str, Any]) -> list[Dict[str, Any]]:
         url = config.get("url")
-        if not url:
+        if not url or not self._validate_url(url):
             return []
 
         try:

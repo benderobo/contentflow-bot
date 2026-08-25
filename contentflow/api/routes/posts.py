@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
@@ -7,6 +7,8 @@ from datetime import datetime
 
 from core.database import get_db
 from models.post import Post
+from models.user import User
+from api.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -40,9 +42,13 @@ class PostResponse(BaseModel):
 
 
 @router.get("/")
-async def list_posts(user_id: int, status: Optional[str] = None, db: AsyncSession = Depends(get_db)):
-    """List posts for a user."""
-    query = select(Post).where(Post.user_id == user_id)
+async def list_posts(
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List posts for current user."""
+    query = select(Post).where(Post.user_id == current_user.id)
     if status:
         query = query.where(Post.status == status)
     query = query.order_by(Post.created_at.desc())
@@ -53,19 +59,29 @@ async def list_posts(user_id: int, status: Optional[str] = None, db: AsyncSessio
 
 
 @router.get("/{post_id}")
-async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
+async def get_post(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Get a specific post."""
     result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+    if post.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     return PostResponse.from_orm(post)
 
 
 @router.post("/")
-async def create_post(post: PostCreate, db: AsyncSession = Depends(get_db)):
+async def create_post(
+    post: PostCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Create a new post."""
-    db_post = Post(**post.dict())
+    db_post = Post(**post.dict(), user_id=current_user.id)
     db.add(db_post)
     await db.commit()
     await db.refresh(db_post)
@@ -74,15 +90,26 @@ async def create_post(post: PostCreate, db: AsyncSession = Depends(get_db)):
 
 @router.patch("/{post_id}")
 async def update_post(
-    post_id: int, post_update: PostUpdate, db: AsyncSession = Depends(get_db)
+    post_id: int,
+    post_update: PostUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """Update a post."""
     result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+    if post.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
     update_data = post_update.dict(exclude_unset=True)
+    # Whitelist editable fields
+    allowed_fields = {"title", "body", "hashtags", "status", "scheduled_at"}
+    for field in list(update_data.keys()):
+        if field not in allowed_fields:
+            del update_data[field]
+
     for field, value in update_data.items():
         setattr(post, field, value)
 
@@ -93,24 +120,36 @@ async def update_post(
 
 
 @router.post("/{post_id}/rewrite")
-async def rewrite_post(post_id: int, db: AsyncSession = Depends(get_db)):
+async def rewrite_post(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Rewrite a post using AI."""
     result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+    if post.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
     # TODO: Implement AI rewrite
     return {"message": "Rewrite queued"}
 
 
 @router.post("/{post_id}/approve")
-async def approve_post(post_id: int, db: AsyncSession = Depends(get_db)):
+async def approve_post(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Approve a post."""
     result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+    if post.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
     post.status = "approved"
     db.add(post)
@@ -119,12 +158,18 @@ async def approve_post(post_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/{post_id}/publish")
-async def publish_post(post_id: int, db: AsyncSession = Depends(get_db)):
+async def publish_post(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Publish a post."""
     result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+    if post.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
     post.status = "published"
     post.published_at = datetime.utcnow()

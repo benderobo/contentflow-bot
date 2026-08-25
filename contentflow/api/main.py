@@ -16,13 +16,26 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Add CORS middleware
+# Add CORS middleware (restricted to specific origins)
+cors_origins = [
+    "http://localhost:3000",
+    "http://localhost:8080",
+    "https://localhost:3000",
+]
+
+# In production, add your domain
+if not settings.debug:
+    cors_origins = [
+        "https://yourdomain.com",
+        "https://www.yourdomain.com",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=cors_origins,
+    allow_credentials=False,  # Disable credentials for wildcard CORS safety
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 

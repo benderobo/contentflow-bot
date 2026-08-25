@@ -1,6 +1,19 @@
 from functools import lru_cache
 from typing import Optional
 from pydantic_settings import BaseSettings
+from ipaddress import ip_address, IPv4Address, IPv6Address
+
+
+def is_private_ip(ip_str: str) -> bool:
+    """Check if IP is private/reserved."""
+    try:
+        ip = ip_address(ip_str)
+        return (
+            ip.is_private or ip.is_loopback or ip.is_link_local or
+            ip.is_multicast or ip.is_reserved or str(ip) == "0.0.0.0"
+        )
+    except ValueError:
+        return False
 
 
 class Settings(BaseSettings):
