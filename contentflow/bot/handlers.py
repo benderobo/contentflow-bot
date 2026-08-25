@@ -199,43 +199,111 @@ def register_handlers(dp: Dispatcher):
         )
         await callback.answer()
 
-    @router.callback_query()
-    async def handle_any_callback(callback: CallbackQuery):
-        """Handle any unmatched callback query."""
-        action_map = {
-            "source_add": "➕ Добавить источник",
-            "source_list": "📋 Список источников",
-            "source_settings": "⚙️ Настройки источников",
-            "post_new": "🆕 Новые посты",
-            "post_drafts": "✏️ Черновики",
-            "post_review": "🔍 На проверке",
-            "post_scheduled": "📅 Запланированные",
-            "post_published": "✅ Опубликованные",
-            "channel_add": "➕ Добавить канал",
-            "channel_list": "📋 Мои каналы",
-            "ai_provider": "⚙️ Выбор провайдера",
-            "ai_templates": "📝 Шаблоны",
-            "ai_stats": "📊 Статистика AI",
-            "stats_general": "📊 Общая статистика",
-            "stats_ai_cost": "💰 Стоимость AI",
-            "stats_trends": "📈 Тренды",
-            "settings_general": "⚙️ Общие настройки",
-            "settings_security": "🔐 Безопасность",
-            "settings_profile": "📌 Профиль",
-            "scheduler_schedule": "⏰ Расписание",
-            "scheduler_calendar": "📅 Календарь",
-            "scheduler_history": "📊 История",
-        }
-
-        title = action_map.get(callback.data, callback.data)
+    # Generic handler for all submenu items
+    async def show_submenu(callback: CallbackQuery, title: str):
+        """Show submenu item."""
         markup = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")]]
         )
-
         await callback.message.edit_text(
             f"{title}\n\n⏳ Функция в разработке",
             reply_markup=markup,
         )
         await callback.answer()
+
+    # Source submenu
+    @router.callback_query(F.data == "source_add")
+    async def handle_source_add(callback: CallbackQuery):
+        await show_submenu(callback, "➕ Добавить источник")
+
+    @router.callback_query(F.data == "source_list")
+    async def handle_source_list(callback: CallbackQuery):
+        await show_submenu(callback, "📋 Список источников")
+
+    @router.callback_query(F.data == "source_settings")
+    async def handle_source_settings(callback: CallbackQuery):
+        await show_submenu(callback, "⚙️ Настройки источников")
+
+    # Post submenu
+    @router.callback_query(F.data == "post_new")
+    async def handle_post_new(callback: CallbackQuery):
+        await show_submenu(callback, "🆕 Новые посты")
+
+    @router.callback_query(F.data == "post_drafts")
+    async def handle_post_drafts(callback: CallbackQuery):
+        await show_submenu(callback, "✏️ Черновики")
+
+    @router.callback_query(F.data == "post_review")
+    async def handle_post_review(callback: CallbackQuery):
+        await show_submenu(callback, "🔍 На проверке")
+
+    @router.callback_query(F.data == "post_scheduled")
+    async def handle_post_scheduled(callback: CallbackQuery):
+        await show_submenu(callback, "📅 Запланированные")
+
+    @router.callback_query(F.data == "post_published")
+    async def handle_post_published(callback: CallbackQuery):
+        await show_submenu(callback, "✅ Опубликованные")
+
+    # Channel submenu
+    @router.callback_query(F.data == "channel_add")
+    async def handle_channel_add(callback: CallbackQuery):
+        await show_submenu(callback, "➕ Добавить канал")
+
+    @router.callback_query(F.data == "channel_list")
+    async def handle_channel_list(callback: CallbackQuery):
+        await show_submenu(callback, "📋 Мои каналы")
+
+    # AI submenu
+    @router.callback_query(F.data == "ai_provider")
+    async def handle_ai_provider(callback: CallbackQuery):
+        await show_submenu(callback, "⚙️ Выбор провайдера")
+
+    @router.callback_query(F.data == "ai_templates")
+    async def handle_ai_templates(callback: CallbackQuery):
+        await show_submenu(callback, "📝 Шаблоны")
+
+    @router.callback_query(F.data == "ai_stats")
+    async def handle_ai_stats(callback: CallbackQuery):
+        await show_submenu(callback, "📊 Статистика AI")
+
+    # Stats submenu
+    @router.callback_query(F.data == "stats_general")
+    async def handle_stats_general(callback: CallbackQuery):
+        await show_submenu(callback, "📊 Общая статистика")
+
+    @router.callback_query(F.data == "stats_ai_cost")
+    async def handle_stats_ai_cost(callback: CallbackQuery):
+        await show_submenu(callback, "💰 Стоимость AI")
+
+    @router.callback_query(F.data == "stats_trends")
+    async def handle_stats_trends(callback: CallbackQuery):
+        await show_submenu(callback, "📈 Тренды")
+
+    # Settings submenu
+    @router.callback_query(F.data == "settings_general")
+    async def handle_settings_general(callback: CallbackQuery):
+        await show_submenu(callback, "⚙️ Общие настройки")
+
+    @router.callback_query(F.data == "settings_security")
+    async def handle_settings_security(callback: CallbackQuery):
+        await show_submenu(callback, "🔐 Безопасность")
+
+    @router.callback_query(F.data == "settings_profile")
+    async def handle_settings_profile(callback: CallbackQuery):
+        await show_submenu(callback, "📌 Профиль")
+
+    # Scheduler submenu
+    @router.callback_query(F.data == "scheduler_schedule")
+    async def handle_scheduler_schedule(callback: CallbackQuery):
+        await show_submenu(callback, "⏰ Расписание")
+
+    @router.callback_query(F.data == "scheduler_calendar")
+    async def handle_scheduler_calendar(callback: CallbackQuery):
+        await show_submenu(callback, "📅 Календарь")
+
+    @router.callback_query(F.data == "scheduler_history")
+    async def handle_scheduler_history(callback: CallbackQuery):
+        await show_submenu(callback, "📊 История")
 
     dp.include_router(router)
