@@ -19,7 +19,9 @@ class SourceCreate(BaseModel):
     parse_interval: int = 3600
     parser_config: dict = {}
     filters: dict = {}
-    user_id: int
+
+    class Config:
+        extra = "forbid"  # Reject unknown fields
 
 
 class SourceUpdate(BaseModel):
@@ -106,8 +108,13 @@ async def create_source(
     if not verify_user_id(int(user_id), user_signature):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
 
-    source_data = {k: v for k, v in body.items() if k not in ["user_signature"]}
-    db_source = Source(**source_data)
+    # Validate through Pydantic model
+    try:
+        source_input = SourceCreate(**{k: v for k, v in body.items() if k not in ["user_signature"]})
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    db_source = Source(**source_input.dict(), user_id=user_id)
     db.add(db_source)
     await db.commit()
     await db.refresh(db_source)

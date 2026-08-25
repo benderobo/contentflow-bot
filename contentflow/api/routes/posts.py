@@ -13,11 +13,13 @@ router = APIRouter()
 
 
 class PostCreate(BaseModel):
-    user_id: int
     source_item_id: Optional[int] = None
     title: str
     body: str
     hashtags: list = []
+
+    class Config:
+        extra = "forbid"  # Reject unknown fields
 
 
 class PostUpdate(BaseModel):
@@ -96,8 +98,14 @@ async def create_post(
     if not verify_user_id(int(user_id), user_signature):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
 
-    post_data = {k: v for k, v in body.items() if k not in ["user_signature"]}
-    db_post = Post(**post_data)
+    # Validate through Pydantic model, exclude user_id and signature
+    try:
+        post_input = PostCreate(**{k: v for k, v in body.items()
+                                   if k not in ["user_id", "user_signature"]})
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    db_post = Post(**post_input.dict(), user_id=user_id)
     db.add(db_post)
     await db.commit()
     await db.refresh(db_post)

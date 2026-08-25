@@ -17,7 +17,9 @@ class ChannelCreate(BaseModel):
     username: Optional[str] = None
     bot_token: Optional[str] = None
     enabled: bool = True
-    user_id: int
+
+    class Config:
+        extra = "forbid"  # Reject unknown fields
 
 
 class ChannelUpdate(BaseModel):
@@ -79,8 +81,13 @@ async def create_channel(
     if not verify_user_id(int(user_id), user_signature):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
 
-    channel_data = {k: v for k, v in body.items() if k not in ["user_signature"]}
-    db_channel = Channel(**channel_data)
+    # Validate through Pydantic model
+    try:
+        channel_input = ChannelCreate(**{k: v for k, v in body.items() if k not in ["user_signature"]})
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    db_channel = Channel(**channel_input.dict(), user_id=user_id)
     db.add(db_channel)
     await db.commit()
     await db.refresh(db_channel)
