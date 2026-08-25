@@ -177,12 +177,79 @@ async def _publish_post_async(post_id: int, channel_id: int):
         if not post:
             return
 
+        # Get channel info
+        from models.channel import Channel
+        channel_result = await db.execute(select(Channel).where(Channel.id == channel_id))
+        channel = channel_result.scalar_one_or_none()
+
+        if not channel:
+            logger.error(f"Channel {channel_id} not found")
+            return
+
         try:
-            # TODO: Implement Telegram publishing
+            from aiogram import Bot
+
+            # Send message to Telegram channel
+            bot = Bot(token=settings.bot_token)
+
+            # Format post message
+            message_text = f"📝 <b>{post.title}</b>\n\n"
+            message_text += post.body
+
+            if post.original_url:
+                message_text += f"\n\n🔗 <a href='{post.original_url}'>Источник</a>"
+
+            # Send to channel
+            await bot.send_message(
+                chat_id=channel.telegram_id,
+                text=message_text,
+                parse_mode="HTML"
+            )
+
+            # Update post status
             post.status = "published"
             post.published_at = datetime.utcnow()
             db.add(post)
+
+            # Update publish job
+            from models.publish_job import PublishJob
+            job_result = await db.execute(
+                select(PublishJob).where(
+                    PublishJob.post_id == post_id,
+                    PublishJob.channel_id == channel_id,
+                    PublishJob.status == "publishing"
+                )
+            )
+            job = job_result.scalar_one_or_none()
+            if job:
+                job.status = "published"
+                job.published_at = datetime.utcnow()
+                db.add(job)
+
             await db.commit()
-            logger.info(f"Published post {post_id} to channel {channel_id}")
+            logger.info(f"Published post {post_id} to channel {channel_id} ({channel.name})")
         except Exception as e:
             logger.error(f"Error publishing post {post_id}: {e}")
+
+            # Update job with error
+            from models.publish_job import PublishJob
+            job_result = await db.execute(
+                select(PublishJob).where(
+                    PublishJob.post_id == post_id,
+                    PublishJob.channel_id == channel_id,
+                    PublishJob.status == "publishing"
+                )
+            )
+            job = job_result.scalar_one_or_none()
+            if job:
+                job.status = "failed"
+                job.error_message = str(e)
+                job.retry_count += 1
+
+                # Retry if not exceeded max retries
+                if job.retry_count < job.max_retries:
+                    job.status = "pending"
+                    logger.info(f"Retrying publish job {job.id} (attempt {job.retry_count})")
+
+                db.add(job)
+                await db.commit()

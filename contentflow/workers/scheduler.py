@@ -20,8 +20,9 @@ async def run_scheduler():
                 # Find all pending jobs that are due
                 result = await db.execute(
                     select(PublishJob).where(
-                        PublishJob.status == "pending",
+                        PublishJob.status.in_(["pending", "failed"]),
                         PublishJob.scheduled_at <= datetime.utcnow(),
+                        PublishJob.retry_count < PublishJob.max_retries
                     )
                 )
                 pending_jobs = result.scalars().all()
@@ -29,9 +30,10 @@ async def run_scheduler():
                 for job in pending_jobs:
                     # Queue the publish task
                     publish_post.delay(job.post_id, job.channel_id)
-                    logger.info(f"Queued publish job {job.id} for post {job.post_id}")
+                    logger.info(f"Queued publish job {job.id} for post {job.post_id} to channel {job.channel_id}")
 
                     job.status = "publishing"
+                    job.updated_at = datetime.utcnow()
                     db.add(job)
 
                 # Find sources that need parsing

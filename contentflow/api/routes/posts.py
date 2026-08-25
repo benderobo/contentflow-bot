@@ -7,6 +7,8 @@ from datetime import datetime
 
 from core.database import get_db
 from models.post import Post
+from models.publish_job import PublishJob
+from models.channel import Channel
 from api.dependencies import verify_service_auth
 
 router = APIRouter()
@@ -200,3 +202,221 @@ async def publish_post(
     db.add(post)
     await db.commit()
     return {"message": "Post published"}
+
+
+# ===== PUBLISH SCHEDULING ENDPOINTS =====
+
+class PublishScheduleRequest(BaseModel):
+    post_id: int
+    channel_id: int
+    scheduled_at: Optional[str] = None
+    user_id: int
+
+
+@router.post("/publish/now")
+async def publish_now(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
+):
+    """Publish post immediately."""
+    from utils.auth import verify_user_id
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    user_id = body.get("user_id")
+    user_signature = body.get("user_signature")
+    post_id = body.get("post_id")
+    channel_id = body.get("channel_id")
+
+    if not user_id or not user_signature:
+        raise HTTPException(status_code=400, detail="user_id and user_signature required")
+
+    if not verify_user_id(int(user_id), user_signature):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+
+    # Verify post ownership
+    post_result = await db.execute(select(Post).where(Post.id == post_id))
+    post = post_result.scalar_one_or_none()
+    if not post or post.user_id != int(user_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
+    # Verify channel ownership
+    channel_result = await db.execute(select(Channel).where(Channel.id == channel_id))
+    channel = channel_result.scalar_one_or_none()
+    if not channel or channel.user_id != int(user_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
+    # Publish immediately
+    post.status = "published"
+    post.published_at = datetime.utcnow()
+    db.add(post)
+
+    # Create publish job with immediate timestamp
+    job = PublishJob(
+        post_id=post_id,
+        channel_id=channel_id,
+        scheduled_at=datetime.utcnow(),
+        status="published",
+        published_at=datetime.utcnow(),
+    )
+    db.add(job)
+    await db.commit()
+
+    return {"message": "Post published", "post_id": post_id, "channel_id": channel_id}
+
+
+@router.post("/publish/schedule")
+async def schedule_publish(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
+):
+    """Schedule post for later publishing."""
+    from utils.auth import verify_user_id
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    user_id = body.get("user_id")
+    user_signature = body.get("user_signature")
+    post_id = body.get("post_id")
+    channel_id = body.get("channel_id")
+    scheduled_at_str = body.get("scheduled_at")
+
+    if not user_id or not user_signature:
+        raise HTTPException(status_code=400, detail="user_id and user_signature required")
+
+    if not verify_user_id(int(user_id), user_signature):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+
+    # Parse scheduled_at
+    try:
+        scheduled_at = datetime.fromisoformat(scheduled_at_str)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid scheduled_at format (use ISO format)")
+
+    # Verify post ownership
+    post_result = await db.execute(select(Post).where(Post.id == post_id))
+    post = post_result.scalar_one_or_none()
+    if not post or post.user_id != int(user_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
+    # Verify channel ownership
+    channel_result = await db.execute(select(Channel).where(Channel.id == channel_id))
+    channel = channel_result.scalar_one_or_none()
+    if not channel or channel.user_id != int(user_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
+    # Create publish job
+    job = PublishJob(
+        post_id=post_id,
+        channel_id=channel_id,
+        scheduled_at=scheduled_at,
+        status="pending",
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(job)
+
+    return {
+        "message": "Post scheduled",
+        "job_id": job.id,
+        "scheduled_at": scheduled_at.isoformat(),
+    }
+
+
+@router.get("/publish/scheduled")
+async def get_scheduled_posts(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
+):
+    """Get scheduled posts for user."""
+    user_id = request.query_params.get("user_id", type=int)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id required")
+
+    # Get user's channels
+    channels_result = await db.execute(
+        select(Channel).where(Channel.user_id == user_id)
+    )
+    user_channels = {ch.id for ch in channels_result.scalars().all()}
+
+    # Get pending jobs for user's channels
+    jobs_result = await db.execute(
+        select(PublishJob).where(
+            PublishJob.channel_id.in_(user_channels),
+            PublishJob.status == "pending"
+        ).order_by(PublishJob.scheduled_at.asc())
+    )
+    jobs = jobs_result.scalars().all()
+
+    result = []
+    for job in jobs:
+        post_result = await db.execute(select(Post).where(Post.id == job.post_id))
+        post = post_result.scalar_one_or_none()
+
+        channel_result = await db.execute(select(Channel).where(Channel.id == job.channel_id))
+        channel = channel_result.scalar_one_or_none()
+
+        result.append({
+            "id": job.id,
+            "post_id": job.post_id,
+            "post_title": post.title if post else "Unknown",
+            "channel_id": job.channel_id,
+            "channel_name": channel.name if channel else "Unknown",
+            "scheduled_at": job.scheduled_at.isoformat(),
+            "status": job.status,
+        })
+
+    return result
+
+
+@router.post("/publish/{job_id}/cancel")
+async def cancel_publish_job(
+    job_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
+):
+    """Cancel scheduled publish job."""
+    from utils.auth import verify_user_id
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    user_id = body.get("user_id")
+    user_signature = body.get("user_signature")
+
+    if not user_id or not user_signature:
+        raise HTTPException(status_code=400, detail="user_id and user_signature required")
+
+    if not verify_user_id(int(user_id), user_signature):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+
+    # Get job
+    job_result = await db.execute(select(PublishJob).where(PublishJob.id == job_id))
+    job = job_result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Verify ownership through channel
+    channel_result = await db.execute(select(Channel).where(Channel.id == job.channel_id))
+    channel = channel_result.scalar_one_or_none()
+    if not channel or channel.user_id != int(user_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
+    # Cancel job
+    job.status = "cancelled"
+    db.add(job)
+    await db.commit()
+
+    return {"message": "Job cancelled", "job_id": job_id}
