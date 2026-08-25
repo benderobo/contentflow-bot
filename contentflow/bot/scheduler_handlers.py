@@ -274,9 +274,14 @@ async def handle_specific_time(callback: CallbackQuery):
 async def handle_view_scheduled(callback: CallbackQuery):
     """Show scheduled posts."""
     try:
+        from utils.auth import sign_user_id
+
+        user_id = callback.from_user.id
+        user_signature = sign_user_id(user_id)
+
         response = await make_authenticated_request(
             "GET",
-            f"/api/publish/scheduled?user_id={callback.from_user.id}"
+            f"/api/publish/scheduled?user_id={user_id}&user_signature={user_signature}"
         )
 
         if response and response.status_code == 200:

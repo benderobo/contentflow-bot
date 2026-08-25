@@ -338,9 +338,16 @@ async def get_scheduled_posts(
     _: bool = Depends(verify_service_auth),
 ):
     """Get scheduled posts for user."""
+    from utils.auth import verify_user_id
+
     user_id = request.query_params.get("user_id", type=int)
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id required")
+    user_signature = request.query_params.get("user_signature")
+
+    if not user_id or not user_signature:
+        raise HTTPException(status_code=400, detail="user_id and user_signature required")
+
+    if not verify_user_id(int(user_id), user_signature):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
 
     # Get user's channels
     channels_result = await db.execute(
