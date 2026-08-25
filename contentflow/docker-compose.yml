@@ -1,4 +1,4 @@
-version: '3.9'
+version: '2.1'
 
 services:
   postgres:
@@ -113,24 +113,20 @@ services:
       - ./contentflow:/app/contentflow
     restart: unless-stopped
 
-  web:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
-    container_name: contentflow-web
-    ports:
-      - "3000:3000"
-    environment:
-      REACT_APP_API_URL: http://api:8000
-    depends_on:
-      - api
-    restart: unless-stopped
+  # web:
+  #   build:
+  #     context: ./web
+  #     dockerfile: Dockerfile
+  #   container_name: contentflow-web
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     REACT_APP_API_URL: http://api:8000
+  #   depends_on:
+  #     - api
+  #   restart: unless-stopped
 
 volumes:
   postgres_data:
   redis_data:
   storage:
-
-networks:
-  default:
-    name: contentflow-network

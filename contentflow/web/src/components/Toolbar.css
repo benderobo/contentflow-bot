@@ -1,0 +1,86 @@
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--tg-color-bg-secondary);
+  border-bottom: 1px solid var(--tg-color-bg);
+  flex-wrap: wrap;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toolbar-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.toolbar-btn {
+  background: var(--tg-color-bg);
+  color: var(--tg-color-text);
+  border: 1px solid var(--tg-color-bg);
+}
+
+.toolbar-btn:hover {
+  background: var(--tg-color-bg);
+  opacity: 0.8;
+}
+
+.toolbar-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.toolbar-btn.btn-secondary {
+  background: var(--tg-color-bg);
+  color: var(--tg-color-text);
+  border: 1px solid var(--tg-color-hint);
+}
+
+.toolbar-btn.btn-secondary:hover {
+  background: var(--tg-color-bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.toolbar-btn.btn-primary {
+  background: var(--success);
+  color: white;
+  border-color: var(--success);
+}
+
+.toolbar-btn.btn-primary:hover {
+  background: #2aa93f;
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-group {
+    width: 100%;
+  }
+
+  .toolbar-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
