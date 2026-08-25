@@ -1,0 +1,136 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: contentflow-db
+    environment:
+      POSTGRES_USER: contentflow
+      POSTGRES_PASSWORD: contentflow
+      POSTGRES_DB: contentflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U contentflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: contentflow-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.bot
+    container_name: contentflow-bot
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://contentflow:contentflow@postgres:5432/contentflow
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./contentflow:/app/contentflow
+      - storage:/app/storage
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: contentflow-api
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://contentflow:contentflow@postgres:5432/contentflow
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./contentflow:/app/contentflow
+      - storage:/app/storage
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: contentflow-worker
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://contentflow:contentflow@postgres:5432/contentflow
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./contentflow:/app/contentflow
+      - storage:/app/storage
+    restart: unless-stopped
+    command: celery -A workers.tasks worker --loglevel=info --concurrency=4
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.scheduler
+    container_name: contentflow-scheduler
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://contentflow:contentflow@postgres:5432/contentflow
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./contentflow:/app/contentflow
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: contentflow-web
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://api:8000
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  storage:
+
+networks:
+  default:
+    name: contentflow-network
