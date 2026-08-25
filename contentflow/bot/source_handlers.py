@@ -14,6 +14,7 @@ class SourceStates(StatesGroup):
     waiting_for_name = State()
     waiting_for_url = State()
     waiting_for_parse_interval = State()
+    waiting_for_custom_interval = State()
 
 
 @source_router.callback_query(F.data == "source_add")
@@ -114,12 +115,14 @@ async def process_source_url(message: Message, state: FSMContext):
 
     await state.update_data(source_url=message.text)
     await message.answer(
-        "Интервал проверки в секундах (по умолчанию 3600 = 1 час):",
+        "⏱️ Интервал проверки источника:\n\n"
+        "Выберите готовый вариант или введите свое значение в минутах:",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="⏱️ 1 час", callback_data="interval_3600")],
                 [InlineKeyboardButton(text="⏱️ 30 мин", callback_data="interval_1800")],
                 [InlineKeyboardButton(text="⏱️ 5 мин", callback_data="interval_300")],
+                [InlineKeyboardButton(text="✏️ Свое значение", callback_data="interval_custom")],
                 [InlineKeyboardButton(text="◀️ Отмена", callback_data="menu_sources")]
             ]
         )
@@ -130,7 +133,24 @@ async def process_source_url(message: Message, state: FSMContext):
 @source_router.callback_query(F.data.startswith("interval_"))
 async def handle_parse_interval(callback: CallbackQuery, state: FSMContext):
     """Handle parse interval selection and save source."""
-    interval = int(callback.data.split("_")[-1])
+    interval_str = callback.data.split("_")[-1]
+
+    # Handle custom interval input
+    if interval_str == "custom":
+        await callback.message.edit_text(
+            "✏️ Введите интервал проверки в минутах:\n\n"
+            "Примеры:\n"
+            "• 60 = 1 час\n"
+            "• 30 = 30 минут\n"
+            "• 5 = 5 минут\n"
+            "• 1 = 1 минута\n\n"
+            "Минимум: 1 минута, максимум: 10080 минут (7 дней)"
+        )
+        await state.set_state(SourceStates.waiting_for_custom_interval)
+        await callback.answer()
+        return
+
+    interval = int(interval_str)
     data = await state.get_data()
 
     source_name = data.get("source_name")
@@ -191,6 +211,85 @@ async def handle_parse_interval(callback: CallbackQuery, state: FSMContext):
         await state.clear()
 
     await callback.answer()
+
+
+@source_router.message(SourceStates.waiting_for_custom_interval)
+async def process_custom_interval(message: Message, state: FSMContext):
+    """Process custom interval input."""
+    try:
+        interval_minutes = int(message.text)
+
+        # Validate interval
+        if interval_minutes < 1 or interval_minutes > 10080:
+            await message.answer(
+                "❌ Ошибка! Интервал должен быть от 1 до 10080 минут.\n\n"
+                "Попробуйте еще раз:"
+            )
+            return
+
+        # Convert minutes to seconds
+        interval = interval_minutes * 60
+
+        data = await state.get_data()
+        source_name = data.get("source_name")
+        source_url = data.get("source_url")
+        source_type = data.get("source_type")
+        is_private = data.get("is_private", False)
+
+        try:
+            payload = {
+                "name": source_name,
+                "type": source_type,
+                "url": source_url,
+                "parse_interval": interval,
+                "enabled": True,
+                "user_id": message.from_user.id
+            }
+
+            if source_type == "telegram":
+                payload["parser_config"] = {"is_private": is_private}
+
+            response = await make_authenticated_request(
+                "POST",
+                "/api/sources",
+                user_id=message.from_user.id,
+                json=payload
+            )
+
+            if response and response.status_code == 200:
+                await message.answer(
+                    f"✅ Источник '{source_name}' добавлен!\n\n"
+                    f"📡 Тип: {source_type}\n"
+                    f"🔗 URL: {source_url[:50]}...\n"
+                    f"⏱️ Интервал: {interval_minutes} мин ({interval}с)",
+                    reply_markup=InlineKeyboardMarkup(
+                        inline_keyboard=[[InlineKeyboardButton(text="📡 К источникам", callback_data="menu_sources")]]
+                    )
+                )
+            else:
+                error_text = response.text if response else "Ошибка подключения к API"
+                await message.answer(
+                    f"❌ Ошибка: {error_text}",
+                    reply_markup=InlineKeyboardMarkup(
+                        inline_keyboard=[[InlineKeyboardButton(text="📡 К источникам", callback_data="menu_sources")]]
+                    )
+                )
+        except Exception as e:
+            logger.error(f"Error creating source: {e}")
+            await message.answer(
+                f"❌ Ошибка: {str(e)}",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[[InlineKeyboardButton(text="📡 К источникам", callback_data="menu_sources")]]
+                )
+            )
+        finally:
+            await state.clear()
+
+    except ValueError:
+        await message.answer(
+            "❌ Пожалуйста, введите число (целое число минут).\n\n"
+            "Попробуйте еще раз:"
+        )
 
 
 @source_router.callback_query(F.data == "source_list")
