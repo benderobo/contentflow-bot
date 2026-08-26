@@ -304,14 +304,26 @@ async def parse_all_sources(
                 items_count += len(items)
                 parsed_count += 1
 
+                new_items = 0
+                skipped_items = 0
+
                 for item in items:
                     import hashlib
                     content = item.get("content", "") or item.get("description", "")
                     content_hash = hashlib.sha256(content.encode()).hexdigest() if content else None
+                    original_url = item.get("url", "")
+
+                    # Check if item already exists
+                    existing = await db.execute(
+                        select(SourceItem).where(SourceItem.original_url == original_url)
+                    )
+                    if existing.scalar_one_or_none():
+                        skipped_items += 1
+                        continue
 
                     db_item = SourceItem(
                         source_id=source.id,
-                        original_url=item.get("url", ""),
+                        original_url=original_url,
                         title=item.get("title", ""),
                         description=item.get("description", ""),
                         content=content,
@@ -320,8 +332,11 @@ async def parse_all_sources(
                         content_hash=content_hash,
                     )
                     db.add(db_item)
+                    new_items += 1
 
-                await db.commit()
+                if new_items > 0:
+                    await db.commit()
+                    logger.info(f"Source {source.id}: Added {new_items} new items, skipped {skipped_items} duplicates")
         except Exception as e:
             logger.error(f"Error parsing source {source.id}: {e}")
             continue

@@ -152,12 +152,20 @@ class WebsiteParser(BaseParser):
             logger.debug(f"Website: Found title: {title_text[:50]}")
 
             # Remove common ad/navigation patterns
-            for element in soup.find_all(["div", "aside"]):
-                if element.get("class", []) and any(
-                    cls in str(element.get("class", [])).lower()
-                    for cls in ["ad", "sidebar", "nav", "cookie", "banner"]
-                ):
-                    element.decompose()
+            try:
+                for element in soup.find_all(["div", "aside"]):
+                    if element is None:
+                        continue
+                    try:
+                        classes = element.get("class", [])
+                        if classes:
+                            classes_str = str(classes).lower()
+                            if any(cls in classes_str for cls in ["ad", "sidebar", "nav", "cookie", "banner"]):
+                                element.decompose()
+                    except (AttributeError, TypeError):
+                        continue
+            except Exception as e:
+                logger.debug(f"Website: Error removing ad elements: {e}")
 
             # Find main content
             main_content = soup.find("article") or soup.find("main") or soup.find("div", class_="content")
