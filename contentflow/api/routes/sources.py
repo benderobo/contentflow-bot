@@ -288,8 +288,7 @@ async def parse_all_sources(
 
     for source in sources:
         try:
-            parser_factory = ParserFactory()
-            parser = parser_factory.create(source.type)
+            parser = ParserFactory.get_parser(source.type)
 
             config = source.parser_config or {}
             items = await parser.parse(config)
