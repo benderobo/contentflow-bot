@@ -4,6 +4,7 @@ from aiogram.filters.command import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 from core.config import get_settings
 from bot.auth import make_authenticated_request
+from bot.instructions import get_instruction_text
 
 logger = logging.getLogger(__name__)
 
@@ -92,15 +93,24 @@ def register_handlers(dp: Dispatcher):
     @router.message(Command("help"))
     async def cmd_help(message: Message):
         """Handle /help command."""
-        help_text = """
-/start - Главное меню
-/help - Помощь
-/sources - Управление источниками
-/posts - Управление постами
-/channels - Управление каналами
-/stats - Статистика
-"""
-        await message.answer(help_text)
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="⚡ Быстрый старт", callback_data="help_quick")],
+                [InlineKeyboardButton(text="📥 Источники", callback_data="help_sources")],
+                [InlineKeyboardButton(text="📝 Посты", callback_data="help_posts")],
+                [InlineKeyboardButton(text="🤖 AI", callback_data="help_ai")],
+                [InlineKeyboardButton(text="📅 Планировщик", callback_data="help_scheduler")],
+                [InlineKeyboardButton(text="📢 Каналы", callback_data="help_channels")],
+                [InlineKeyboardButton(text="🔄 Парсинг", callback_data="help_parsing")],
+                [InlineKeyboardButton(text="⚙️ Настройки", callback_data="help_settings")],
+            ]
+        )
+        await message.answer(
+            "📚 **Справка ContentFlow Bot**\n\n"
+            "Выберите раздел для получения детальной инструкции:",
+            reply_markup=markup,
+            parse_mode="Markdown"
+        )
 
     # Text button handlers
     @router.message(F.text == "📥 Источники")
@@ -264,6 +274,43 @@ def register_handlers(dp: Dispatcher):
 /start - вернуться в главное меню
 """
         await message.answer(help_text)
+
+    # Help callbacks
+    @router.callback_query(F.data.startswith("help_"))
+    async def handle_help_callback(callback: CallbackQuery):
+        """Handle help section callbacks."""
+        section = callback.data.replace("help_", "")
+        text = get_instruction_text(section)
+
+        back_button = InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_help")
+        back_markup = InlineKeyboardMarkup(inline_keyboard=[[back_button]])
+
+        await callback.message.edit_text(text, reply_markup=back_markup, parse_mode="Markdown")
+        await callback.answer()
+
+    @router.callback_query(F.data == "back_to_help")
+    async def handle_back_to_help(callback: CallbackQuery):
+        """Return to help menu."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="⚡ Быстрый старт", callback_data="help_quick")],
+                [InlineKeyboardButton(text="📥 Источники", callback_data="help_sources")],
+                [InlineKeyboardButton(text="📝 Посты", callback_data="help_posts")],
+                [InlineKeyboardButton(text="🤖 AI", callback_data="help_ai")],
+                [InlineKeyboardButton(text="📅 Планировщик", callback_data="help_scheduler")],
+                [InlineKeyboardButton(text="📢 Каналы", callback_data="help_channels")],
+                [InlineKeyboardButton(text="🔄 Парсинг", callback_data="help_parsing")],
+                [InlineKeyboardButton(text="⚙️ Настройки", callback_data="help_settings")],
+                [InlineKeyboardButton(text="◀️ В главное меню", callback_data="menu_main")],
+            ]
+        )
+        await callback.message.edit_text(
+            "📚 **Справка ContentFlow Bot**\n\n"
+            "Выберите раздел для получения детальной инструкции:",
+            reply_markup=markup,
+            parse_mode="Markdown"
+        )
+        await callback.answer()
 
     @router.message(F.text == "✨ Редактор")
     async def handle_editor_button(message: Message):
