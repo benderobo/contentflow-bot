@@ -152,13 +152,13 @@ def register_handlers(dp: Dispatcher):
         """Handle scheduler button."""
         markup = InlineKeyboardMarkup(
             inline_keyboard=[
+                [InlineKeyboardButton(text="🚀 Опубликовать сейчас", callback_data="schedule_publish")],
                 [InlineKeyboardButton(text="⏰ Расписание", callback_data="scheduler_schedule")],
-                [InlineKeyboardButton(text="📅 Календарь", callback_data="scheduler_calendar")],
                 [InlineKeyboardButton(text="📊 История", callback_data="scheduler_history")],
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
             ]
         )
-        await message.answer("📅 Планировщик публикаций\n\nУправляйте расписанием публикаций.", reply_markup=markup)
+        await message.answer("📅 Планировщик публикаций\n\n• 🚀 Опубликовать пост сейчас\n• ⏰ Запланировать на время\n• 📊 Просмотреть историю", reply_markup=markup)
 
     @router.message(F.text == "📢 Каналы")
     async def handle_channels_button(message: Message):
@@ -502,6 +502,24 @@ def register_handlers(dp: Dispatcher):
         await callback.message.edit_text(
             "📅 **Планировщик публикаций**\n\n"
             "Управляйте расписанием публикаций.",
+            reply_markup=markup,
+        )
+        await callback.answer()
+
+    @router.callback_query(F.data == "menu_scheduler")
+    async def handle_scheduler_menu(callback: CallbackQuery):
+        """Handle scheduler menu."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📅 Запланировать публикацию", callback_data="schedule_publish")],
+                [InlineKeyboardButton(text="📊 История публикаций", callback_data="scheduler_history")],
+                [InlineKeyboardButton(text="⏰ Расписание", callback_data="scheduler_schedule")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
+            ]
+        )
+        await callback.message.edit_text(
+            "📅 Планировщик публикаций\n\n"
+            "Планируйте автоматическую публикацию ваших постов в каналы по расписанию.",
             reply_markup=markup,
         )
         await callback.answer()
@@ -1039,15 +1057,58 @@ def register_handlers(dp: Dispatcher):
     # Scheduler submenu
     @router.callback_query(F.data == "scheduler_schedule")
     async def handle_scheduler_schedule(callback: CallbackQuery):
-        await show_submenu(callback, "⏰ Расписание")
+        """Show scheduler schedule."""
+        text = """⏰ **Расписание публикаций**
 
-    @router.callback_query(F.data == "scheduler_calendar")
-    async def handle_scheduler_calendar(callback: CallbackQuery):
-        await show_submenu(callback, "📅 Календарь")
+📅 Здесь будут отображаться запланированные посты.
+
+Функции:
+• Планирование публикаций на будущее
+• Автоматическая публикация в указанное время
+• Отмена запланированных постов
+• Просмотр истории публикаций
+
+Нажмите ниже для добавления нового расписания."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="➕ Новое расписание", callback_data="schedule_publish")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_scheduler")]
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup)
+        await callback.answer()
 
     @router.callback_query(F.data == "scheduler_history")
     async def handle_scheduler_history(callback: CallbackQuery):
-        await show_submenu(callback, "📊 История")
+        """Show publish history."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts?status=published&user_id={callback.from_user.id}&limit=10"
+            )
+
+            if response and response.status_code == 200:
+                posts = response.json()
+                if not posts:
+                    text = "📊 **История публикаций**\n\nНет опубликованных постов"
+                    markup = []
+                else:
+                    text = f"📊 **История публикаций** ({len(posts)})\n\n"
+                    markup = []
+                    for post in posts[:5]:
+                        text += f"✅ {post['title'][:40]}\n"
+                        if post.get('published_at'):
+                            text += f"   📅 {post['published_at'][:10]}\n"
+            else:
+                text = "📊 **История публикаций**\n\n❌ Ошибка при загрузке"
+                markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="scheduler_history")]]
+        except Exception as e:
+            text = f"📊 **История публикаций**\n\n❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="scheduler_history")]]
+
+        markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_scheduler")])
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup))
+        await callback.answer()
 
     # User approval handlers
     @router.callback_query(F.data.startswith("approve_user_"))
