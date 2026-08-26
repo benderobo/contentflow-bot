@@ -234,3 +234,74 @@ async def handle_ai_analyze(callback: CallbackQuery):
         reply_markup=InlineKeyboardMarkup(inline_keyboard=markup)
     )
     await callback.answer()
+
+
+@ai_router.callback_query(F.data == "ai_auto_rewrite")
+async def handle_ai_auto_rewrite(callback: CallbackQuery):
+    """Auto-rewrite all new posts with AI."""
+    await callback.message.edit_text(
+        "⏳ Автоматически переписываю все новые посты...",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[]])
+    )
+
+    try:
+        # Get all new posts
+        response = await make_authenticated_request(
+            "GET",
+            f"/api/posts?status=new&user_id={callback.from_user.id}"
+        )
+
+        if response and response.status_code == 200:
+            posts = response.json()
+            if not posts:
+                text = "✅ Все посты уже переписаны!\n\nНет новых постов"
+                rewritten_count = 0
+            else:
+                rewritten_count = 0
+                for post in posts:
+                    try:
+                        rewrite_response = await make_authenticated_request(
+                            "POST",
+                            f"/api/posts/{post['id']}/rewrite",
+                            user_id=callback.from_user.id,
+                            json={
+                                "style": "engaging",
+                                "user_id": callback.from_user.id
+                            }
+                        )
+
+                        if rewrite_response and rewrite_response.status_code == 200:
+                            use_response = await make_authenticated_request(
+                                "POST",
+                                f"/api/posts/{post['id']}/use-rewrite",
+                                user_id=callback.from_user.id,
+                                json={
+                                    "user_id": callback.from_user.id
+                                }
+                            )
+                            if use_response and use_response.status_code == 200:
+                                rewritten_count += 1
+                    except Exception as e:
+                        logger.error(f"Error auto-rewriting post {post['id']}: {e}")
+                        continue
+
+                text = f"✅ Автоматическое переписывание завершено!\n\n" \
+                       f"📝 Переписано постов: {rewritten_count}/{len(posts)}"
+        else:
+            text = "❌ Ошибка при получении постов"
+            rewritten_count = 0
+
+    except Exception as e:
+        logger.error(f"Error in auto-rewrite: {e}")
+        text = f"❌ Ошибка: {str(e)}"
+        rewritten_count = 0
+
+    markup = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🔄 Повторить", callback_data="ai_auto_rewrite")],
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_ai")],
+        ]
+    )
+
+    await callback.message.edit_text(text, reply_markup=markup)
+    await callback.answer()

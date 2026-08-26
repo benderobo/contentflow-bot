@@ -137,13 +137,15 @@ def register_handlers(dp: Dispatcher):
         markup = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="🔄 Переписать пост", callback_data="ai_rewrite")],
+                [InlineKeyboardButton(text="⚡ Авто-переписать", callback_data="ai_auto_rewrite")],
+                [InlineKeyboardButton(text="🔍 Анализировать", callback_data="ai_analyze")],
                 [InlineKeyboardButton(text="⚙️ Провайдер", callback_data="ai_provider")],
                 [InlineKeyboardButton(text="📝 Шаблоны", callback_data="ai_templates")],
                 [InlineKeyboardButton(text="📊 Статистика", callback_data="ai_stats")],
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
             ]
         )
-        await message.answer("🤖 Настройки AI\n\nПереписывайте посты с помощью AI, настраивайте провайдера и просматривайте статистику.", reply_markup=markup)
+        await message.answer("🤖 Настройки AI\n\n• 🔄 Переписывайте отдельные посты\n• ⚡ Автоматически переписывайте все новые\n• 🔍 Анализируйте элементы источников\n• 📊 Просматривайте статистику использования", reply_markup=markup)
 
     @router.message(F.text == "📅 Планировщик")
     async def handle_scheduler_button(message: Message):
