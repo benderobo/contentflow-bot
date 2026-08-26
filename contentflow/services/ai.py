@@ -100,6 +100,38 @@ class AnthropicProvider(LLMProvider):
             return {"error": str(e)}
 
 
+class MockProvider(LLMProvider):
+    """Mock AI provider for testing without external API."""
+    def __init__(self, api_key: str = "", model: str = "mock"):
+        self.api_key = api_key
+        self.model = model
+
+    async def analyze(self, text: str, prompt: str) -> Dict[str, Any]:
+        import json
+        result = {
+            "relevant": True,
+            "category": "tech",
+            "importance": 7,
+            "sentiment": "positive",
+            "clickbait": False,
+            "summary": f"Summary of: {text[:100]}..."
+        }
+        return {"content": json.dumps(result)}
+
+    async def rewrite(self, text: str, prompt: str) -> str:
+        styles = {
+            "engaging": f"✨ {text}",
+            "professional": f"[Professional] {text}",
+            "informative": f"📚 {text}",
+            "neutral": text,
+        }
+        # Extract style from prompt if possible
+        for style, prefix in styles.items():
+            if style in prompt.lower():
+                return prefix
+        return f"✏️ {text}"
+
+
 class OllamaProvider(LLMProvider):
     def __init__(self, base_url: str, model: str):
         self.base_url = base_url

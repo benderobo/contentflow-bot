@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -11,8 +12,9 @@ from models.ai_usage import AIUsage
 from models.ai_request import AIRequest
 from models.post import Post
 from api.dependencies import verify_service_auth
-from services.ai import AIService, OpenAIProvider, AnthropicProvider, OllamaProvider
+from services.ai import AIService, OpenAIProvider, AnthropicProvider, OllamaProvider, MockProvider
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 settings = get_settings()
 
@@ -122,11 +124,12 @@ async def analyze_content(
 
         ai_request = AIRequest(
             user_id=user_id,
-            endpoint="/analyze",
+            request_type="analyze",
             input_text=text[:1000],
             output_text=str(analysis)[:1000],
             model=settings.ai_model,
-            tokens_used=0
+            total_tokens=0,
+            status="completed"
         )
         db.add(ai_request)
         await db.commit()
@@ -145,9 +148,17 @@ def get_ai_provider() -> AIService:
         provider = AnthropicProvider(settings.anthropic_api_key, settings.ai_model)
     elif settings.ai_provider == "ollama":
         provider = OllamaProvider(settings.ollama_url, settings.ai_model)
+    elif settings.ai_provider == "openrouter":
+        # OpenRouter uses OpenAI API format but with different endpoint
+        provider = OpenAIProvider(settings.openrouter_api_key, settings.ai_model)
+        provider.base_url = "https://openrouter.ai/api/v1"
+    elif settings.ai_provider == "mock":
+        # Mock provider for testing
+        provider = MockProvider()
     else:
-        # Default to OpenAI, but will fail if no key
-        provider = OpenAIProvider(settings.openai_api_key, settings.ai_model)
+        # Default to mock if provider not found
+        logger.warning(f"Unknown AI provider: {settings.ai_provider}, using mock")
+        provider = MockProvider()
 
     return AIService(provider)
 
@@ -291,11 +302,12 @@ async def rewrite_content(
 
         ai_request = AIRequest(
             user_id=user_id,
-            endpoint="/rewrite",
+            request_type="rewrite",
             input_text=text[:1000],
             output_text=rewritten[:1000],
             model=settings.ai_model,
-            tokens_used=0
+            total_tokens=0,
+            status="completed"
         )
         db.add(ai_request)
         await db.commit()
