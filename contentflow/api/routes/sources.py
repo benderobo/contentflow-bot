@@ -250,3 +250,71 @@ async def get_unanalyzed_items(
         }
         for item in items
     ]
+
+
+@router.post("/parse-all")
+async def parse_all_sources(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
+):
+    """Parse all enabled sources for a user."""
+    from services.parser import ParserFactory
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    user_id_str = body.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
+
+    result = await db.execute(
+        select(Source).where(Source.user_id == user_id, Source.enabled == True)
+    )
+    sources = result.scalars().all()
+
+    parsed_count = 0
+    items_count = 0
+
+    for source in sources:
+        try:
+            parser_factory = ParserFactory()
+            parser = parser_factory.create(source.type)
+
+            config = source.parser_config or {}
+            items = await parser.parse(config)
+
+            if items:
+                items_count += len(items)
+                parsed_count += 1
+
+                for item in items:
+                    db_item = SourceItem(
+                        source_id=source.id,
+                        title=item.get("title", ""),
+                        description=item.get("description", ""),
+                        url=item.get("url", ""),
+                        content=item.get("content", ""),
+                    )
+                    db.add(db_item)
+
+                await db.commit()
+        except Exception as e:
+            logger.error(f"Error parsing source {source.id}: {e}")
+            continue
+
+    return {
+        "parsed_count": parsed_count,
+        "items_count": items_count,
+        "message": f"Parsed {parsed_count} sources, got {items_count} items"
+    }

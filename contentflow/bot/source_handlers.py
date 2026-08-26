@@ -335,10 +335,48 @@ async def handle_source_list(callback: CallbackQuery):
 
 @source_router.callback_query(F.data == "source_settings")
 async def handle_source_settings(callback: CallbackQuery):
-    """Show source settings."""
+    """Show source settings menu."""
+    markup = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="⚙️ Редактировать источники", callback_data="source_edit_list")],
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]
+        ]
+    )
     text = "⚙️ Настройки источников\n\n" \
-           "📋 Управление парсингом и интервалами обновления\n\n" \
-           "Настройки доступны в разработке."
+           "Управление парсингом и интервалами обновления источников."
+
+    await callback.message.edit_text(text, reply_markup=markup)
+    await callback.answer()
+
+
+@source_router.callback_query(F.data == "source_parse_all")
+async def handle_source_parse_all(callback: CallbackQuery):
+    """Parse all enabled sources."""
+    try:
+        await callback.message.edit_text(
+            "⏳ Запуск парсинга всех источников...",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[]])
+        )
+
+        response = await make_authenticated_request(
+            "POST",
+            f"/api/sources/parse-all",
+            user_id=callback.from_user.id,
+            json={"user_id": callback.from_user.id}
+        )
+
+        if response and response.status_code == 200:
+            result = response.json()
+            parsed_count = result.get("parsed_count", 0)
+            items_count = result.get("items_count", 0)
+            text = f"✅ Парсинг завершен!\n\n" \
+                   f"📡 Источников обработано: {parsed_count}\n" \
+                   f"📰 Статей получено: {items_count}"
+        else:
+            text = "❌ Ошибка при запуске парсинга"
+    except Exception as e:
+        logger.error(f"Error parsing sources: {e}")
+        text = f"❌ Ошибка: {str(e)}"
 
     markup = InlineKeyboardMarkup(
         inline_keyboard=[

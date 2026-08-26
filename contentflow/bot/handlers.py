@@ -260,6 +260,7 @@ def register_handlers(dp: Dispatcher):
             inline_keyboard=[
                 [InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")],
                 [InlineKeyboardButton(text="📋 Список", callback_data="source_list")],
+                [InlineKeyboardButton(text="🔄 Запустить парсинг", callback_data="source_parse_all")],
                 [InlineKeyboardButton(text="🔍 Фильтры", callback_data="source_filters_menu")],
                 [InlineKeyboardButton(text="⚙️ Настройки", callback_data="source_settings")],
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
@@ -267,7 +268,7 @@ def register_handlers(dp: Dispatcher):
         )
         await callback.message.edit_text(
             "📥 Управление источниками\n\n"
-            "Добавьте новые источники контента, настройте фильтры и параметры.",
+            "Добавьте новые источники контента, запустите парсинг, настройте фильтры и параметры.",
             reply_markup=markup,
         )
         await callback.answer()
