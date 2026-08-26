@@ -68,7 +68,8 @@ def register_handlers(dp: Dispatcher):
             [KeyboardButton(text="📥 Источники"), KeyboardButton(text="📝 Посты")],
             [KeyboardButton(text="🤖 AI"), KeyboardButton(text="📅 Планировщик")],
             [KeyboardButton(text="📢 Каналы"), KeyboardButton(text="📊 Статистика")],
-            [KeyboardButton(text="⚙️ Настройки"), KeyboardButton(text="ℹ️ Помощь")],
+            [KeyboardButton(text="🔄 Парсинг"), KeyboardButton(text="⚙️ Настройки")],
+            [KeyboardButton(text="ℹ️ Помощь")],
         ]
 
         if message.from_user and message.from_user.id == 5264530602:
@@ -195,6 +196,49 @@ def register_handlers(dp: Dispatcher):
         )
         await message.answer("⚙️ Настройки\n\nУправляйте параметрами вашего аккаунта.", reply_markup=markup)
 
+    @router.message(F.text == "🔄 Парсинг")
+    async def handle_parsing_button(message: Message):
+        """Handle parsing button."""
+        await message.answer(
+            "⏳ Запуск парсинга всех источников...",
+            reply_markup=ReplyKeyboardMarkup(keyboard=[], resize_keyboard=True)
+        )
+
+        try:
+            response = await make_authenticated_request(
+                "POST",
+                "/api/sources/parse-all",
+                user_id=message.from_user.id,
+                json={"user_id": message.from_user.id}
+            )
+
+            if response and response.status_code == 200:
+                result = response.json()
+                parsed_count = result.get("parsed_count", 0)
+                items_count = result.get("items_count", 0)
+                text = f"✅ Парсинг завершен!\n\n" \
+                       f"📡 Источников обработано: {parsed_count}\n" \
+                       f"📰 Статей получено: {items_count}"
+            else:
+                text = "❌ Ошибка при запуске парсинга"
+        except Exception as e:
+            logger.error(f"Error parsing sources: {e}")
+            text = f"❌ Ошибка: {str(e)}"
+
+        keyboard_buttons = [
+            [KeyboardButton(text="📥 Источники"), KeyboardButton(text="📝 Посты")],
+            [KeyboardButton(text="🤖 AI"), KeyboardButton(text="📅 Планировщик")],
+            [KeyboardButton(text="📢 Каналы"), KeyboardButton(text="📊 Статистика")],
+            [KeyboardButton(text="🔄 Парсинг"), KeyboardButton(text="⚙️ Настройки")],
+            [KeyboardButton(text="ℹ️ Помощь")],
+        ]
+
+        if message.from_user and message.from_user.id == 5264530602:
+            keyboard_buttons.append([KeyboardButton(text="✨ Редактор")])
+
+        markup = ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True)
+        await message.answer(text, reply_markup=markup)
+
     @router.message(F.text == "ℹ️ Помощь")
     async def handle_help_button(message: Message):
         """Handle help button."""
@@ -239,7 +283,8 @@ def register_handlers(dp: Dispatcher):
             [KeyboardButton(text="📥 Источники"), KeyboardButton(text="📝 Посты")],
             [KeyboardButton(text="🤖 AI"), KeyboardButton(text="📅 Планировщик")],
             [KeyboardButton(text="📢 Каналы"), KeyboardButton(text="📊 Статистика")],
-            [KeyboardButton(text="⚙️ Настройки"), KeyboardButton(text="ℹ️ Помощь")],
+            [KeyboardButton(text="🔄 Парсинг"), KeyboardButton(text="⚙️ Настройки")],
+            [KeyboardButton(text="ℹ️ Помощь")],
         ]
 
         if callback.from_user.id == 5264530602:
