@@ -15,6 +15,7 @@ interface TelegramUser {
 
 interface Post {
   id?: string;
+  source_item_id?: number;
   title: string;
   body: string;
   hashtags: string[];
@@ -50,9 +51,14 @@ export default function App() {
         setUser(userData);
 
         // Check if user is authorized
-        // For now, allow all users (you can restrict by ID later)
         if (userData.id) {
           setAuthorized(true);
+          // Load source item if item_id is in URL
+          const params = new URLSearchParams(window.location.search);
+          const itemId = params.get('item_id');
+          if (itemId) {
+            loadSourceItem(parseInt(itemId), userData.id);
+          }
         } else {
           setError('Unauthorized user');
           setAuthorized(false);
@@ -73,6 +79,32 @@ export default function App() {
       });
     }
   }, []);
+
+  const loadSourceItem = async (itemId: number, userId: number) => {
+    try {
+      const response = await fetch(`/api/sources/items/${itemId}?user_id=${userId}`, {
+        headers: {
+          'X-API-Key': 'internal-bot-key-production-change-this',
+        },
+      });
+
+      if (response.ok) {
+        const item = await response.json();
+        setPost({
+          title: item.title || '',
+          body: item.content || item.description || '',
+          hashtags: [],
+          media: [],
+          source_item_id: itemId,
+        });
+      } else {
+        setError('Failed to load article');
+      }
+    } catch (err) {
+      setError('Error loading article');
+      console.error(err);
+    }
+  };
 
   const handleSavePost = async () => {
     try {
@@ -118,6 +150,39 @@ export default function App() {
     }
   };
 
+  const handleQuickReplace = async (replaceFrom: string, replaceTo: string) => {
+    try {
+      if (!user) return;
+
+      const response = await fetch('/api/ai/rewrite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': 'internal-bot-key-production-change-this',
+        },
+        body: JSON.stringify({
+          text: post.body,
+          style: 'neutral',
+          replace_from: replaceFrom,
+          replace_to: replaceTo,
+          user_id: user.id,
+          user_signature: 'mock-signature',
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setPost({ ...post, body: result.rewritten });
+        alert('Channel mention replaced!');
+      } else {
+        setError('Failed to apply replacement');
+      }
+    } catch (err) {
+      setError('Error applying replacement');
+      console.error(err);
+    }
+  };
+
   if (!authorized) {
     return (
       <div className="auth-error">
@@ -143,6 +208,7 @@ export default function App() {
             onPreview={() => setShowPreview(!showPreview)}
             onSave={handleSavePost}
             onPublish={handlePublishPost}
+            onQuickReplace={handleQuickReplace}
             showPreview={showPreview}
           />
 

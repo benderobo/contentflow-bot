@@ -289,6 +289,8 @@ async def rewrite_content(
 
     text = body.get("text")
     style = body.get("style", "neutral")
+    replace_from = body.get("replace_from")
+    replace_to = body.get("replace_to")
 
     if not text or len(text) < 10:
         raise HTTPException(status_code=400, detail="Text must be at least 10 characters")
@@ -298,7 +300,12 @@ async def rewrite_content(
 
     try:
         ai_service = get_ai_provider()
-        rewritten = await ai_service.rewrite_content(text, style=style)
+        rewritten = await ai_service.rewrite_content(
+            text,
+            style=style,
+            replace_from=replace_from,
+            replace_to=replace_to
+        )
 
         ai_request = AIRequest(
             user_id=user_id,

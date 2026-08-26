@@ -213,11 +213,19 @@ async def get_unanalyzed_items(
         user_id = int(user_id_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="user_id must be an integer")
-    limit_str = request.query_params.get("limit", "5")
+    limit_str = request.query_params.get("limit", "10")
     try:
         limit = int(limit_str)
     except ValueError:
-        limit = 5
+        limit = 10
+
+    source_id_str = request.query_params.get("source_id")
+    source_id = None
+    if source_id_str:
+        try:
+            source_id = int(source_id_str)
+        except ValueError:
+            pass
 
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id required")
@@ -232,12 +240,19 @@ async def get_unanalyzed_items(
     if not source_ids:
         return []
 
-    # Get unanalyzed items from user's sources
+    # Filter by source_id if provided
+    if source_id and source_id not in source_ids:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    query = select(SourceItem).where(SourceItem.ai_analysis == None)
+
+    if source_id:
+        query = query.where(SourceItem.source_id == source_id)
+    else:
+        query = query.where(SourceItem.source_id.in_(source_ids))
+
     result = await db.execute(
-        select(SourceItem).where(
-            SourceItem.source_id.in_(source_ids),
-            SourceItem.ai_analysis == None
-        ).order_by(SourceItem.created_at.desc()).limit(limit)
+        query.order_by(SourceItem.created_at.desc()).limit(limit)
     )
     items = result.scalars().all()
 
@@ -250,6 +265,56 @@ async def get_unanalyzed_items(
         }
         for item in items
     ]
+
+
+@router.get("/items/{item_id}")
+async def get_source_item(
+    item_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
+):
+    """Get a specific source item for editing in miniapp."""
+    from utils.webapp_auth import verify_webapp_init_data
+    from core.config import get_settings
+
+    settings = get_settings()
+    user_id_str = request.query_params.get("user_id")
+
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
+
+    result = await db.execute(
+        select(SourceItem).where(SourceItem.id == item_id)
+    )
+    item = result.scalar_one_or_none()
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    # Verify user owns the source
+    source_result = await db.execute(
+        select(Source).where(Source.id == item.source_id)
+    )
+    source = source_result.scalar_one_or_none()
+
+    if not source or source.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return {
+        "id": item.id,
+        "title": item.title,
+        "description": item.description or "",
+        "content": item.content or "",
+        "source_id": item.source_id,
+        "original_url": item.original_url,
+        "author": item.author,
+    }
 
 
 @router.post("/parse-all")

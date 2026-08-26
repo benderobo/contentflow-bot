@@ -120,6 +120,7 @@ def register_handlers(dp: Dispatcher):
             inline_keyboard=[
                 [InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")],
                 [InlineKeyboardButton(text="📋 Список", callback_data="source_list")],
+                [InlineKeyboardButton(text="📰 Статьи", callback_data="source_articles")],
                 [InlineKeyboardButton(text="⚙️ Настройки", callback_data="source_settings")],
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
             ]
@@ -315,15 +316,13 @@ def register_handlers(dp: Dispatcher):
     @router.message(F.text == "✨ Редактор")
     async def handle_editor_button(message: Message):
         """Handle editor button."""
-        if message.from_user.id == 5264530602:
-            markup = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="🔗 Открыть редактор", web_app=WebAppInfo(url="http://localhost:3000"))]
-                ]
-            )
-            await message.answer("✨ Редактор контента\n\nНажмите кнопку для открытия редактора:", reply_markup=markup)
-        else:
-            await message.answer("❌ У вас нет доступа к редактору.")
+        settings = get_settings()
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🔗 Открыть редактор", web_app=WebAppInfo(url=settings.webapp_url))]
+            ]
+        )
+        await message.answer("✨ Редактор контента\n\nНажмите кнопку для открытия редактора:", reply_markup=markup)
 
     @router.callback_query(F.data == "menu_main")
     async def handle_menu_main(callback: CallbackQuery):
