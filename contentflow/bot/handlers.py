@@ -135,13 +135,14 @@ def register_handlers(dp: Dispatcher):
         """Handle AI button."""
         markup = InlineKeyboardMarkup(
             inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Переписать пост", callback_data="ai_rewrite")],
                 [InlineKeyboardButton(text="⚙️ Провайдер", callback_data="ai_provider")],
                 [InlineKeyboardButton(text="📝 Шаблоны", callback_data="ai_templates")],
                 [InlineKeyboardButton(text="📊 Статистика", callback_data="ai_stats")],
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
             ]
         )
-        await message.answer("🤖 Настройки AI\n\nНастройте провайдера и модели для переписывания.", reply_markup=markup)
+        await message.answer("🤖 Настройки AI\n\nПереписывайте посты с помощью AI, настраивайте провайдера и просматривайте статистику.", reply_markup=markup)
 
     @router.message(F.text == "📅 Планировщик")
     async def handle_scheduler_button(message: Message):
@@ -578,15 +579,80 @@ def register_handlers(dp: Dispatcher):
     # AI submenu
     @router.callback_query(F.data == "ai_provider")
     async def handle_ai_provider(callback: CallbackQuery):
-        await show_submenu(callback, "⚙️ Выбор провайдера")
+        """Show AI provider selection."""
+        text = """⚙️ **Выбор провайдера AI**
+
+Текущий провайдер: OpenRouter
+
+Доступные провайдеры:
+• OpenRouter (GPT-4, Claude, etc.)
+• OpenAI (ChatGPT, GPT-4)
+• Anthropic (Claude)
+• Ollama (локальные модели)
+
+Для смены провайдера обновите переменные окружения."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Переписать пост", callback_data="ai_rewrite")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_ai")],
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup)
+        await callback.answer()
 
     @router.callback_query(F.data == "ai_templates")
     async def handle_ai_templates(callback: CallbackQuery):
-        await show_submenu(callback, "📝 Шаблоны")
+        """Show AI templates."""
+        text = """📝 **Шаблоны переписывания**
+
+Доступные шаблоны:
+• 📰 Новостной стиль - формальный, информативный
+• 🎯 Маркетинг - привлекающий внимание, убедительный
+• 💬 Диалог - разговорный, дружелюбный
+• 🔍 SEO - оптимизированный для поиска
+• 📚 Аналитика - подробный, исследовательский
+
+Шаблоны применяются при переписывании постов."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_ai")],
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup)
+        await callback.answer()
 
     @router.callback_query(F.data == "ai_stats")
     async def handle_ai_stats(callback: CallbackQuery):
-        await show_submenu(callback, "📊 Статистика AI")
+        """Show AI usage statistics."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/ai/stats?user_id={callback.from_user.id}"
+            )
+
+            if response and response.status_code == 200:
+                stats = response.json()
+                text = f"""📊 **Статистика использования AI**
+
+📝 Текстов обработано: {stats.get('texts_processed', 0)}
+💰 Затрачено токенов: {stats.get('tokens_used', 0)}
+💵 Приблизительная стоимость: ${stats.get('estimated_cost', '0.00')}
+
+Провайдер: {stats.get('provider', 'OpenRouter')}
+Последний запрос: {stats.get('last_used', 'Никогда')}"""
+            else:
+                text = "📊 **Статистика использования AI**\n\n❌ Ошибка при загрузке статистики"
+        except Exception as e:
+            text = f"📊 **Статистика использования AI**\n\n❌ Ошибка: {str(e)}"
+
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Переписать пост", callback_data="ai_rewrite")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_ai")],
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup)
+        await callback.answer()
 
     # Stats submenu
     @router.callback_query(F.data == "stats_general")

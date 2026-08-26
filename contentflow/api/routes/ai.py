@@ -28,6 +28,39 @@ class AIUsageResponse(BaseModel):
         from_attributes = True
 
 
+@router.get("/stats")
+async def get_ai_stats(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
+):
+    """Get AI usage statistics summary for a user."""
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
+
+    result = await db.execute(
+        select(AIRequest).where(AIRequest.user_id == user_id).order_by(AIRequest.created_at.desc())
+    )
+    requests = result.scalars().all()
+
+    total_tokens = sum(r.tokens_used or 0 for r in requests)
+    estimated_cost = total_tokens * 0.000002  # Approximate cost per token
+
+    return {
+        "texts_processed": len(requests),
+        "tokens_used": total_tokens,
+        "estimated_cost": f"{estimated_cost:.2f}",
+        "provider": settings.ai_provider,
+        "last_used": requests[0].created_at.isoformat() if requests else "Never"
+    }
+
+
 @router.get("/usage")
 async def get_ai_usage(user_id: int, period: str = "today", db: AsyncSession = Depends(get_db)):
     """Get AI usage statistics for a period."""
