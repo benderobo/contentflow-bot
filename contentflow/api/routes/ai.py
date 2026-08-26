@@ -51,7 +51,7 @@ async def get_ai_stats(
     )
     requests = result.scalars().all()
 
-    total_tokens = sum(r.tokens_used or 0 for r in requests)
+    total_tokens = sum(r.total_tokens or 0 for r in requests)
     estimated_cost = total_tokens * 0.000002  # Approximate cost per token
 
     return {
