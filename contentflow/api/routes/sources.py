@@ -289,8 +289,15 @@ async def parse_all_sources(
     for source in sources:
         try:
             parser = ParserFactory.get_parser(source.type)
+            if not parser:
+                logger.warning(f"Unknown parser type: {source.type}")
+                continue
 
             config = source.parser_config or {}
+            config["url"] = source.url
+            config["username"] = source.url  # For Telegram
+            logger.debug(f"Parsing source {source.id} ({source.type}) with config: {config}")
+
             items = await parser.parse(config)
 
             if items:
@@ -298,12 +305,19 @@ async def parse_all_sources(
                 parsed_count += 1
 
                 for item in items:
+                    import hashlib
+                    content = item.get("content", "") or item.get("description", "")
+                    content_hash = hashlib.sha256(content.encode()).hexdigest() if content else None
+
                     db_item = SourceItem(
                         source_id=source.id,
+                        original_url=item.get("url", ""),
                         title=item.get("title", ""),
                         description=item.get("description", ""),
-                        url=item.get("url", ""),
-                        content=item.get("content", ""),
+                        content=content,
+                        author=item.get("author"),
+                        published_at=item.get("published_at"),
+                        content_hash=content_hash,
                     )
                     db.add(db_item)
 
