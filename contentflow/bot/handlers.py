@@ -549,32 +549,181 @@ def register_handlers(dp: Dispatcher):
     # Post submenu
     @router.callback_query(F.data == "post_new")
     async def handle_post_new(callback: CallbackQuery):
-        await show_submenu(callback, "🆕 Новые посты")
+        """List new posts from sources."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts?status=new&user_id={callback.from_user.id}"
+            )
+
+            if response and response.status_code == 200:
+                posts = response.json()
+                if not posts:
+                    text = "🆕 **Новые посты**\n\nНет новых постов из источников"
+                    markup = [[InlineKeyboardButton(text="🔄 Запустить парсинг", callback_data="source_parse_all")]]
+                else:
+                    text = f"🆕 **Новые посты** ({len(posts)})\n\n"
+                    markup = []
+                    for post in posts[:5]:
+                        text += f"📝 {post['title'][:40]}\n"
+                        post_id = post['id']
+                        markup.append([InlineKeyboardButton(text=f"✏️ {post['title'][:25]}", callback_data=f"post_edit_{post_id}")])
+            else:
+                text = "🆕 **Новые посты**\n\n❌ Ошибка при загрузке постов"
+                markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="post_new")]]
+        except Exception as e:
+            text = f"🆕 **Новые посты**\n\n❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="post_new")]]
+
+        markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_posts")])
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup))
+        await callback.answer()
 
     @router.callback_query(F.data == "post_drafts")
     async def handle_post_drafts(callback: CallbackQuery):
-        await show_submenu(callback, "✏️ Черновики")
+        """List draft posts."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts?status=draft&user_id={callback.from_user.id}"
+            )
+
+            if response and response.status_code == 200:
+                posts = response.json()
+                if not posts:
+                    text = "✏️ **Черновики**\n\nНет черновиков"
+                    markup = [[InlineKeyboardButton(text="📝 Создать пост", callback_data="post_new")]]
+                else:
+                    text = f"✏️ **Черновики** ({len(posts)})\n\n"
+                    markup = []
+                    for post in posts[:5]:
+                        text += f"📝 {post['title'][:40]}\n"
+                        post_id = post['id']
+                        markup.append([InlineKeyboardButton(text=f"✏️ {post['title'][:25]}", callback_data=f"post_edit_{post_id}")])
+            else:
+                text = "✏️ **Черновики**\n\n❌ Ошибка при загрузке"
+                markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="post_drafts")]]
+        except Exception as e:
+            text = f"✏️ **Черновики**\n\n❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="post_drafts")]]
+
+        markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_posts")])
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup))
+        await callback.answer()
 
     @router.callback_query(F.data == "post_review")
     async def handle_post_review(callback: CallbackQuery):
-        await show_submenu(callback, "🔍 На проверке")
+        """List posts on review."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts?status=review&user_id={callback.from_user.id}"
+            )
+
+            if response and response.status_code == 200:
+                posts = response.json()
+                if not posts:
+                    text = "🔍 **На проверке**\n\nНет постов на проверке"
+                    markup = []
+                else:
+                    text = f"🔍 **На проверке** ({len(posts)})\n\n"
+                    markup = []
+                    for post in posts[:5]:
+                        text += f"📝 {post['title'][:40]}\n"
+                        post_id = post['id']
+                        markup.append([InlineKeyboardButton(text=f"✓ {post['title'][:25]}", callback_data=f"post_publish_{post_id}")])
+            else:
+                text = "🔍 **На проверке**\n\n❌ Ошибка при загрузке"
+                markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="post_review")]]
+        except Exception as e:
+            text = f"🔍 **На проверке**\n\n❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="post_review")]]
+
+        markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_posts")])
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup))
+        await callback.answer()
 
     @router.callback_query(F.data == "post_scheduled")
     async def handle_post_scheduled(callback: CallbackQuery):
-        await show_submenu(callback, "📅 Запланированные")
+        """List scheduled posts."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts?status=scheduled&user_id={callback.from_user.id}"
+            )
+
+            if response and response.status_code == 200:
+                posts = response.json()
+                if not posts:
+                    text = "📅 **Запланированные**\n\nНет запланированных постов"
+                    markup = [[InlineKeyboardButton(text="📝 Создать пост", callback_data="post_new")]]
+                else:
+                    text = f"📅 **Запланированные** ({len(posts)})\n\n"
+                    markup = []
+                    for post in posts[:5]:
+                        text += f"📝 {post['title'][:40]}\n"
+                        post_id = post['id']
+                        markup.append([InlineKeyboardButton(text=f"📅 {post['title'][:25]}", callback_data=f"post_edit_{post_id}")])
+            else:
+                text = "📅 **Запланированные**\n\n❌ Ошибка при загрузке"
+                markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="post_scheduled")]]
+        except Exception as e:
+            text = f"📅 **Запланированные**\n\n❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="post_scheduled")]]
+
+        markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_posts")])
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup))
+        await callback.answer()
 
     @router.callback_query(F.data == "post_published")
     async def handle_post_published(callback: CallbackQuery):
-        await show_submenu(callback, "✅ Опубликованные")
+        """List published posts."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts?status=published&user_id={callback.from_user.id}"
+            )
 
-    # Channel submenu
-    @router.callback_query(F.data == "channel_add")
-    async def handle_channel_add(callback: CallbackQuery):
-        await show_submenu(callback, "➕ Добавить канал")
+            if response and response.status_code == 200:
+                posts = response.json()
+                if not posts:
+                    text = "✅ **Опубликованные**\n\nНет опубликованных постов"
+                    markup = []
+                else:
+                    text = f"✅ **Опубликованные** ({len(posts)})\n\n"
+                    markup = []
+                    for post in posts[:5]:
+                        text += f"📝 {post['title'][:40]}\n"
+                        post_id = post['id']
+                        markup.append([InlineKeyboardButton(text=f"✅ {post['title'][:25]}", callback_data=f"post_view_{post_id}")])
+            else:
+                text = "✅ **Опубликованные**\n\n❌ Ошибка при загрузке"
+                markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="post_published")]]
+        except Exception as e:
+            text = f"✅ **Опубликованные**\n\n❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="post_published")]]
 
-    @router.callback_query(F.data == "channel_list")
-    async def handle_channel_list(callback: CallbackQuery):
-        await show_submenu(callback, "📋 Мои каналы")
+        markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_posts")])
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup))
+        await callback.answer()
+
+    # Channel submenu - delegates to channel_handlers
+    @router.callback_query(F.data == "menu_channels")
+    async def handle_channels_menu(callback: CallbackQuery):
+        """Handle channels menu."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="➕ Добавить канал", callback_data="channel_add")],
+                [InlineKeyboardButton(text="📋 Мои каналы", callback_data="channel_list")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
+            ]
+        )
+        await callback.message.edit_text(
+            "📢 Управление каналами\n\n"
+            "Добавьте ваши Telegram каналы для публикации контента.",
+            reply_markup=markup,
+        )
+        await callback.answer()
 
     # AI submenu
     @router.callback_query(F.data == "ai_provider")
