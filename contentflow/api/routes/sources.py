@@ -272,22 +272,27 @@ async def get_source_item(
     item_id: int,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
 ):
-    """Get a specific source item for editing in miniapp."""
+    """Get a specific source item for editing in miniapp (WebApp auth)."""
     from utils.webapp_auth import verify_webapp_init_data
     from core.config import get_settings
 
     settings = get_settings()
-    user_id_str = request.query_params.get("user_id")
 
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
+    # Extract and validate Telegram WebApp initData
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("tg-init-data "):
+        raise HTTPException(status_code=401, detail="Missing or invalid auth header")
 
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
+    init_data = auth_header.replace("tg-init-data ", "", 1)
+    user_data = verify_webapp_init_data(init_data, settings.bot_token)
+
+    if not user_data or "user" not in user_data:
+        raise HTTPException(status_code=401, detail="Invalid or expired initData")
+
+    user_id = user_data["user"].get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID not found in initData")
 
     result = await db.execute(
         select(SourceItem).where(SourceItem.id == item_id)

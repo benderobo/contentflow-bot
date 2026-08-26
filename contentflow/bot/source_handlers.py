@@ -396,8 +396,13 @@ async def handle_item_open(callback: CallbackQuery):
     from core.config import get_settings
 
     settings = get_settings()
-    item_id = callback.data.split("_")[-1]
-    editor_url = f"{settings.webapp_url}?item_id={item_id}&user_id={callback.from_user.id}"
+    try:
+        item_id = int(callback.data.split("_")[-1])
+    except (ValueError, IndexError):
+        await callback.answer("❌ Invalid item ID", show_alert=True)
+        return
+
+    editor_url = f"{settings.webapp_url}?item_id={item_id}"
 
     markup = InlineKeyboardMarkup(
         inline_keyboard=[

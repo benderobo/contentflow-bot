@@ -275,12 +275,31 @@ async def use_rewrite_post(
 async def rewrite_content(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
 ):
-    """Rewrite content using AI."""
+    """Rewrite content using AI (supports bot API and WebApp auth)."""
     from api.dependencies import verify_user_id_signature
+    from utils.webapp_auth import verify_webapp_init_data
 
-    user_id = await verify_user_id_signature(request)
+    user_id = None
+
+    # Try WebApp initData auth first (for miniapp)
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("tg-init-data "):
+        init_data = auth_header.replace("tg-init-data ", "", 1)
+        user_data = verify_webapp_init_data(init_data, settings.bot_token)
+        if user_data and "user" in user_data:
+            user_id = user_data["user"].get("id")
+
+    # Fall back to service auth (for bot handlers)
+    if not user_id:
+        try:
+            await verify_service_auth(request)
+            user_id = await verify_user_id_signature(request)
+        except HTTPException:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Could not determine user ID")
 
     try:
         body = await request.json()

@@ -80,11 +80,14 @@ export default function App() {
     }
   }, []);
 
-  const loadSourceItem = async (itemId: number, userId: number) => {
+  const loadSourceItem = async (itemId: number, _userId: number) => {
     try {
-      const response = await fetch(`/api/sources/items/${itemId}?user_id=${userId}`, {
+      const TelegramAPI = (window as any).Telegram?.WebApp;
+      const initData = TelegramAPI?.initData || '';
+
+      const response = await fetch(`/api/sources/items/${itemId}`, {
         headers: {
-          'X-API-Key': 'internal-bot-key-production-change-this',
+          'Authorization': `tg-init-data ${initData}`,
         },
       });
 
@@ -154,19 +157,20 @@ export default function App() {
     try {
       if (!user) return;
 
+      const TelegramAPI = (window as any).Telegram?.WebApp;
+      const initData = TelegramAPI?.initData || '';
+
       const response = await fetch('/api/ai/rewrite', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': 'internal-bot-key-production-change-this',
+          'Authorization': `tg-init-data ${initData}`,
         },
         body: JSON.stringify({
           text: post.body,
           style: 'neutral',
           replace_from: replaceFrom,
           replace_to: replaceTo,
-          user_id: user.id,
-          user_signature: 'mock-signature',
         }),
       });
 
