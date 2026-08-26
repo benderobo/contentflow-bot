@@ -657,15 +657,132 @@ def register_handlers(dp: Dispatcher):
     # Stats submenu
     @router.callback_query(F.data == "stats_general")
     async def handle_stats_general(callback: CallbackQuery):
-        await show_submenu(callback, "📊 Общая статистика")
+        """Show general statistics."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/stats/overview?user_id={callback.from_user.id}"
+            )
+
+            if response and response.status_code == 200:
+                stats = response.json()
+                text = f"""📊 **Статистика системы**
+
+📝 Постов создано: {stats.get('posts_created', 0)}
+✅ Опубликовано: {stats.get('posts_published', 0)}
+📅 Запланировано: {stats.get('posts_scheduled', 0)}
+📡 Источников: {stats.get('sources_count', 0)}
+📢 Каналов: {stats.get('channels_count', 0)}
+
+Обновлено: Сейчас"""
+            else:
+                text = "📊 **Статистика системы**\n\n❌ Ошибка при загрузке статистики"
+        except Exception as e:
+            text = f"📊 **Статистика системы**\n\n❌ Ошибка: {str(e)}"
+
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📈 По времени", callback_data="stats_timeline")],
+                [InlineKeyboardButton(text="🔄 Обновить", callback_data="stats_general")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_stats")],
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup)
+        await callback.answer()
 
     @router.callback_query(F.data == "stats_ai_cost")
     async def handle_stats_ai_cost(callback: CallbackQuery):
-        await show_submenu(callback, "💰 Стоимость AI")
+        """Show AI usage cost."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/ai/stats?user_id={callback.from_user.id}"
+            )
+
+            if response and response.status_code == 200:
+                stats = response.json()
+                text = f"""💰 **Стоимость использования AI**
+
+📝 Текстов обработано: {stats.get('texts_processed', 0)}
+📊 Использовано токенов: {stats.get('tokens_used', 0)}
+💵 Приблизительная стоимость: ${stats.get('estimated_cost', '0.00')}
+
+Провайдер: {stats.get('provider', 'OpenRouter')}"""
+            else:
+                text = "💰 **Стоимость использования AI**\n\n❌ Ошибка при загрузке статистики"
+        except Exception as e:
+            text = f"💰 **Стоимость использования AI**\n\n❌ Ошибка: {str(e)}"
+
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Обновить", callback_data="stats_ai_cost")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_stats")],
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup)
+        await callback.answer()
 
     @router.callback_query(F.data == "stats_trends")
     async def handle_stats_trends(callback: CallbackQuery):
-        await show_submenu(callback, "📈 Тренды")
+        """Show trends and analytics."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/stats/timeline?user_id={callback.from_user.id}&period=7d"
+            )
+
+            if response and response.status_code == 200:
+                timeline = response.json()
+                text = "📈 **Тренды (последние 7 дней)**\n\n"
+                for entry in timeline[:7]:
+                    date = entry.get('date', 'N/A')
+                    published = entry.get('published', 0)
+                    scheduled = entry.get('scheduled', 0)
+                    text += f"📅 {date}: {published} опубл. + {scheduled} запланировано\n"
+            else:
+                text = "📈 **Тренды**\n\n❌ Ошибка при загрузке статистики"
+        except Exception as e:
+            text = f"📈 **Тренды**\n\n❌ Ошибка: {str(e)}"
+
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Обновить", callback_data="stats_trends")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_stats")],
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup)
+        await callback.answer()
+
+    @router.callback_query(F.data == "stats_timeline")
+    async def handle_stats_timeline(callback: CallbackQuery):
+        """Show timeline statistics."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/stats/timeline?user_id={callback.from_user.id}&period=7d"
+            )
+
+            if response and response.status_code == 200:
+                timeline = response.json()
+                text = "📈 **Статистика по дням (последние 7 дней)**\n\n"
+                for entry in timeline[:7]:
+                    date = entry.get('date', 'N/A')
+                    published = entry.get('published', 0)
+                    scheduled = entry.get('scheduled', 0)
+                    text += f"📅 {date}: {published} опубл. + {scheduled} запланировано\n"
+            else:
+                text = "📈 **Статистика по дням**\n\n❌ Ошибка при загрузке"
+        except Exception as e:
+            text = f"📈 **Статистика по дням**\n\n❌ Ошибка: {str(e)}"
+
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📊 Основные", callback_data="stats_general")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_stats")],
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup)
+        await callback.answer()
 
     # Settings submenu
     @router.callback_query(F.data == "settings_general")
