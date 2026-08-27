@@ -1,8 +1,9 @@
 """Telegram WebApp authentication utilities."""
 import hmac
 import hashlib
+import time
 from typing import Optional, Dict, Any
-from urllib.parse import unquote, parse_qsl
+from urllib.parse import parse_qsl
 
 
 def verify_webapp_init_data(init_data: str, bot_token: str) -> Optional[Dict[str, Any]]:
@@ -20,13 +21,21 @@ def verify_webapp_init_data(init_data: str, bot_token: str) -> Optional[Dict[str
         return None
 
     try:
-        # Parse init_data query string
-        params = dict(parse_qsl(unquote(init_data)))
+        # Parse init_data query string (parse_qsl already URL-decodes each value)
+        params = dict(parse_qsl(init_data))
 
         if "hash" not in params:
             return None
 
         received_hash = params.pop("hash")
+
+        # Check auth_date freshness (prevent replay attacks)
+        auth_date = params.get("auth_date", "0")
+        try:
+            if time.time() - int(auth_date) > 86400:  # 24 hours
+                return None
+        except (ValueError, TypeError):
+            return None
 
         # Create data check string (sorted by keys, newline separated)
         data_check_arr = [f"{k}={v}" for k, v in sorted(params.items())]
@@ -46,8 +55,8 @@ def verify_webapp_init_data(init_data: str, bot_token: str) -> Optional[Dict[str
             hashlib.sha256
         ).hexdigest()
 
-        # Compare hashes
-        if calculated_hash != received_hash:
+        # Use constant-time comparison to prevent timing attacks
+        if not hmac.compare_digest(calculated_hash, received_hash):
             return None
 
         # Parse user data if present

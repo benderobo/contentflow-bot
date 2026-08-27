@@ -31,8 +31,6 @@ class OpenAIProvider(LLMProvider):
         return await self._call(messages)
 
     async def rewrite(self, text: str, prompt: str, replace_from: Optional[str] = None, replace_to: Optional[str] = None) -> str:
-        if replace_from and replace_to:
-            prompt += f"\n\nReplace '{replace_from}' with '{replace_to}' where appropriate."
         messages = [
             {"role": "system", "content": "You are a professional content editor."},
             {"role": "user", "content": f"{prompt}\n\nContent:\n{text}"},
@@ -73,8 +71,6 @@ class AnthropicProvider(LLMProvider):
         return await self._call(full_prompt, system="Analyze and return JSON.")
 
     async def rewrite(self, text: str, prompt: str, replace_from: Optional[str] = None, replace_to: Optional[str] = None) -> str:
-        if replace_from and replace_to:
-            prompt += f"\n\nReplace '{replace_from}' with '{replace_to}' where appropriate."
         full_prompt = f"{prompt}\n\nContent:\n{text}"
         result = await self._call(full_prompt, system="You are a professional editor.")
         return result.get("content", text)
@@ -152,8 +148,6 @@ class OllamaProvider(LLMProvider):
         return await self._call(full_prompt)
 
     async def rewrite(self, text: str, prompt: str, replace_from: Optional[str] = None, replace_to: Optional[str] = None) -> str:
-        if replace_from and replace_to:
-            prompt += f"\n\nReplace '{replace_from}' with '{replace_to}' where appropriate."
         full_prompt = f"{prompt}\n\nContent:\n{text}"
         result = await self._call(full_prompt)
         return result.get("content", text)

@@ -111,12 +111,21 @@ export default function App() {
 
   const handleSavePost = async () => {
     try {
+      const TelegramAPI = (window as any).Telegram?.WebApp;
+      const initData = TelegramAPI?.initData || '';
+
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `tg-init-data ${initData}`,
         },
-        body: JSON.stringify(post),
+        body: JSON.stringify({
+          title: post.title,
+          body: post.body,
+          hashtags: post.hashtags,
+          source_item_id: post.source_item_id,
+        }),
       });
 
       if (response.ok) {
@@ -133,12 +142,22 @@ export default function App() {
 
   const handlePublishPost = async () => {
     try {
+      const TelegramAPI = (window as any).Telegram?.WebApp;
+      const initData = TelegramAPI?.initData || '';
+
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `tg-init-data ${initData}`,
         },
-        body: JSON.stringify({ ...post, status: 'published' }),
+        body: JSON.stringify({
+          title: post.title,
+          body: post.body,
+          hashtags: post.hashtags,
+          source_item_id: post.source_item_id,
+          status: 'published',
+        }),
       });
 
       if (response.ok) {

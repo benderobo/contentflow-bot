@@ -286,7 +286,7 @@ def register_handlers(dp: Dispatcher):
         back_button = InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_help")
         back_markup = InlineKeyboardMarkup(inline_keyboard=[[back_button]])
 
-        await callback.message.edit_text(text, reply_markup=back_markup, parse_mode="Markdown")
+        await callback.message.edit_text(text, reply_markup=back_markup)
         await callback.answer()
 
     @router.callback_query(F.data == "back_to_help")

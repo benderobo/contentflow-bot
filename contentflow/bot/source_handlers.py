@@ -292,47 +292,6 @@ async def process_custom_interval(message: Message, state: FSMContext):
         )
 
 
-@source_router.callback_query(F.data == "source_list")
-async def handle_source_list(callback: CallbackQuery):
-    """Show all sources."""
-    try:
-        response = await make_authenticated_request(
-            "GET",
-            f"/api/sources?user_id={callback.from_user.id}"
-        )
-
-        if response and response.status_code == 200:
-            sources = response.json()
-            if not sources:
-                text = "📡 **Источники**\n\n" \
-                       "У вас еще нет источников. Добавьте первый!"
-                markup = [[InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")]]
-            else:
-                text = "📡 **Источники**\n\n"
-                for src in sources:
-                    status = "✅" if src["enabled"] else "❌"
-                    text += f"{status} {src['name']} ({src['type']})\n"
-                markup = [
-                    [InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")],
-                ]
-        else:
-            text = "❌ Ошибка при загрузке источников"
-            markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="source_list")]]
-
-    except Exception as e:
-        logger.error(f"Error fetching sources: {e}")
-        text = f"❌ Ошибка: {str(e)}"
-        markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="source_list")]]
-
-    markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")])
-
-    await callback.message.edit_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=markup)
-    )
-    await callback.answer()
-
-
 @source_router.callback_query(F.data == "source_settings")
 async def handle_source_settings(callback: CallbackQuery):
     """Show source settings menu."""
@@ -440,11 +399,6 @@ async def handle_source_parse_all(callback: CallbackQuery):
             text = f"✅ Парсинг завершен!\n\n" \
                    f"📡 Источников обработано: {parsed_count}\n" \
                    f"📰 Статей получено: {items_count}"
-
-            # Show list of parsed items
-            items_text, markup_list = await render_items_list(callback.from_user.id)
-            markup_list.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")])
-            markup = InlineKeyboardMarkup(inline_keyboard=markup_list)
 
             await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[[InlineKeyboardButton(text="📰 Просмотреть статьи", callback_data="source_articles")],

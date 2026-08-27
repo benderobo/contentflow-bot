@@ -92,33 +92,63 @@ async def get_post(
 async def create_post(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
 ):
-    """Create a new post."""
+    """Create a new post (supports both WebApp auth and service auth)."""
     from utils.auth import verify_user_id
+    from utils.webapp_auth import verify_webapp_init_data
+    from core.config import get_settings
+
+    user_id = None
+
+    # Try WebApp initData auth first (for miniapp)
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("tg-init-data "):
+        init_data = auth_header.replace("tg-init-data ", "", 1)
+        settings = get_settings()
+        user_data = verify_webapp_init_data(init_data, settings.bot_token)
+        if user_data and "user" in user_data:
+            user_id = user_data["user"].get("id")
+
+    # Fall back to service auth (for bot handlers)
+    if not user_id:
+        try:
+            await verify_service_auth(request)
+        except HTTPException:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+        try:
+            body = await request.json()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid request body")
+
+        user_id = body.get("user_id")
+        user_signature = body.get("user_signature")
+
+        if not user_id or not user_signature:
+            raise HTTPException(status_code=400, detail="user_id and user_signature required")
+
+        if not verify_user_id(int(user_id), user_signature):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Could not determine user ID")
 
     try:
         body = await request.json()
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
-    user_id = body.get("user_id")
-    user_signature = body.get("user_signature")
-
-    if not user_id or not user_signature:
-        raise HTTPException(status_code=400, detail="user_id and user_signature required")
-
-    if not verify_user_id(int(user_id), user_signature):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
-
-    # Validate through Pydantic model, exclude user_id and signature
+    # Validate through Pydantic model, exclude user_id, user_signature, media, status
     try:
         post_input = PostCreate(**{k: v for k, v in body.items()
-                                   if k not in ["user_id", "user_signature"]})
+                                   if k not in ["user_id", "user_signature", "media", "status"]})
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    db_post = Post(**post_input.dict(), user_id=user_id)
+    # Extract status if provided (defaults to 'draft')
+    post_status = body.get("status", "draft")
+
+    db_post = Post(**post_input.dict(), user_id=user_id, status=post_status)
     db.add(db_post)
     await db.commit()
     await db.refresh(db_post)
