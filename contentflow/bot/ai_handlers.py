@@ -101,13 +101,18 @@ async def handle_rewrite_style(callback: CallbackQuery, state: FSMContext):
     )
 
     try:
+        from utils.auth import sign_user_id
+        user_id = callback.from_user.id
+        user_signature = sign_user_id(user_id)
+
         response = await make_authenticated_request(
             "POST",
             f"/api/posts/{post_id}/rewrite",
-            user_id=callback.from_user.id,
+            user_id=user_id,
             json={
                 "style": style,
-                "user_id": callback.from_user.id
+                "user_id": user_id,
+                "user_signature": user_signature
             }
         )
 
@@ -150,15 +155,19 @@ async def handle_rewrite_style(callback: CallbackQuery, state: FSMContext):
 @ai_router.callback_query(F.data.startswith("use_rewrite_"))
 async def handle_use_rewrite(callback: CallbackQuery):
     """Handle using the rewritten content."""
+    from utils.auth import sign_user_id
     post_id = callback.data.split("_")[-1]
+    user_id = callback.from_user.id
+    user_signature = sign_user_id(user_id)
 
     try:
         response = await make_authenticated_request(
             "POST",
             f"/api/posts/{post_id}/use-rewrite",
-            user_id=callback.from_user.id,
+            user_id=user_id,
             json={
-                "user_id": callback.from_user.id
+                "user_id": user_id,
+                "user_signature": user_signature
             }
         )
 
@@ -258,15 +267,20 @@ async def handle_ai_auto_rewrite(callback: CallbackQuery):
                 rewritten_count = 0
             else:
                 rewritten_count = 0
+                from utils.auth import sign_user_id
+                user_id = callback.from_user.id
+                user_signature = sign_user_id(user_id)
+
                 for post in posts:
                     try:
                         rewrite_response = await make_authenticated_request(
                             "POST",
                             f"/api/posts/{post['id']}/rewrite",
-                            user_id=callback.from_user.id,
+                            user_id=user_id,
                             json={
                                 "style": "engaging",
-                                "user_id": callback.from_user.id
+                                "user_id": user_id,
+                                "user_signature": user_signature
                             }
                         )
 
@@ -274,9 +288,10 @@ async def handle_ai_auto_rewrite(callback: CallbackQuery):
                             use_response = await make_authenticated_request(
                                 "POST",
                                 f"/api/posts/{post['id']}/use-rewrite",
-                                user_id=callback.from_user.id,
+                                user_id=user_id,
                                 json={
-                                    "user_id": callback.from_user.id
+                                    "user_id": user_id,
+                                    "user_signature": user_signature
                                 }
                             )
                             if use_response and use_response.status_code == 200:
