@@ -19,14 +19,14 @@ async def verify_service_auth(request: Request) -> bool:
     """Verify service-level authentication from Bearer token."""
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
-        logger.error(f"Missing/invalid Bearer token in Authorization header. Got: {auth_header[:50] if auth_header else 'EMPTY'}")
+        logger.warning("Authorization header missing or not Bearer scheme")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     token = auth_header[7:]  # Remove "Bearer " prefix
 
     # Use constant-time comparison to prevent timing attacks
     if not hmac.compare_digest(token, API_KEY):
-        logger.error(f"Invalid API key. Expected: {API_KEY[:20]}..., Got: {token[:20]}...")
+        logger.warning("Invalid API key presented")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     return True
