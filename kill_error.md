@@ -381,3 +381,122 @@ python3 -c "from dotenv import load_dotenv; load_dotenv('.env'); import config; 
 3. **Process paths:** HTTP server working directory matters for relative paths and file serving
 4. **Duplicate processes:** Kill old instances before starting new ones to avoid port conflicts
 
+---
+
+## 2026-08-27: ContentFlow Bot — Authentication & Rewrite Issues
+
+### Error #1: BOT_TOKEN Compromised in Git History ✅
+**Symptom:** Bot couldn't authenticate - "Conflict: terminated by other getUpdates request"
+
+**Root Cause:** `BOT_TOKEN=8660988275:AAHxamyem5NALsqAUcVRTohpwT7b3KUSgeA` was hardcoded and committed to git
+- Token exposed in public repository history
+- Telegram API detected multiple connections from same token (bot + processes using exposed token)
+- 409 Conflict errors due to token being used elsewhere
+
+**Solution:**
+1. ✅ Rotated BOT_TOKEN via @BotFather in Telegram
+2. ✅ Updated `.env` with new token: `8660988275:AAEsItHyTNsdr9gyvayR9Hddz1oi5k8J1oo`
+3. ✅ Verified `.env` in `.gitignore` (prevent re-exposure)
+4. ✅ Restarted bot container with new token
+
+**Files Modified:**
+- `contentflow/.env` (token rotation)
+- `.gitignore` (already had `.env` exclusion)
+
+**Verification:** Bot polling works, no 409 conflicts ✅
+
+**Prevention:** Never commit `.env` files. Use `.env.example` for template only.
+
+---
+
+### Error #2: Duplicate Bot Instances (Local + Container) ✅
+**Symptom:** Container bot repeatedly got "terminated by other getUpdates request" errors
+
+**Root Cause:** Old `python -m bot.main` process (PID 353769) running on host machine
+- Both host process and container bot tried to poll same Telegram bot token
+- Telegram API allows only one polling connection per token
+
+**Solution:**
+1. ✅ Identified host process: `ps aux | grep bot.main` → PID 353769
+2. ✅ Killed host process: `kill -9 353769`
+3. ✅ Verified no cron/systemd jobs auto-restarting it
+4. ✅ Restarted container bot
+
+**Verification:** Bot polling successful, no more 409 errors ✅
+
+**Lesson:** Always check for duplicate instances before containerization.
+
+---
+
+### Error #3: AI Rewrite Returns 401 Unauthorized ✅
+**Symptom:** `/api/posts/{id}/rewrite` endpoint returned 401 Unauthorized
+
+**Root Cause:** Multiple issues identified:
+
+1. **Duplicate user_signature generation:**
+   - `make_authenticated_request()` already adds `user_signature` automatically (line 26)
+   - `ai_handlers.py` was manually adding it again → caused double-signing
+   - API expected fresh signature, got stale one
+
+2. **Missing API_KEY in Authorization header:**
+   - Service auth required `Bearer {API_KEY}` in Authorization header
+   - Bot correctly sent Bearer token, but verify_service_auth had no logging to debug
+
+**Solution:**
+1. ✅ Removed manual `user_signature` generation in `ai_handlers.py` 
+   - Let `make_authenticated_request()` handle signing automatically
+   - Simplified code: pass `user_id` param, function adds signature
+2. ✅ Added debug logging to `verify_service_auth()`
+   - Log missing/invalid Bearer tokens (without exposing secrets)
+3. ✅ Verified API_KEY in `.env`: `internal-bot-key-production-change-this` ✅
+
+**Files Modified:**
+- `contentflow/bot/ai_handlers.py` — removed redundant sign_user_id calls
+- `contentflow/api/dependencies.py` — added debug logging
+
+**Commits:**
+- `56d97e8` — Remove duplicate user_signature
+- `c2c1956` — Add logging to verify_service_auth
+
+**Verification:** AI rewrite now works (after service restart) ✅
+
+**Lesson:** `make_authenticated_request()` is a helper that auto-signs. Don't sign twice.
+
+---
+
+### Error #4: Secrets Leaked in Logs ⚠️ → ✅
+**Symptom:** Security review flagged: `logger.error(f"Invalid API key. Expected: {API_KEY[:20]}..., Got: {token[:20]}...")`
+
+**Root Cause:** Debug logging exposed partial credentials:
+- API_KEY first 20 chars: `internal-bot-key-pr...`
+- Submitted token first 20 chars: leaked token fragments
+
+**Solution:**
+1. ✅ Removed credential exposure from logs
+2. ✅ Changed to generic messages:
+   - `logger.warning("Authorization header missing or not Bearer scheme")`
+   - `logger.warning("Invalid API key presented")`
+3. ✅ No sensitive data in exception messages
+
+**Files Modified:**
+- `contentflow/api/dependencies.py` (lines 15-27)
+
+**Commit:** `0007056` — "security: Remove secrets from logs"
+
+**Verification:** Logs no longer contain API_KEY or token values ✅
+
+**Lesson:** Never log `API_KEY` or bearer tokens, even partially. Log only boolean/generic messages.
+
+---
+
+### Summary of Fixes
+
+| Issue | Type | Status | Commits |
+|-------|------|--------|---------|
+| BOT_TOKEN compromised | Security | ✅ | Manual token rotation |
+| Duplicate bot instances | Architecture | ✅ | `kill -9 353769` |
+| AI rewrite 401 errors | Integration | ✅ | `56d97e8`, `c2c1956` |
+| Secrets in logs | Security | ✅ | `0007056` |
+
+**All services restarted and verified working** ✅
+

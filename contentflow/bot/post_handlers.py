@@ -16,6 +16,7 @@ class PostStates(StatesGroup):
     waiting_for_content = State()
     choosing_channel = State()
     choosing_action = State()
+    viewing_post = State()
 
 
 @post_router.callback_query(F.data == "post_new")
@@ -125,12 +126,10 @@ async def handle_post_drafts(callback: CallbackQuery):
                 for post in posts[:5]:  # Show first 5
                     text += f"📝 {post['title'][:30]}\n"
                     post_id = post['id']
-                    keyboard.append(
-                        [InlineKeyboardButton(
-                            text=f"✏️ {post['title'][:25]}",
-                            callback_data=f"post_edit_{post_id}"
-                        )]
-                    )
+                    keyboard.append([
+                        InlineKeyboardButton(text="👁️", callback_data=f"view_post_{post_id}"),
+                        InlineKeyboardButton(text="✏️", callback_data=f"post_edit_{post_id}")
+                    ])
                 keyboard.append([InlineKeyboardButton(text="🆕 Создать", callback_data="post_new")])
                 markup = keyboard
         else:
@@ -244,6 +243,64 @@ async def handle_confirm_publish(callback: CallbackQuery):
             f"❌ Ошибка: {str(e)}",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[[InlineKeyboardButton(text="📝 К постам", callback_data="menu_posts")]]
+            )
+        )
+
+    await callback.answer()
+
+
+@post_router.callback_query(F.data.startswith("view_post_"))
+async def handle_view_post(callback: CallbackQuery, state: FSMContext):
+    """Show full post details."""
+    post_id = callback.data.split("_")[-1]
+
+    try:
+        response = await make_authenticated_request(
+            "GET",
+            f"/api/posts/{post_id}",
+            user_id=callback.from_user.id
+        )
+
+        if response and response.status_code == 200:
+            post = response.json()
+            text = (
+                f"📄 **{post.get('title', 'Без заголовка')}**\n\n"
+                f"{post.get('body', 'Пусто')}\n\n"
+                f"---\n"
+                f"📊 Статус: {post.get('status', 'unknown').upper()}\n"
+                f"📅 Создан: {post.get('created_at', 'N/A')[:10]}\n"
+            )
+
+            keyboard = []
+            status = post.get('status', '')
+
+            if status == 'draft':
+                keyboard.append([InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"edit_post_{post_id}")])
+                keyboard.append([InlineKeyboardButton(text="🤖 Переписать", callback_data=f"ai_select_post_{post_id}")])
+                keyboard.append([InlineKeyboardButton(text="📢 Опубликовать", callback_data=f"post_publish_{post_id}")])
+            elif status in ['approved', 'published']:
+                keyboard.append([InlineKeyboardButton(text="📋 Скопировать", callback_data=f"copy_post_{post_id}")])
+
+            keyboard.append([InlineKeyboardButton(text="🗑️ Удалить", callback_data=f"delete_post_{post_id}")])
+            keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_posts")])
+
+            await callback.message.edit_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
+            )
+        else:
+            await callback.message.edit_text(
+                f"❌ Ошибка при загрузке поста",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_posts")]]
+                )
+            )
+    except Exception as e:
+        logger.error(f"Error viewing post: {e}")
+        await callback.message.edit_text(
+            f"❌ Ошибка: {str(e)}",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_posts")]]
             )
         )
 
