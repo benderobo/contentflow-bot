@@ -1,6 +1,6 @@
 import logging
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message, WebAppInfo
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from bot.auth import make_authenticated_request
