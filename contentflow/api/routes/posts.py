@@ -48,12 +48,21 @@ class PostResponse(BaseModel):
 
 @router.get("/")
 async def list_posts(
+    request: Request,
     status: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_service_auth),
 ):
     """List posts for current user."""
-    query = select(Post).where(Post.user_id == current_user.id)
+    user_id_str = request.query_params.get("user_id")
+    if not user_id_str:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id must be an integer")
+
+    query = select(Post).where(Post.user_id == user_id)
     if status:
         query = query.where(Post.status == status)
     query = query.order_by(Post.created_at.desc())
