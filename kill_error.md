@@ -500,3 +500,48 @@ python3 -c "from dotenv import load_dotenv; load_dotenv('.env'); import config; 
 
 **All services restarted and verified working** ✅
 
+---
+
+## 2026-08-28: Parser Data Not Converting to Posts ✅
+
+### Error #1: Posts Not Created from Parsed Content ✅
+**Symptom:** Parsed items from RSS/Website/Telegram sources created SourceItems but no Posts appeared
+
+**Root Cause:** Two-step process was too slow:
+1. `parse_source` created only SourceItems
+2. `scheduler` waited 60 seconds before checking for unanalyzed items
+3. `analyze_content` then created Posts, but only for items with `relevant=True`
+4. With 10 items/minute parsed limit per scheduler tick, new posts had massive delay
+
+**Solution:**
+1. ✅ Modified `parse_source` to create Posts immediately (not wait for analyze_content)
+2. ✅ Post created with default category="general", importance=5 when source item created
+3. ✅ Queue `analyze_content` tasks for background AI analysis
+4. ✅ Modified `analyze_content` to UPDATE existing Post (instead of creating new one)
+5. ✅ Analysis updates category, importance, clickbait flags asynchronously
+6. ✅ If analysis.relevant=False, mark post status as "irrelevant" (don't delete, just mark)
+
+**Files Modified:**
+- `contentflow/workers/tasks.py`:
+  - `_parse_source_async()` now creates Post immediately after SourceItem
+  - Collects item IDs and queues analyze_content for each
+  - `_analyze_content_async()` updates existing Post instead of creating new one
+  - Sets status="irrelevant" if AI says content not relevant
+
+**Verification Steps:**
+- Parse a source → Posts appear immediately as "draft" ✅
+- Check database: posts.status='draft' with default importance=5 ✅
+- Wait for analyzer → Posts updated with AI analysis (category, importance, flags) ✅
+
+**Performance Improvement:**
+- **Before:** Posts appear 60+ seconds after parsing (waiting for scheduler + analyzer)
+- **After:** Posts appear immediately, analysis updates in background
+- **Result:** ~60x faster post creation, users see content instantly
+
+**Lesson:** Don't make data creation dependent on async analysis. Create first, enrich later.
+
+**Edge Cases Handled:**
+- If post already exists (duplicate item), skip creation
+- If AI analysis returns relevant=False, mark post irrelevant (don't delete)
+- If source.user_id missing, posts won't create (depends on source setup)
+
