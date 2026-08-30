@@ -545,3 +545,36 @@ python3 -c "from dotenv import load_dotenv; load_dotenv('.env'); import config; 
 - If AI analysis returns relevant=False, mark post irrelevant (don't delete)
 - If source.user_id missing, posts won't create (depends on source setup)
 
+---
+
+## Follow-up Issue: Posts Not Created for Existing Source Items ✅
+
+**Symptom:** After optimization, scheduler ran, worker got tasks, but 0 posts created even though logs showed "Parsed 1 items, saved 0 new posts"
+
+**Root Cause:** Logic was wrong:
+- If `SourceItem` URL already existed (from previous parse) → skip entire item
+- Never created `Post` for existing `SourceItem`
+- Result: Only first parse run created posts, subsequent runs with same sources created 0 posts
+
+**Solution:**
+1. ✅ Changed logic to: Get or create `SourceItem` (don't skip if exists)
+2. ✅ Check if `Post` exists for that `SourceItem` 
+3. ✅ Create `Post` if not exists (even if `SourceItem` is old)
+4. ✅ Queue analysis for all `SourceItems` regardless of age
+
+**Files Modified:**
+- `contentflow/workers/tasks.py` (parse_source_async) — rewrote item/post creation logic
+
+**Verification:**
+- Before: 5 posts in DB (only manual/old ones)
+- After: 25 posts in DB (5 old + 20 from parser)
+- 20 new posts have source_item_id pointing to existing source_items
+- All visible as draft status ✅
+
+**Performance Impact:**
+- First parse: creates source_item + post (same as before)
+- Subsequent parses of same source: now creates post for every item (fixes the bug)
+- AI analysis still runs async in background for all items
+
+**Lesson:** Don't skip processing old items. Create posts whenever source_item exists but post doesn't.
+
