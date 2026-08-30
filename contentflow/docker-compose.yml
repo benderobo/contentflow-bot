@@ -39,8 +39,8 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://contentflow:contentflow@postgres:5432/contentflow
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://contentflow:contentflow@contentflow-db:5432/contentflow
+      REDIS_URL: redis://contentflow-cache:6379/0
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,8 +59,8 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://contentflow:contentflow@postgres:5432/contentflow
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://contentflow:contentflow@contentflow-db:5432/contentflow
+      REDIS_URL: redis://contentflow-cache:6379/0
     ports:
       - "8000:8000"
     depends_on:
@@ -81,8 +81,8 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://contentflow:contentflow@postgres:5432/contentflow
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://contentflow:contentflow@contentflow-db:5432/contentflow
+      REDIS_URL: redis://contentflow-cache:6379/0
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,8 +102,8 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://contentflow:contentflow@postgres:5432/contentflow
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://contentflow:contentflow@contentflow-db:5432/contentflow
+      REDIS_URL: redis://contentflow-cache:6379/0
     depends_on:
       postgres:
         condition: service_healthy

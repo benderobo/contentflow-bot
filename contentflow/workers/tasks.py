@@ -67,42 +67,51 @@ async def _parse_source_async(source_id: int):
                 url_result = await db.execute(
                     select(SourceItem).where(SourceItem.original_url == item.get("url"))
                 )
-                existing = url_result.scalar_one_or_none()
+                source_item = url_result.scalar_one_or_none()
 
-                if existing:
-                    logger.debug(f"Item already exists: {item.get('url')}")
-                    continue
+                # Create source item if not exists
+                if not source_item:
+                    content_hash = DeduplicationService.hash_content(
+                        item.get("description", "")
+                    )
+                    source_item = SourceItem(
+                        source_id=source.id,
+                        original_url=item.get("url", ""),
+                        title=item.get("title", ""),
+                        description=item.get("description", ""),
+                        content_hash=content_hash,
+                        author=item.get("author"),
+                        published_at=item.get("published_at"),
+                    )
+                    db.add(source_item)
+                    await db.flush()  # Get the ID immediately
+                    logger.debug(f"Created new source item: {item.get('url')}")
+                else:
+                    logger.debug(f"Source item already exists: {item.get('url')}")
 
-                # Create new source item
-                content_hash = DeduplicationService.hash_content(
-                    item.get("description", "")
+                # Check if post already exists for this source_item
+                post_result = await db.execute(
+                    select(Post).where(Post.source_item_id == source_item.id)
                 )
-                source_item = SourceItem(
-                    source_id=source.id,
-                    original_url=item.get("url", ""),
-                    title=item.get("title", ""),
-                    description=item.get("description", ""),
-                    content_hash=content_hash,
-                    author=item.get("author"),
-                    published_at=item.get("published_at"),
-                )
-                db.add(source_item)
-                await db.flush()  # Get the ID immediately
+                existing_post = post_result.scalar_one_or_none()
 
-                # Create post immediately (don't wait for analyze_content)
-                post = Post(
-                    user_id=source.user_id,
-                    source_item_id=source_item.id,
-                    original_url=item.get("url", ""),
-                    title=item.get("title", ""),
-                    body=item.get("description", ""),
-                    status="draft",
-                    category="general",
-                    importance=5,
-                )
-                db.add(post)
-                saved_items.append(source_item.id)
-                saved_count += 1
+                # Create post if not exists
+                if not existing_post:
+                    post = Post(
+                        user_id=source.user_id,
+                        source_item_id=source_item.id,
+                        original_url=item.get("url", ""),
+                        title=item.get("title", ""),
+                        body=item.get("description", ""),
+                        status="draft",
+                        category="general",
+                        importance=5,
+                    )
+                    db.add(post)
+                    saved_items.append(source_item.id)
+                    saved_count += 1
+                else:
+                    logger.debug(f"Post already exists for source item {source_item.id}")
 
             source.last_success = datetime.utcnow()
             source.error_count = 0
