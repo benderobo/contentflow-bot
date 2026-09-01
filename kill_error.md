@@ -578,3 +578,73 @@ python3 -c "from dotenv import load_dotenv; load_dotenv('.env'); import config; 
 
 **Lesson:** Don't skip processing old items. Create posts whenever source_item exists but post doesn't.
 
+---
+
+## 2026-09-01: Missing Post Management UI Handlers ✅
+
+### Error #1: Post Action Buttons Not Working (No Handlers) ✅
+**Symptom:** Post list buttons existed in bot but clicking them did nothing
+- "На проверке" button showed posts list with "✓ Post Title" buttons
+- "Черновики" button showed drafts with "✏️ Post Title" buttons  
+- "Опубликованные" button showed published with "✅ Post Title" buttons
+- But no handlers to process these actions
+
+**Root Cause:** Buttons used callbacks like `post_view_{id}`, `post_edit_{id}`, `post_publish_{id}` but no router handlers existed for them
+
+**Solution:**
+1. ✅ Added `handle_post_view_` handler for viewing published posts
+   - Fetches post details from API
+   - Displays title, body, source link
+   - Shows importance, category, status
+   - Back button returns to published list
+
+2. ✅ Added `handle_post_edit_` handler for draft editing
+   - Fetches post from API
+   - Displays title, body, source link  
+   - Shows importance, category, status
+   - Provides "Одобрить для публикации" and "Отклонить" buttons
+   - Back button returns to drafts list
+
+3. ✅ Added `handle_post_publish_` handler for approval/publishing
+   - Called from "На проверке" list when user clicks post
+   - Fetches available channels from API
+   - Displays channel list to choose destination
+   - Back button returns to review list
+
+4. ✅ Added `handle_publish_to_channel` handler for sending to channel
+   - Takes post_id and channel_id from callback
+   - Calls `/api/posts/{id}/publish` endpoint
+   - Updates post status to "published"
+   - Shows success/error message
+
+5. ✅ Added `handle_post_reject_` handler for rejecting drafts
+   - Called from draft editor when user clicks reject
+   - Updates post status to "rejected"
+   - Shows confirmation message
+
+**Files Modified:**
+- `contentflow/bot/handlers.py` — added 5 new callback handlers (178 lines inserted)
+
+**Commits:**
+- `2f63cd5` — "feat: Add post view, edit, and publish handlers to Telegram bot"
+
+**Verification:**
+- ✅ Handlers registered with router (F.data.startswith() for parametrized callbacks)
+- ✅ All 5 handlers return proper markup with Back/Action buttons
+- ✅ API endpoints called with correct authentication (user_id parameter)
+- ✅ HTML parsing enabled for formatting (parse_mode="HTML")
+- ✅ Error messages show if API returns non-200 status
+
+**Docker Changes:**
+- ✅ Rebuilt bot image: `docker build -t contentflow-bot:latest`
+- ✅ Restarted container with proper env vars (BOT_TOKEN, API_KEY, API_URL)
+- ✅ Bot polling started successfully
+
+**Post Workflow Now Complete:**
+1. Drafts: View → Approve/Reject
+2. On Review: View → Select Channel → Publish → Show success
+3. Published: View → History
+4. All statuses properly tracked in database
+
+**Lesson:** Always implement handlers before using callback buttons in UI. Empty buttons confuse users.
+
