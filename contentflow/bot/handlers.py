@@ -1215,4 +1215,182 @@ def register_handlers(dp: Dispatcher):
             await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
         await callback.answer()
 
+    # Post detail view
+    @router.callback_query(F.data.startswith("post_view_"))
+    async def handle_post_view(callback: CallbackQuery):
+        """Show full post view."""
+        post_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts/{post_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                post = response.json()
+                text = f"📝 <b>{post['title']}</b>\n\n"
+                text += f"{post.get('body', '')}\n\n"
+                if post.get('original_url'):
+                    text += f"🔗 <a href='{post['original_url']}'>Источник</a>\n"
+                text += f"\n📊 Статус: <b>{post['status']}</b>"
+                if post.get('importance'):
+                    text += f"\n⭐ Важность: {post['importance']}/10"
+                if post.get('category'):
+                    text += f"\n📂 Категория: {post['category']}"
+
+                markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_published")]]
+            else:
+                text = "❌ Пост не найден"
+                markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_published")]]
+        except Exception as e:
+            text = f"❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_published")]]
+
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup), parse_mode="HTML")
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("post_edit_"))
+    async def handle_post_edit(callback: CallbackQuery):
+        """Show post for editing."""
+        post_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts/{post_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                post = response.json()
+                text = f"✏️ <b>Редактирование поста</b>\n\n"
+                text += f"📝 Заголовок: {post['title']}\n\n"
+                text += f"📄 Содержание:\n{post.get('body', '')}\n\n"
+                if post.get('original_url'):
+                    text += f"🔗 Источник: {post['original_url']}\n"
+                text += f"\n📊 Статус: <b>{post['status']}</b>"
+                if post.get('importance'):
+                    text += f"\n⭐ Важность: {post['importance']}/10"
+                if post.get('category'):
+                    text += f"\n📂 Категория: {post['category']}"
+
+                markup = [
+                    [InlineKeyboardButton(text="✅ Одобрить для публикации", callback_data=f"post_publish_{post_id}")],
+                    [InlineKeyboardButton(text="❌ Отклонить", callback_data=f"post_reject_{post_id}")],
+                    [InlineKeyboardButton(text="◀️ Назад", callback_data="post_drafts")]
+                ]
+            else:
+                text = "❌ Пост не найден"
+                markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_drafts")]]
+        except Exception as e:
+            text = f"❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_drafts")]]
+
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup), parse_mode="HTML")
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("post_publish_"))
+    async def handle_post_publish(callback: CallbackQuery):
+        """Publish post to channels."""
+        post_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts/{post_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                post = response.json()
+
+                channels_response = await make_authenticated_request(
+                    "GET",
+                    f"/api/channels",
+                    user_id=callback.from_user.id
+                )
+
+                if channels_response and channels_response.status_code == 200:
+                    channels = channels_response.json()
+                    if not channels:
+                        text = "❌ Нет доступных каналов для публикации"
+                        markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_review")]]
+                    else:
+                        text = f"📢 <b>Выберите канал для публикации</b>\n\n"
+                        text += f"📝 Пост: <b>{post['title']}</b>\n\n"
+                        text += f"Доступные каналы:\n"
+                        markup = []
+                        for channel in channels[:10]:
+                            text += f"• {channel['name']}\n"
+                            markup.append([InlineKeyboardButton(
+                                text=f"📢 {channel['name'][:20]}",
+                                callback_data=f"publish_to_{post_id}_{channel['id']}"
+                            )])
+                        markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="post_review")])
+                else:
+                    text = "❌ Ошибка при загрузке каналов"
+                    markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_review")]]
+            else:
+                text = "❌ Пост не найден"
+                markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_review")]]
+        except Exception as e:
+            text = f"❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_review")]]
+
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup), parse_mode="HTML")
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("publish_to_"))
+    async def handle_publish_to_channel(callback: CallbackQuery):
+        """Publish post to specific channel."""
+        parts = callback.data.split("_")
+        post_id = int(parts[2])
+        channel_id = int(parts[3])
+
+        try:
+            response = await make_authenticated_request(
+                "POST",
+                f"/api/posts/{post_id}/publish",
+                user_id=callback.from_user.id,
+                json={"channel_id": channel_id}
+            )
+
+            if response and response.status_code == 200:
+                await callback.message.edit_text(
+                    "✅ Пост успешно опубликован!\n\n"
+                    "Он был отправлен в выбранный канал."
+                )
+            else:
+                error_detail = response.json().get('detail', 'Неизвестная ошибка') if response else 'Ошибка сервера'
+                await callback.message.edit_text(
+                    f"❌ Ошибка при публикации:\n{error_detail}\n\n"
+                    "Попробуйте еще раз или выберите другой канал."
+                )
+        except Exception as e:
+            await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("post_reject_"))
+    async def handle_post_reject(callback: CallbackQuery):
+        """Reject post."""
+        post_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "PATCH",
+                f"/api/posts/{post_id}",
+                user_id=callback.from_user.id,
+                json={"status": "rejected"}
+            )
+
+            if response and response.status_code == 200:
+                await callback.message.edit_text(
+                    "❌ Пост отклонен и переведен в черновики."
+                )
+            else:
+                await callback.message.edit_text("❌ Ошибка при отклонении поста")
+        except Exception as e:
+            await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+        await callback.answer()
+
     dp.include_router(router)
