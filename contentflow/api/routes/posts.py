@@ -224,13 +224,18 @@ async def approve_post(
     return {"message": "Post approved"}
 
 
+class PublishPostRequest(BaseModel):
+    channel_id: int
+
+
 @router.post("/{post_id}/publish")
 async def publish_post(
     post_id: int,
+    request: PublishPostRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Publish a post."""
+    """Publish a post to Telegram channel."""
     result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
     if not post:
@@ -238,11 +243,19 @@ async def publish_post(
     if post.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
-    post.status = "published"
-    post.published_at = datetime.utcnow()
-    db.add(post)
-    await db.commit()
-    return {"message": "Post published"}
+    # Verify channel exists and belongs to user
+    channel_result = await db.execute(
+        select(Channel).where(Channel.id == request.channel_id, Channel.user_id == current_user.id)
+    )
+    channel = channel_result.scalar_one_or_none()
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+
+    # Queue publish task
+    from workers.tasks import publish_post as publish_task
+    publish_task.delay(post_id, request.channel_id)
+
+    return {"message": "Post queued for publishing", "post_id": post_id, "channel_id": request.channel_id}
 
 
 # ===== PUBLISH SCHEDULING ENDPOINTS =====
