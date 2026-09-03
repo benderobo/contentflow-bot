@@ -8,7 +8,7 @@ from models.user import User
 from models.source import Source
 from models.source_item import SourceItem
 from pydantic import BaseModel
-from api.dependencies import get_current_user
+from api.dependencies import get_current_user, verify_service_auth
 
 router = APIRouter()
 
@@ -263,27 +263,46 @@ async def get_source_item(
 async def parse_all_sources(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     """Parse all enabled sources for a user."""
     from services.parser import ParserFactory
+    from utils.auth import verify_user_id
     import logging
 
     logger = logging.getLogger(__name__)
 
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid request body")
+    # Handle both JWT and service auth
+    auth_header = request.headers.get("Authorization", "")
 
-    user_id_str = body.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
+        # Try JWT first
+        current_user = await get_current_user(request, db)
+        user_id = current_user.id
+    except HTTPException:
+        # If JWT fails, try service auth with signature
+        await verify_service_auth(request)
+
+        try:
+            body = await request.json()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid request body")
+
+        user_id_str = body.get("user_id")
+        user_signature = body.get("user_signature")
+
+        if not user_id_str or not user_signature:
+            raise HTTPException(status_code=400, detail="user_id and user_signature required for service auth")
+
+        try:
+            user_id = int(user_id_str)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="user_id must be an integer")
+
+        if not verify_user_id(user_id, user_signature):
+            raise HTTPException(status_code=403, detail="Invalid user signature")
 
     result = await db.execute(
         select(Source).where(Source.user_id == user_id, Source.enabled == True)
