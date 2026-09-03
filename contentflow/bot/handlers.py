@@ -892,7 +892,8 @@ def register_handlers(dp: Dispatcher):
         try:
             response = await make_authenticated_request(
                 "GET",
-                f"/api/ai/stats?user_id={callback.from_user.id}"
+                "/api/ai/stats",
+                user_id=callback.from_user.id
             )
 
             if response and response.status_code == 200:
@@ -926,7 +927,8 @@ def register_handlers(dp: Dispatcher):
         try:
             response = await make_authenticated_request(
                 "GET",
-                f"/api/stats/overview?user_id={callback.from_user.id}"
+                "/api/stats/overview",
+                user_id=callback.from_user.id
             )
 
             if response and response.status_code == 200:
@@ -961,7 +963,8 @@ def register_handlers(dp: Dispatcher):
         try:
             response = await make_authenticated_request(
                 "GET",
-                f"/api/ai/stats?user_id={callback.from_user.id}"
+                "/api/ai/stats",
+                user_id=callback.from_user.id
             )
 
             if response and response.status_code == 200:
@@ -993,7 +996,9 @@ def register_handlers(dp: Dispatcher):
         try:
             response = await make_authenticated_request(
                 "GET",
-                f"/api/stats/timeline?user_id={callback.from_user.id}&period=7d"
+                "/api/stats/timeline",
+                user_id=callback.from_user.id,
+                params={"period": "7d"}
             )
 
             if response and response.status_code == 200:
@@ -1024,7 +1029,9 @@ def register_handlers(dp: Dispatcher):
         try:
             response = await make_authenticated_request(
                 "GET",
-                f"/api/stats/timeline?user_id={callback.from_user.id}&period=7d"
+                "/api/stats/timeline",
+                user_id=callback.from_user.id,
+                params={"period": "7d"}
             )
 
             if response and response.status_code == 200:
