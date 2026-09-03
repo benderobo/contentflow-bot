@@ -126,6 +126,42 @@ async def create_post(
     return PostResponse.from_orm(db_post)
 
 
+@router.get("/{post_id}")
+async def get_post(
+    post_id: int,
+    request: Request,
+    user_id: Optional[int] = None,
+    user_signature: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a single post by ID."""
+    from utils.auth import verify_user_id
+
+    auth_header = request.headers.get("Authorization", "")
+
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    await verify_service_auth(request)
+
+    if not user_id or not user_signature:
+        raise HTTPException(status_code=400, detail="user_id and user_signature required")
+
+    if not verify_user_id(user_id, user_signature):
+        raise HTTPException(status_code=403, detail="Invalid signature")
+
+    result = await db.execute(select(Post).where(Post.id == post_id))
+    post = result.scalar_one_or_none()
+
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    if post.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return PostResponse.from_orm(post)
+
+
 @router.patch("/{post_id}")
 async def update_post(
     post_id: int,
