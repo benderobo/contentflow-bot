@@ -4,10 +4,11 @@ from sqlalchemy import select
 from typing import Optional
 
 from core.database import get_db
+from models.user import User
 from models.source import Source
 from models.source_item import SourceItem
 from pydantic import BaseModel
-from api.dependencies import verify_service_auth
+from api.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -50,75 +51,11 @@ class SourceResponse(BaseModel):
 async def list_sources(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """List all sources for a user."""
     # Get user_id from query params
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-
-    result = await db.execute(
-        select(Source).where(Source.user_id == user_id).order_by(Source.created_at.desc())
-    )
-    sources = result.scalars().all()
-    return [SourceResponse.from_orm(s) for s in sources]
-
-
-@router.get("/{source_id}")
-async def get_source(
-    source_id: int,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
-):
-    """Get a specific source."""
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id required")
-
-    result = await db.execute(select(Source).where(Source.id == source_id))
-    source = result.scalar_one_or_none()
-    if not source:
-        raise HTTPException(status_code=404, detail="Source not found")
-    if source.user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-    return SourceResponse.from_orm(source)
-
-
-@router.post("/")
-async def create_source(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
-):
-    """Create a new source."""
-    from utils.auth import verify_user_id
-
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid request body")
-
-    user_id = body.get("user_id")
-    user_signature = body.get("user_signature")
-
-    if not user_id or not user_signature:
-        raise HTTPException(status_code=400, detail="user_id and user_signature required")
-
-    if not verify_user_id(int(user_id), user_signature):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+    user_id = current_user.id
 
     # Validate through Pydantic model
     try:
@@ -139,7 +76,7 @@ async def update_source(
     source_update: SourceUpdate,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Update a source."""
     user_id_str = request.query_params.get("user_id")
@@ -174,7 +111,7 @@ async def delete_source(
     source_id: int,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a source."""
     user_id_str = request.query_params.get("user_id")
@@ -203,7 +140,7 @@ async def delete_source(
 async def get_unanalyzed_items(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Get unanalyzed source items for a user."""
     user_id_str = request.query_params.get("user_id")
@@ -213,11 +150,19 @@ async def get_unanalyzed_items(
         user_id = int(user_id_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="user_id must be an integer")
-    limit_str = request.query_params.get("limit", "5")
+    limit_str = request.query_params.get("limit", "10")
     try:
         limit = int(limit_str)
     except ValueError:
-        limit = 5
+        limit = 10
+
+    source_id_str = request.query_params.get("source_id")
+    source_id = None
+    if source_id_str:
+        try:
+            source_id = int(source_id_str)
+        except ValueError:
+            pass
 
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id required")
@@ -232,12 +177,19 @@ async def get_unanalyzed_items(
     if not source_ids:
         return []
 
-    # Get unanalyzed items from user's sources
+    # Filter by source_id if provided
+    if source_id and source_id not in source_ids:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    query = select(SourceItem).where(SourceItem.ai_analysis == None)
+
+    if source_id:
+        query = query.where(SourceItem.source_id == source_id)
+    else:
+        query = query.where(SourceItem.source_id.in_(source_ids))
+
     result = await db.execute(
-        select(SourceItem).where(
-            SourceItem.source_id.in_(source_ids),
-            SourceItem.ai_analysis == None
-        ).order_by(SourceItem.created_at.desc()).limit(limit)
+        query.order_by(SourceItem.created_at.desc()).limit(limit)
     )
     items = result.scalars().all()
 
@@ -252,11 +204,66 @@ async def get_unanalyzed_items(
     ]
 
 
+@router.get("/items/{item_id}")
+async def get_source_item(
+    item_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a specific source item for editing in miniapp (WebApp auth)."""
+    from utils.webapp_auth import verify_webapp_init_data
+    from core.config import get_settings
+
+    settings = get_settings()
+
+    # Extract and validate Telegram WebApp initData
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("tg-init-data "):
+        raise HTTPException(status_code=401, detail="Missing or invalid auth header")
+
+    init_data = auth_header.replace("tg-init-data ", "", 1)
+    user_data = verify_webapp_init_data(init_data, settings.bot_token)
+
+    if not user_data or "user" not in user_data:
+        raise HTTPException(status_code=401, detail="Invalid or expired initData")
+
+    user_id = user_data["user"].get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID not found in initData")
+
+    result = await db.execute(
+        select(SourceItem).where(SourceItem.id == item_id)
+    )
+    item = result.scalar_one_or_none()
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    # Verify user owns the source
+    source_result = await db.execute(
+        select(Source).where(Source.id == item.source_id)
+    )
+    source = source_result.scalar_one_or_none()
+
+    if not source or source.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return {
+        "id": item.id,
+        "title": item.title,
+        "description": item.description or "",
+        "content": item.content or "",
+        "source_id": item.source_id,
+        "original_url": item.original_url,
+        "author": item.author,
+    }
+
+
 @router.post("/parse-all")
 async def parse_all_sources(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Parse all enabled sources for a user."""
     from services.parser import ParserFactory

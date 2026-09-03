@@ -10,7 +10,8 @@ from models.source_item import SourceItem
 from models.channel import Channel
 from models.publish_job import PublishJob
 from models.ai_request import AIRequest
-from api.dependencies import verify_service_auth
+from models.user import User
+from api.dependencies import get_current_user, get_current_user
 
 router = APIRouter()
 
@@ -72,27 +73,11 @@ async def get_dashboard_stats(user_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.get("/overview")
 async def get_stats_overview(
-    request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
-    """Get overview statistics for user."""
-    from utils.auth import verify_user_id
-
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-    user_signature = request.query_params.get("user_signature")
-
-    if not user_id or not user_signature:
-        raise HTTPException(status_code=400, detail="user_id and user_signature required")
-
-    if not verify_user_id(int(user_id), user_signature):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+    """Get overview statistics for current user."""
+    user_id = current_user.id
 
     # Count posts
     posts_result = await db.execute(
@@ -140,26 +125,12 @@ async def get_stats_overview(
 async def get_stats_timeline(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Get timeline statistics."""
     from utils.auth import verify_user_id
 
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-    user_signature = request.query_params.get("user_signature")
-    period = request.query_params.get("period", "7d")
-
-    if not user_id or not user_signature:
-        raise HTTPException(status_code=400, detail="user_id and user_signature required")
-
-    if not verify_user_id(int(user_id), user_signature):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+    user_id = current_user.id
 
     # Parse period
     if period == "30d":
@@ -203,25 +174,12 @@ async def get_stats_timeline(
 async def get_stats_by_channel(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Get statistics grouped by channel."""
     from utils.auth import verify_user_id
 
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-    user_signature = request.query_params.get("user_signature")
-
-    if not user_id or not user_signature:
-        raise HTTPException(status_code=400, detail="user_id and user_signature required")
-
-    if not verify_user_id(int(user_id), user_signature):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+    user_id = current_user.id
 
     # Get user's channels
     channels_result = await db.execute(
@@ -261,25 +219,12 @@ async def get_stats_by_channel(
 async def get_stats_by_source(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Get statistics grouped by source."""
     from utils.auth import verify_user_id
 
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-    user_signature = request.query_params.get("user_signature")
-
-    if not user_id or not user_signature:
-        raise HTTPException(status_code=400, detail="user_id and user_signature required")
-
-    if not verify_user_id(int(user_id), user_signature):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+    user_id = current_user.id
 
     # Get user's sources
     sources_result = await db.execute(

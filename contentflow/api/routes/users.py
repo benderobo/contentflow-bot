@@ -7,7 +7,7 @@ from typing import Optional
 
 from core.database import get_db
 from models.user import User
-from api.dependencies import verify_service_auth
+from api.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -34,7 +34,6 @@ class UserResponse(BaseModel):
 async def create_or_get_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
 ):
     """Create user if doesn't exist, or return existing."""
     from utils.auth import verify_user_id
@@ -93,11 +92,13 @@ async def create_or_get_user(
 @router.get("/{user_id}")
 async def get_user(
     user_id: int,
-    request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Get user by telegram_id."""
+    if user_id != current_user.telegram_id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
     result = await db.execute(select(User).where(User.telegram_id == user_id))
     user = result.scalar_one_or_none()
 
@@ -112,70 +113,37 @@ async def update_user(
     user_id: int,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Update user by telegram_id."""
-    import logging
-    from utils.auth import verify_user_id
-
-    logger = logging.getLogger(__name__)
+    if user_id != current_user.telegram_id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
     try:
         body = await request.json()
-        safe_body = {k: v for k, v in body.items() if k != "user_signature"}
-        logger.info(f"PATCH /api/users/{user_id} body: {safe_body}")
-    except Exception as e:
-        logger.error(f"Failed to parse request body: {e}")
+    except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
-
-    caller_user_id = body.get("user_id")
-    user_signature = body.get("user_signature")
-
-    logger.info(f"Caller user_id: {caller_user_id}")
-
-    if not caller_user_id or not user_signature:
-        logger.error(f"Missing user_id or user_signature")
-        raise HTTPException(status_code=400, detail="user_id and user_signature required")
-
-    if not verify_user_id(int(caller_user_id), user_signature):
-        logger.error(f"Invalid signature for user {caller_user_id}")
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
-
-    # Only admins can update users
-    caller_result = await db.execute(select(User).where(User.telegram_id == int(caller_user_id)))
-    caller = caller_result.scalar_one_or_none()
-    logger.info(f"Caller: {caller}, is_admin: {caller.is_admin if caller else None}")
-    if not caller or not caller.is_admin:
-        logger.error(f"Caller {caller_user_id} is not admin")
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can update users")
 
     # Find and update user
     result = await db.execute(select(User).where(User.telegram_id == user_id))
     user = result.scalar_one_or_none()
 
-    logger.info(f"Updating user {user_id}: {user}")
-
     if not user:
-        logger.error(f"User {user_id} not found")
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Update fields
-    if "is_approved" in body:
-        user.is_approved = body.get("is_approved")
-        logger.info(f"Setting is_approved to {user.is_approved}")
-    if "is_admin" in body:
-        user.is_admin = body.get("is_admin")
-    if "username" in body:
-        user.username = body.get("username")
-    if "first_name" in body:
-        user.first_name = body.get("first_name")
+    # Whitelist allowed fields, never allow user to set their own admin status
+    allowed_fields = {"username", "first_name", "last_name"}
+    if current_user.is_admin:
+        allowed_fields.update({"is_approved", "is_admin"})
+
+    for field in allowed_fields:
+        if field in body:
+            setattr(user, field, body[field])
 
     try:
         db.add(user)
         await db.commit()
-        logger.info(f"User {user_id} updated successfully")
     except Exception as e:
-        logger.error(f"Database error updating user: {e}")
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 

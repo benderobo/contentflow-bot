@@ -15,6 +15,7 @@ interface TelegramUser {
 
 interface Post {
   id?: string;
+  source_item_id?: number;
   title: string;
   body: string;
   hashtags: string[];
@@ -50,9 +51,14 @@ export default function App() {
         setUser(userData);
 
         // Check if user is authorized
-        // For now, allow all users (you can restrict by ID later)
         if (userData.id) {
           setAuthorized(true);
+          // Load source item if item_id is in URL
+          const params = new URLSearchParams(window.location.search);
+          const itemId = params.get('item_id');
+          if (itemId) {
+            loadSourceItem(parseInt(itemId), userData.id);
+          }
         } else {
           setError('Unauthorized user');
           setAuthorized(false);
@@ -74,14 +80,52 @@ export default function App() {
     }
   }, []);
 
+  const loadSourceItem = async (itemId: number, _userId: number) => {
+    try {
+      const TelegramAPI = (window as any).Telegram?.WebApp;
+      const initData = TelegramAPI?.initData || '';
+
+      const response = await fetch(`/api/sources/items/${itemId}`, {
+        headers: {
+          'Authorization': `tg-init-data ${initData}`,
+        },
+      });
+
+      if (response.ok) {
+        const item = await response.json();
+        setPost({
+          title: item.title || '',
+          body: item.content || item.description || '',
+          hashtags: [],
+          media: [],
+          source_item_id: itemId,
+        });
+      } else {
+        setError('Failed to load article');
+      }
+    } catch (err) {
+      setError('Error loading article');
+      console.error(err);
+    }
+  };
+
   const handleSavePost = async () => {
     try {
+      const TelegramAPI = (window as any).Telegram?.WebApp;
+      const initData = TelegramAPI?.initData || '';
+
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `tg-init-data ${initData}`,
         },
-        body: JSON.stringify(post),
+        body: JSON.stringify({
+          title: post.title,
+          body: post.body,
+          hashtags: post.hashtags,
+          source_item_id: post.source_item_id,
+        }),
       });
 
       if (response.ok) {
@@ -98,12 +142,22 @@ export default function App() {
 
   const handlePublishPost = async () => {
     try {
+      const TelegramAPI = (window as any).Telegram?.WebApp;
+      const initData = TelegramAPI?.initData || '';
+
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `tg-init-data ${initData}`,
         },
-        body: JSON.stringify({ ...post, status: 'published' }),
+        body: JSON.stringify({
+          title: post.title,
+          body: post.body,
+          hashtags: post.hashtags,
+          source_item_id: post.source_item_id,
+          status: 'published',
+        }),
       });
 
       if (response.ok) {
@@ -114,6 +168,40 @@ export default function App() {
       }
     } catch (err) {
       setError('Error publishing post');
+      console.error(err);
+    }
+  };
+
+  const handleQuickReplace = async (replaceFrom: string, replaceTo: string) => {
+    try {
+      if (!user) return;
+
+      const TelegramAPI = (window as any).Telegram?.WebApp;
+      const initData = TelegramAPI?.initData || '';
+
+      const response = await fetch('/api/ai/rewrite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `tg-init-data ${initData}`,
+        },
+        body: JSON.stringify({
+          text: post.body,
+          style: 'neutral',
+          replace_from: replaceFrom,
+          replace_to: replaceTo,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setPost({ ...post, body: result.rewritten });
+        alert('Channel mention replaced!');
+      } else {
+        setError('Failed to apply replacement');
+      }
+    } catch (err) {
+      setError('Error applying replacement');
       console.error(err);
     }
   };
@@ -143,6 +231,7 @@ export default function App() {
             onPreview={() => setShowPreview(!showPreview)}
             onSave={handleSavePost}
             onPublish={handlePublishPost}
+            onQuickReplace={handleQuickReplace}
             showPreview={showPreview}
           />
 

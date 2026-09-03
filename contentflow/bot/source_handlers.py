@@ -1,6 +1,6 @@
 import logging
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message, WebAppInfo
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from bot.auth import make_authenticated_request
@@ -292,47 +292,6 @@ async def process_custom_interval(message: Message, state: FSMContext):
         )
 
 
-@source_router.callback_query(F.data == "source_list")
-async def handle_source_list(callback: CallbackQuery):
-    """Show all sources."""
-    try:
-        response = await make_authenticated_request(
-            "GET",
-            f"/api/sources?user_id={callback.from_user.id}"
-        )
-
-        if response and response.status_code == 200:
-            sources = response.json()
-            if not sources:
-                text = "📡 **Источники**\n\n" \
-                       "У вас еще нет источников. Добавьте первый!"
-                markup = [[InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")]]
-            else:
-                text = "📡 **Источники**\n\n"
-                for src in sources:
-                    status = "✅" if src["enabled"] else "❌"
-                    text += f"{status} {src['name']} ({src['type']})\n"
-                markup = [
-                    [InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")],
-                ]
-        else:
-            text = "❌ Ошибка при загрузке источников"
-            markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="source_list")]]
-
-    except Exception as e:
-        logger.error(f"Error fetching sources: {e}")
-        text = f"❌ Ошибка: {str(e)}"
-        markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="source_list")]]
-
-    markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")])
-
-    await callback.message.edit_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=markup)
-    )
-    await callback.answer()
-
-
 @source_router.callback_query(F.data == "source_settings")
 async def handle_source_settings(callback: CallbackQuery):
     """Show source settings menu."""
@@ -346,6 +305,74 @@ async def handle_source_settings(callback: CallbackQuery):
            "Управление парсингом и интервалами обновления источников."
 
     await callback.message.edit_text(text, reply_markup=markup)
+    await callback.answer()
+
+
+async def render_items_list(user_id: int, source_id: int = None):
+    """Render list of source items as inline buttons."""
+    try:
+        params = f"?user_id={user_id}"
+        if source_id:
+            params += f"&source_id={source_id}"
+
+        response = await make_authenticated_request(
+            "GET",
+            f"/api/sources/items/unanalyzed{params}"
+        )
+
+        if response and response.status_code == 200:
+            items = response.json()
+            if not items:
+                return "📰 **Статьи**\n\nНет неанализированных статей.", [[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]]
+
+            markup = []
+            for item in items:
+                title = item.get("title", "Без названия")[:60]
+                markup.append([InlineKeyboardButton(text=title, callback_data=f"item_open_{item['id']}")])
+
+            markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")])
+            return "📰 **Статьи**\n\nВыберите статью для редактирования:", markup
+        else:
+            return "❌ Ошибка при загрузке статей", [[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]]
+
+    except Exception as e:
+        logger.error(f"Error rendering items list: {e}")
+        return f"❌ Ошибка: {str(e)}", [[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]]
+
+
+@source_router.callback_query(F.data == "source_articles")
+async def handle_source_articles(callback: CallbackQuery):
+    """Show list of source articles."""
+    text, markup_list = await render_items_list(callback.from_user.id)
+    markup = InlineKeyboardMarkup(inline_keyboard=markup_list)
+    await callback.message.edit_text(text, reply_markup=markup, parse_mode="Markdown")
+    await callback.answer()
+
+
+@source_router.callback_query(F.data.startswith("item_open_"))
+async def handle_item_open(callback: CallbackQuery):
+    """Open source item in miniapp editor."""
+    from core.config import get_settings
+
+    settings = get_settings()
+    try:
+        item_id = int(callback.data.split("_")[-1])
+    except (ValueError, IndexError):
+        await callback.answer("❌ Invalid item ID", show_alert=True)
+        return
+
+    editor_url = f"{settings.webapp_url}?item_id={item_id}"
+
+    markup = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="✏️ Открыть в редакторе", web_app=WebAppInfo(url=editor_url))],
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="source_articles")]
+        ]
+    )
+    await callback.message.edit_text(
+        "📝 Статья готова к редактированию.\n\nНажмите кнопку для открытия редактора:",
+        reply_markup=markup
+    )
     await callback.answer()
 
 
@@ -372,16 +399,27 @@ async def handle_source_parse_all(callback: CallbackQuery):
             text = f"✅ Парсинг завершен!\n\n" \
                    f"📡 Источников обработано: {parsed_count}\n" \
                    f"📰 Статей получено: {items_count}"
+
+            await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[[InlineKeyboardButton(text="📰 Просмотреть статьи", callback_data="source_articles")],
+                                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]]
+            ))
         else:
             text = "❌ Ошибка при запуске парсинга"
+            markup = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]
+                ]
+            )
+            await callback.message.edit_text(text, reply_markup=markup)
     except Exception as e:
         logger.error(f"Error parsing sources: {e}")
         text = f"❌ Ошибка: {str(e)}"
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup)
 
-    markup = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]
-        ]
-    )
-    await callback.message.edit_text(text, reply_markup=markup)
     await callback.answer()

@@ -95,6 +95,65 @@ async def handle_manage_source_list(callback: CallbackQuery):
     await callback.answer()
 
 
+@source_settings_router.callback_query(F.data == "source_list")
+async def handle_source_list(callback: CallbackQuery):
+    """Show list of user's sources (alias for source_manage_list)."""
+    try:
+        response = await make_authenticated_request(
+            "GET",
+            f"/api/sources?user_id={callback.from_user.id}"
+        )
+
+        if response and response.status_code == 200:
+            sources = response.json()
+            if not sources:
+                await callback.message.edit_text(
+                    "📭 У вас нет источников.",
+                    reply_markup=InlineKeyboardMarkup(
+                        inline_keyboard=[
+                            [InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")],
+                            [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]
+                        ]
+                    )
+                )
+                await callback.answer()
+                return
+
+            buttons = []
+            for source in sources:
+                status = "✅" if source.get("enabled") else "⛔"
+                buttons.append(
+                    [InlineKeyboardButton(
+                        text=f"{status} {source.get('name')[:30]}",
+                        callback_data=f"source_edit_{source.get('id')}"
+                    )]
+                )
+            buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")])
+
+            await callback.message.edit_text(
+                "📋 Ваши источники:\n\n"
+                "✅ - активный | ⛔ - отключен",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+            )
+        else:
+            await callback.message.edit_text(
+                "❌ Ошибка загрузки источников",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]]
+                )
+            )
+    except Exception as e:
+        logger.error(f"Error loading sources: {e}")
+        await callback.message.edit_text(
+            f"❌ Ошибка: {str(e)}",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[[InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]]
+            )
+        )
+
+    await callback.answer()
+
+
 @source_settings_router.callback_query(F.data.startswith("source_edit_"))
 async def handle_edit_source(callback: CallbackQuery, state: FSMContext):
     """Show edit menu for a specific source."""

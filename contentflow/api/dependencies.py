@@ -4,10 +4,13 @@ from sqlalchemy import select
 import jwt
 import os
 import hmac
+import logging
 
 from core.config import get_settings
 from core.database import get_db
 from models.user import User
+
+logger = logging.getLogger(__name__)
 settings = get_settings()
 API_KEY = os.environ["API_KEY"]  # Fail hard if not set
 
@@ -16,12 +19,14 @@ async def verify_service_auth(request: Request) -> bool:
     """Verify service-level authentication from Bearer token."""
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
+        logger.warning("Authorization header missing or not Bearer scheme")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     token = auth_header[7:]  # Remove "Bearer " prefix
 
     # Use constant-time comparison to prevent timing attacks
     if not hmac.compare_digest(token, API_KEY):
+        logger.warning("Invalid API key presented")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     return True

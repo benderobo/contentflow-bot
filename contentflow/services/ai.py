@@ -13,7 +13,7 @@ class LLMProvider(ABC):
         pass
 
     @abstractmethod
-    async def rewrite(self, text: str, prompt: str) -> str:
+    async def rewrite(self, text: str, prompt: str, replace_from: Optional[str] = None, replace_to: Optional[str] = None) -> str:
         pass
 
 
@@ -30,7 +30,7 @@ class OpenAIProvider(LLMProvider):
         ]
         return await self._call(messages)
 
-    async def rewrite(self, text: str, prompt: str) -> str:
+    async def rewrite(self, text: str, prompt: str, replace_from: Optional[str] = None, replace_to: Optional[str] = None) -> str:
         messages = [
             {"role": "system", "content": "You are a professional content editor."},
             {"role": "user", "content": f"{prompt}\n\nContent:\n{text}"},
@@ -70,7 +70,7 @@ class AnthropicProvider(LLMProvider):
         full_prompt = f"{prompt}\n\nContent:\n{text}"
         return await self._call(full_prompt, system="Analyze and return JSON.")
 
-    async def rewrite(self, text: str, prompt: str) -> str:
+    async def rewrite(self, text: str, prompt: str, replace_from: Optional[str] = None, replace_to: Optional[str] = None) -> str:
         full_prompt = f"{prompt}\n\nContent:\n{text}"
         result = await self._call(full_prompt, system="You are a professional editor.")
         return result.get("content", text)
@@ -118,18 +118,24 @@ class MockProvider(LLMProvider):
         }
         return {"content": json.dumps(result)}
 
-    async def rewrite(self, text: str, prompt: str) -> str:
+    async def rewrite(self, text: str, prompt: str, replace_from: Optional[str] = None, replace_to: Optional[str] = None) -> str:
+        result_text = text
+
+        # Apply text replacement if specified
+        if replace_from and replace_to:
+            result_text = result_text.replace(replace_from, replace_to)
+
         styles = {
-            "engaging": f"✨ {text}",
-            "professional": f"[Professional] {text}",
-            "informative": f"📚 {text}",
-            "neutral": text,
+            "engaging": f"✨ {result_text}",
+            "professional": f"[Professional] {result_text}",
+            "informative": f"📚 {result_text}",
+            "neutral": result_text,
         }
         # Extract style from prompt if possible
         for style, prefix in styles.items():
             if style in prompt.lower():
                 return prefix
-        return f"✏️ {text}"
+        return f"✏️ {result_text}"
 
 
 class OllamaProvider(LLMProvider):
@@ -141,7 +147,7 @@ class OllamaProvider(LLMProvider):
         full_prompt = f"{prompt}\n\nContent:\n{text}"
         return await self._call(full_prompt)
 
-    async def rewrite(self, text: str, prompt: str) -> str:
+    async def rewrite(self, text: str, prompt: str, replace_from: Optional[str] = None, replace_to: Optional[str] = None) -> str:
         full_prompt = f"{prompt}\n\nContent:\n{text}"
         result = await self._call(full_prompt)
         return result.get("content", text)
@@ -191,14 +197,18 @@ class AIService:
             logger.warning("Failed to parse AI analysis JSON")
             return {"relevant": True, "importance": 5}
 
-    async def rewrite_content(self, text: str, style: str = "neutral") -> str:
-        """Rewrite content in specified style."""
+    async def rewrite_content(self, text: str, style: str = "neutral", replace_from: Optional[str] = None, replace_to: Optional[str] = None) -> str:
+        """Rewrite content in specified style and optionally replace text."""
         prompt = f"""Rewrite this content in a {style} professional style.
 Keep all facts and information intact.
 Do not add information that wasn't in the original.
 Improve clarity and engagement."""
+
+        if replace_from and replace_to:
+            prompt += f"\n\nAlso replace mentions of '{replace_from}' with '{replace_to}' where contextually appropriate."
+
         try:
-            result = await self.provider.rewrite(text, prompt)
+            result = await self.provider.rewrite(text, prompt, replace_from=replace_from, replace_to=replace_to)
             return result
         except Exception as e:
             logger.error(f"Rewrite error: {e}")

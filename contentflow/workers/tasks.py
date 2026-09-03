@@ -60,40 +60,69 @@ async def _parse_source_async(source_id: int):
             items = await parser.parse(parser_config)
             source.last_check = datetime.utcnow()
 
+            saved_items = []
             saved_count = 0
             for item in items:
                 # Check if URL already exists
                 url_result = await db.execute(
                     select(SourceItem).where(SourceItem.original_url == item.get("url"))
                 )
-                existing = url_result.scalar_one_or_none()
+                source_item = url_result.scalar_one_or_none()
 
-                if existing:
-                    logger.debug(f"Item already exists: {item.get('url')}")
-                    continue
+                # Create source item if not exists
+                if not source_item:
+                    content_hash = DeduplicationService.hash_content(
+                        item.get("description", "")
+                    )
+                    source_item = SourceItem(
+                        source_id=source.id,
+                        original_url=item.get("url", ""),
+                        title=item.get("title", ""),
+                        description=item.get("description", ""),
+                        content_hash=content_hash,
+                        author=item.get("author"),
+                        published_at=item.get("published_at"),
+                    )
+                    db.add(source_item)
+                    await db.flush()  # Get the ID immediately
+                    logger.debug(f"Created new source item: {item.get('url')}")
+                else:
+                    logger.debug(f"Source item already exists: {item.get('url')}")
 
-                # Create new source item
-                content_hash = DeduplicationService.hash_content(
-                    item.get("description", "")
+                # Check if post already exists for this source_item
+                post_result = await db.execute(
+                    select(Post).where(Post.source_item_id == source_item.id)
                 )
-                source_item = SourceItem(
-                    source_id=source.id,
-                    original_url=item.get("url", ""),
-                    title=item.get("title", ""),
-                    description=item.get("description", ""),
-                    content_hash=content_hash,
-                    author=item.get("author"),
-                    published_at=item.get("published_at"),
-                )
-                db.add(source_item)
-                saved_count += 1
+                existing_post = post_result.scalar_one_or_none()
+
+                # Create post if not exists
+                if not existing_post:
+                    post = Post(
+                        user_id=source.user_id,
+                        source_item_id=source_item.id,
+                        original_url=item.get("url", ""),
+                        title=item.get("title", ""),
+                        body=item.get("description", ""),
+                        status="draft",
+                        category="general",
+                        importance=5,
+                    )
+                    db.add(post)
+                    saved_items.append(source_item.id)
+                    saved_count += 1
+                else:
+                    logger.debug(f"Post already exists for source item {source_item.id}")
 
             source.last_success = datetime.utcnow()
             source.error_count = 0
             db.add(source)
             await db.commit()
 
-            logger.info(f"Parsed {len(items)} items, saved {saved_count} new items from source {source_id}")
+            logger.info(f"Parsed {len(items)} items, saved {saved_count} new posts from source {source_id}")
+
+            # Queue analysis for newly created items
+            for item_id in saved_items:
+                analyze_content.delay(item_id)
         except Exception as e:
             logger.error(f"Error parsing source {source_id}: {e}")
             source.last_error = str(e)[:1000]
@@ -140,20 +169,22 @@ async def _analyze_content_async(source_item_id: int):
             item.ai_analysis = analysis
             db.add(item)
 
-            # Create post from analyzed content if relevant
-            if analysis.get("relevant", True):
-                post = Post(
-                    user_id=source.user_id,
-                    source_item_id=item.id,
-                    original_url=item.original_url,
-                    title=item.title,
-                    body=item.description or item.title,
-                    status="draft",
-                    ai_analysis=analysis,
-                    category=analysis.get("category"),
-                    importance=analysis.get("importance", 5),
-                    clickbait=analysis.get("clickbait", False),
-                )
+            # Update existing post with analysis (post already created by parse_source)
+            post_result = await db.execute(
+                select(Post).where(Post.source_item_id == item.id)
+            )
+            post = post_result.scalar_one_or_none()
+
+            if post:
+                post.ai_analysis = analysis
+                post.category = analysis.get("category", "general")
+                post.importance = analysis.get("importance", 5)
+                post.clickbait = analysis.get("clickbait", False)
+
+                # Mark as irrelevant if AI says so
+                if not analysis.get("relevant", True):
+                    post.status = "irrelevant"
+
                 db.add(post)
 
             await db.commit()

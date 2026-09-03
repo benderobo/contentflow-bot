@@ -4,6 +4,7 @@ from aiogram.filters.command import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 from core.config import get_settings
 from bot.auth import make_authenticated_request
+from bot.instructions import get_instruction_text
 
 logger = logging.getLogger(__name__)
 
@@ -92,15 +93,24 @@ def register_handlers(dp: Dispatcher):
     @router.message(Command("help"))
     async def cmd_help(message: Message):
         """Handle /help command."""
-        help_text = """
-/start - Главное меню
-/help - Помощь
-/sources - Управление источниками
-/posts - Управление постами
-/channels - Управление каналами
-/stats - Статистика
-"""
-        await message.answer(help_text)
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="⚡ Быстрый старт", callback_data="help_quick")],
+                [InlineKeyboardButton(text="📥 Источники", callback_data="help_sources")],
+                [InlineKeyboardButton(text="📝 Посты", callback_data="help_posts")],
+                [InlineKeyboardButton(text="🤖 AI", callback_data="help_ai")],
+                [InlineKeyboardButton(text="📅 Планировщик", callback_data="help_scheduler")],
+                [InlineKeyboardButton(text="📢 Каналы", callback_data="help_channels")],
+                [InlineKeyboardButton(text="🔄 Парсинг", callback_data="help_parsing")],
+                [InlineKeyboardButton(text="⚙️ Настройки", callback_data="help_settings")],
+            ]
+        )
+        await message.answer(
+            "📚 **Справка ContentFlow Bot**\n\n"
+            "Выберите раздел для получения детальной инструкции:",
+            reply_markup=markup,
+            parse_mode="Markdown"
+        )
 
     # Text button handlers
     @router.message(F.text == "📥 Источники")
@@ -110,6 +120,7 @@ def register_handlers(dp: Dispatcher):
             inline_keyboard=[
                 [InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")],
                 [InlineKeyboardButton(text="📋 Список", callback_data="source_list")],
+                [InlineKeyboardButton(text="📰 Статьи", callback_data="source_articles")],
                 [InlineKeyboardButton(text="⚙️ Настройки", callback_data="source_settings")],
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")],
             ]
@@ -265,18 +276,53 @@ def register_handlers(dp: Dispatcher):
 """
         await message.answer(help_text)
 
+    # Help callbacks
+    @router.callback_query(F.data.startswith("help_"))
+    async def handle_help_callback(callback: CallbackQuery):
+        """Handle help section callbacks."""
+        section = callback.data.replace("help_", "")
+        text = get_instruction_text(section)
+
+        back_button = InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_help")
+        back_markup = InlineKeyboardMarkup(inline_keyboard=[[back_button]])
+
+        await callback.message.edit_text(text, reply_markup=back_markup)
+        await callback.answer()
+
+    @router.callback_query(F.data == "back_to_help")
+    async def handle_back_to_help(callback: CallbackQuery):
+        """Return to help menu."""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="⚡ Быстрый старт", callback_data="help_quick")],
+                [InlineKeyboardButton(text="📥 Источники", callback_data="help_sources")],
+                [InlineKeyboardButton(text="📝 Посты", callback_data="help_posts")],
+                [InlineKeyboardButton(text="🤖 AI", callback_data="help_ai")],
+                [InlineKeyboardButton(text="📅 Планировщик", callback_data="help_scheduler")],
+                [InlineKeyboardButton(text="📢 Каналы", callback_data="help_channels")],
+                [InlineKeyboardButton(text="🔄 Парсинг", callback_data="help_parsing")],
+                [InlineKeyboardButton(text="⚙️ Настройки", callback_data="help_settings")],
+                [InlineKeyboardButton(text="◀️ В главное меню", callback_data="menu_main")],
+            ]
+        )
+        await callback.message.edit_text(
+            "📚 **Справка ContentFlow Bot**\n\n"
+            "Выберите раздел для получения детальной инструкции:",
+            reply_markup=markup,
+            parse_mode="Markdown"
+        )
+        await callback.answer()
+
     @router.message(F.text == "✨ Редактор")
     async def handle_editor_button(message: Message):
         """Handle editor button."""
-        if message.from_user.id == 5264530602:
-            markup = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="🔗 Открыть редактор", web_app=WebAppInfo(url="http://localhost:3000"))]
-                ]
-            )
-            await message.answer("✨ Редактор контента\n\nНажмите кнопку для открытия редактора:", reply_markup=markup)
-        else:
-            await message.answer("❌ У вас нет доступа к редактору.")
+        settings = get_settings()
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🔗 Открыть редактор", web_app=WebAppInfo(url=settings.webapp_url))]
+            ]
+        )
+        await message.answer("✨ Редактор контента\n\nНажмите кнопку для открытия редактора:", reply_markup=markup)
 
     @router.callback_query(F.data == "menu_main")
     async def handle_menu_main(callback: CallbackQuery):
@@ -682,7 +728,7 @@ def register_handlers(dp: Dispatcher):
         try:
             response = await make_authenticated_request(
                 "GET",
-                f"/api/posts?status=review&user_id={callback.from_user.id}"
+                f"/api/posts?status=needs_review&user_id={callback.from_user.id}"
             )
 
             if response and response.status_code == 200:
@@ -1167,6 +1213,369 @@ def register_handlers(dp: Dispatcher):
         except Exception as e:
             logger.error(f"Error rejecting user: {e}")
             await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+        await callback.answer()
+
+    # Post detail view
+    @router.callback_query(F.data.startswith("post_view_"))
+    async def handle_post_view(callback: CallbackQuery):
+        """Show full post view."""
+        post_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts/{post_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                post = response.json()
+                text = f"📝 <b>{post['title']}</b>\n\n"
+                text += f"{post.get('body', '')}\n\n"
+                if post.get('original_url'):
+                    text += f"🔗 <a href='{post['original_url']}'>Источник</a>\n"
+                text += f"\n📊 Статус: <b>{post['status']}</b>"
+                if post.get('importance'):
+                    text += f"\n⭐ Важность: {post['importance']}/10"
+                if post.get('category'):
+                    text += f"\n📂 Категория: {post['category']}"
+
+                markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_published")]]
+            else:
+                text = "❌ Пост не найден"
+                markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_published")]]
+        except Exception as e:
+            text = f"❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_published")]]
+
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup), parse_mode="HTML")
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("post_edit_"))
+    async def handle_post_edit(callback: CallbackQuery):
+        """Show post for editing."""
+        post_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts/{post_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                post = response.json()
+                text = f"✏️ <b>Редактирование поста</b>\n\n"
+                text += f"📝 Заголовок: {post['title']}\n\n"
+                text += f"📄 Содержание:\n{post.get('body', '')}\n\n"
+                if post.get('original_url'):
+                    text += f"🔗 Источник: {post['original_url']}\n"
+                text += f"\n📊 Статус: <b>{post['status']}</b>"
+                if post.get('importance'):
+                    text += f"\n⭐ Важность: {post['importance']}/10"
+                if post.get('category'):
+                    text += f"\n📂 Категория: {post['category']}"
+
+                markup = [
+                    [InlineKeyboardButton(text="✅ Одобрить для публикации", callback_data=f"post_publish_{post_id}")],
+                    [InlineKeyboardButton(text="❌ Отклонить", callback_data=f"post_reject_{post_id}")],
+                    [InlineKeyboardButton(text="◀️ Назад", callback_data="post_drafts")]
+                ]
+            else:
+                text = "❌ Пост не найден"
+                markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_drafts")]]
+        except Exception as e:
+            text = f"❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_drafts")]]
+
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup), parse_mode="HTML")
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("post_publish_"))
+    async def handle_post_publish(callback: CallbackQuery):
+        """Publish post to channels."""
+        post_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/posts/{post_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                post = response.json()
+
+                channels_response = await make_authenticated_request(
+                    "GET",
+                    f"/api/channels",
+                    user_id=callback.from_user.id
+                )
+
+                if channels_response and channels_response.status_code == 200:
+                    channels = channels_response.json()
+                    if not channels:
+                        text = "❌ Нет доступных каналов для публикации"
+                        markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_review")]]
+                    else:
+                        text = f"📢 <b>Выберите канал для публикации</b>\n\n"
+                        text += f"📝 Пост: <b>{post['title']}</b>\n\n"
+                        text += f"Доступные каналы:\n"
+                        markup = []
+                        for channel in channels[:10]:
+                            text += f"• {channel['name']}\n"
+                            markup.append([InlineKeyboardButton(
+                                text=f"📢 {channel['name'][:20]}",
+                                callback_data=f"publish_to_{post_id}_{channel['id']}"
+                            )])
+                        markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="post_review")])
+                else:
+                    text = "❌ Ошибка при загрузке каналов"
+                    markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_review")]]
+            else:
+                text = "❌ Пост не найден"
+                markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_review")]]
+        except Exception as e:
+            text = f"❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="post_review")]]
+
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup), parse_mode="HTML")
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("publish_to_"))
+    async def handle_publish_to_channel(callback: CallbackQuery):
+        """Publish post to specific channel."""
+        parts = callback.data.split("_")
+        post_id = int(parts[2])
+        channel_id = int(parts[3])
+
+        try:
+            response = await make_authenticated_request(
+                "POST",
+                f"/api/posts/{post_id}/publish",
+                user_id=callback.from_user.id,
+                json={"channel_id": channel_id}
+            )
+
+            if response and response.status_code == 200:
+                await callback.message.edit_text(
+                    "✅ Пост успешно опубликован!\n\n"
+                    "Он был отправлен в выбранный канал."
+                )
+            else:
+                error_detail = response.json().get('detail', 'Неизвестная ошибка') if response else 'Ошибка сервера'
+                await callback.message.edit_text(
+                    f"❌ Ошибка при публикации:\n{error_detail}\n\n"
+                    "Попробуйте еще раз или выберите другой канал."
+                )
+        except Exception as e:
+            await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("post_reject_"))
+    async def handle_post_reject(callback: CallbackQuery):
+        """Reject post."""
+        post_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "PATCH",
+                f"/api/posts/{post_id}",
+                user_id=callback.from_user.id,
+                json={"status": "rejected"}
+            )
+
+            if response and response.status_code == 200:
+                await callback.message.edit_text(
+                    "❌ Пост отклонен и переведен в черновики."
+                )
+            else:
+                await callback.message.edit_text("❌ Ошибка при отклонении поста")
+        except Exception as e:
+            await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+        await callback.answer()
+
+    # Source management handlers
+    @router.callback_query(F.data == "source_list")
+    async def handle_source_list(callback: CallbackQuery):
+        """Show list of user's sources."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                "/api/sources",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                sources = response.json()
+                if not sources:
+                    text = "📥 **Мои источники**\n\nНет источников. Добавьте новый для начала парсинга."
+                    markup = [[InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")]]
+                else:
+                    text = f"📥 **Мои источники** ({len(sources)})\n\n"
+                    markup = []
+                    for source in sources:
+                        text += f"📰 {source['name']} ({source['type']})\n"
+                        source_id = source['id']
+                        markup.append([InlineKeyboardButton(
+                            text=f"⚙️ {source['name'][:20]}",
+                            callback_data=f"source_edit_{source_id}"
+                        )])
+            else:
+                text = "📥 **Мои источники**\n\n❌ Ошибка при загрузке"
+                markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="source_list")]]
+        except Exception as e:
+            text = f"📥 **Мои источники**\n\n❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="source_list")]]
+
+        markup.append([InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")])
+        markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")])
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup))
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("source_edit_"))
+    async def handle_source_edit(callback: CallbackQuery):
+        """Edit source settings."""
+        source_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/sources/{source_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                source = response.json()
+                text = f"⚙️ <b>Редактирование источника</b>\n\n"
+                text += f"📰 Имя: <b>{source['name']}</b>\n"
+                text += f"🔗 Тип: <b>{source['type']}</b>\n"
+                text += f"📍 URL: {source.get('url', 'N/A')}\n"
+                text += f"✅ Статус: {'Включен' if source.get('enabled') else 'Отключен'}\n"
+                if source.get('last_check'):
+                    text += f"🕐 Последняя проверка: {source['last_check'][:16]}\n"
+                if source.get('last_success'):
+                    text += f"✓ Последний успех: {source['last_success'][:16]}\n"
+
+                markup = [
+                    [InlineKeyboardButton(
+                        text="⏸️ Отключить" if source.get('enabled') else "▶️ Включить",
+                        callback_data=f"source_toggle_{source_id}"
+                    )],
+                    [InlineKeyboardButton(text="🗑️ Удалить", callback_data=f"source_delete_{source_id}")],
+                    [InlineKeyboardButton(text="◀️ Назад", callback_data="source_list")]
+                ]
+            else:
+                text = "❌ Источник не найден"
+                markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="source_list")]]
+        except Exception as e:
+            text = f"❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="source_list")]]
+
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup), parse_mode="HTML")
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("source_toggle_"))
+    async def handle_source_toggle(callback: CallbackQuery):
+        """Enable/disable source."""
+        source_id = int(callback.data.split("_")[-1])
+        try:
+            # Get current state
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/sources/{source_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                source = response.json()
+                new_state = not source.get('enabled', False)
+
+                # Update source
+                update_response = await make_authenticated_request(
+                    "PATCH",
+                    f"/api/sources/{source_id}",
+                    user_id=callback.from_user.id,
+                    json={"enabled": new_state}
+                )
+
+                if update_response and update_response.status_code == 200:
+                    status_text = "✅ Включен" if new_state else "⏸️ Отключен"
+                    await callback.message.edit_text(
+                        f"Источник {status_text}"
+                    )
+                else:
+                    await callback.message.edit_text("❌ Ошибка при обновлении источника")
+            else:
+                await callback.message.edit_text("❌ Источник не найден")
+        except Exception as e:
+            await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("source_delete_"))
+    async def handle_source_delete(callback: CallbackQuery):
+        """Delete source."""
+        source_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "DELETE",
+                f"/api/sources/{source_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                await callback.message.edit_text(
+                    "✅ Источник удален"
+                )
+            else:
+                await callback.message.edit_text("❌ Ошибка при удалении источника")
+        except Exception as e:
+            await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+        await callback.answer()
+
+    @router.callback_query(F.data == "source_add")
+    async def handle_source_add(callback: CallbackQuery):
+        """Show source type selection."""
+        text = """➕ <b>Добавить новый источник</b>
+
+Выберите тип источника для парсинга:"""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📰 RSS Feed", callback_data="source_type_rss")],
+                [InlineKeyboardButton(text="🌐 Веб-сайт", callback_data="source_type_website")],
+                [InlineKeyboardButton(text="💬 Telegram", callback_data="source_type_telegram")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("source_type_"))
+    async def handle_source_type(callback: CallbackQuery):
+        """Show source creation form."""
+        source_type = callback.data.split("_")[-1]
+
+        type_names = {
+            "rss": "RSS Feed",
+            "website": "Веб-сайт",
+            "telegram": "Telegram"
+        }
+
+        text = f"""📝 <b>Новый источник: {type_names.get(source_type, source_type)}</b>
+
+Для завершения настройки отправьте:
+1. Имя источника
+2. URL для парсинга
+
+Формат: <code>Имя|URL</code>
+
+Пример: <code>HackerNews|https://news.ycombinator.com</code>"""
+
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="source_add")]
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
         await callback.answer()
 
     dp.include_router(router)
