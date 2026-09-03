@@ -300,26 +300,54 @@ async def approve_post(
 
 class PublishPostRequest(BaseModel):
     channel_id: int
+    user_id: Optional[int] = None
+    user_signature: Optional[str] = None
 
 
 @router.post("/{post_id}/publish")
 async def publish_post(
     post_id: int,
-    request: PublishPostRequest,
-    current_user: User = Depends(get_current_user),
+    request_obj: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Publish a post to Telegram channel."""
+    """Publish a post to Telegram channel with service auth."""
+    from api.dependencies import verify_service_auth
+    from utils.auth import verify_user_id
+
+    auth_header = request_obj.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    await verify_service_auth(request_obj)
+
+    try:
+        body = await request_obj.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    user_id = body.get("user_id")
+    user_signature = body.get("user_signature")
+    channel_id = body.get("channel_id")
+
+    if not user_id or not user_signature:
+        raise HTTPException(status_code=400, detail="user_id and user_signature required")
+
+    if not channel_id:
+        raise HTTPException(status_code=400, detail="channel_id required")
+
+    if not verify_user_id(int(user_id), user_signature):
+        raise HTTPException(status_code=403, detail="Invalid user signature")
+
     result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    if post.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    if post.user_id != int(user_id):
+        raise HTTPException(status_code=403, detail="Access denied")
 
     # Verify channel exists and belongs to user
     channel_result = await db.execute(
-        select(Channel).where(Channel.id == request.channel_id, Channel.user_id == current_user.id)
+        select(Channel).where(Channel.id == channel_id, Channel.user_id == int(user_id))
     )
     channel = channel_result.scalar_one_or_none()
     if not channel:
@@ -327,9 +355,9 @@ async def publish_post(
 
     # Queue publish task
     from workers.tasks import publish_post as publish_task
-    publish_task.delay(post_id, request.channel_id)
+    publish_task.delay(post_id, channel_id)
 
-    return {"message": "Post queued for publishing", "post_id": post_id, "channel_id": request.channel_id}
+    return {"message": "Post queued for publishing", "post_id": post_id, "channel_id": channel_id}
 
 
 # ===== PUBLISH SCHEDULING ENDPOINTS =====

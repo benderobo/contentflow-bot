@@ -25,8 +25,10 @@ async def make_authenticated_request(
     if user_id:
         signature = sign_user_id(user_id)
         if "json" in kwargs:
+            kwargs["json"]["user_id"] = user_id
             kwargs["json"]["user_signature"] = signature
         elif "params" in kwargs:
+            kwargs["params"]["user_id"] = user_id
             kwargs["params"]["user_signature"] = signature
         else:
             # If no params dict yet, add user_id to endpoint URL
