@@ -7,7 +7,8 @@ from typing import Optional
 from core.database import get_db
 from models.channel import Channel
 from models.user import User
-from api.dependencies import get_current_user, get_current_user
+from api.dependencies import verify_service_auth
+from utils.auth import verify_user_id
 
 router = APIRouter()
 
@@ -41,14 +42,26 @@ class ChannelResponse(BaseModel):
         from_attributes = True
 
 
-@router.get("/")
+@router.get("/", name="list_channels_slash")
+@router.get("", name="list_channels_no_slash")
 async def list_channels(
+    request: Request,
+    user_id: int,
+    user_signature: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    """List channels for current user."""
+    """List channels for user."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    await verify_service_auth(request)
+
+    if not verify_user_id(user_id, user_signature):
+        raise HTTPException(status_code=403, detail="Invalid signature")
+
     result = await db.execute(
-        select(Channel).where(Channel.user_id == current_user.id).order_by(Channel.created_at.desc())
+        select(Channel).where(Channel.user_id == user_id).order_by(Channel.created_at.desc())
     )
     channels = result.scalars().all()
     return [ChannelResponse.from_orm(c) for c in channels]
