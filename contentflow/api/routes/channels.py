@@ -36,7 +36,7 @@ class ChannelResponse(BaseModel):
     user_id: int
     name: str
     telegram_id: str
-    enabled: bool
+    enabled: Optional[bool] = True
 
     class Config:
         from_attributes = True
