@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     # Telegram
     bot_token: str
     webhook_url: Optional[str] = None
-    webapp_url: str = "http://contentflow-api:8000/app"
+    webapp_url: str = Field(default="http://localhost:3001", alias="WEBAPP_URL")
     admin_telegram_ids: str = ""
     telegram_api_id: Optional[int] = None
     telegram_api_hash: Optional[str] = None
