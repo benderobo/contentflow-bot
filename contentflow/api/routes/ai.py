@@ -128,9 +128,15 @@ async def rewrite_content(
 ):
     """Rewrite content using AI (supports bot API and WebApp auth)."""
     from utils.webapp_auth import verify_webapp_init_data
+    from utils.auth import verify_user_id
     from api.dependencies import verify_service_auth
 
     user_id = None
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
 
     # Try WebApp initData auth first (for miniapp)
     auth_header = request.headers.get("Authorization", "")
@@ -144,20 +150,24 @@ async def rewrite_content(
     if not user_id:
         try:
             await verify_service_auth(request)
-            body = await request.json()
-            user_id = body.get("user_id")
-            if user_id:
-                user_id = int(user_id)
-        except (HTTPException, Exception):
+            # Service auth requires signature verification
+            extracted_user_id = body.get("user_id")
+            user_signature = body.get("user_signature")
+
+            if not extracted_user_id or not user_signature:
+                raise HTTPException(status_code=400, detail="user_id and user_signature required for service auth")
+
+            if not verify_user_id(int(extracted_user_id), user_signature):
+                raise HTTPException(status_code=403, detail="Invalid user signature")
+
+            user_id = int(extracted_user_id)
+        except HTTPException:
+            raise
+        except Exception:
             raise HTTPException(status_code=401, detail="Unauthorized")
 
     if not user_id:
         raise HTTPException(status_code=401, detail="Could not determine user ID")
-
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid request body")
 
     text = body.get("text")
     style = body.get("style", "neutral")
