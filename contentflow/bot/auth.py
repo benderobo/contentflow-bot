@@ -21,9 +21,12 @@ async def make_authenticated_request(
     headers["Authorization"] = f"Bearer {API_KEY}"
     headers["X-Service-Account"] = "bot"
 
-    # If user_id is provided in json body, add HMAC signature
-    if user_id and "json" in kwargs:
-        kwargs["json"]["user_signature"] = sign_user_id(user_id)
+    # If user_id is provided, add HMAC signature (in json body or query params)
+    if user_id:
+        if "json" in kwargs:
+            kwargs["json"]["user_signature"] = sign_user_id(user_id)
+        elif "params" in kwargs:
+            kwargs["params"]["user_signature"] = sign_user_id(user_id)
 
     try:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
