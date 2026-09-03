@@ -27,18 +27,10 @@ const ALLOWED_USER_IDS = [
   // You can find it with @userinfobot in Telegram
 ];
 
-// Get signature from server
-async function signUserId(userId: number): Promise<string> {
-  try {
-    const response = await fetch(`/api/sign?user_id=${userId}`);
-    if (response.ok) {
-      const data = await response.json();
-      return data.user_signature;
-    }
-  } catch (err) {
-    console.error('Failed to get signature:', err);
-  }
-  return '';
+// Get Telegram initData for authentication
+function getInitData(): string {
+  const TelegramAPI = (window as any).Telegram?.WebApp;
+  return TelegramAPI?.initData || '';
 }
 
 export default function App() {
@@ -97,14 +89,13 @@ export default function App() {
     }
   }, []);
 
-  const loadSourceItem = async (itemId: number, userId: number) => {
+  const loadSourceItem = async (itemId: number, _userId: number) => {
     try {
-      // Create signature for user_id
-      const signature = await signUserId(userId);
+      const initData = getInitData();
 
-      const response = await fetch(`/api/sources/items/${itemId}?user_id=${userId}&user_signature=${signature}`, {
+      const response = await fetch(`/api/sources/items/${itemId}`, {
         headers: {
-          'Authorization': 'Bearer service',
+          'Authorization': `tg-init-data ${initData}`,
         },
       });
 
@@ -126,13 +117,13 @@ export default function App() {
     }
   };
 
-  const loadPost = async (postId: number, userId: number) => {
+  const loadPost = async (postId: number, _userId: number) => {
     try {
-      const signature = await signUserId(userId);
+      const initData = getInitData();
 
-      const response = await fetch(`/api/posts/${postId}?user_id=${userId}&user_signature=${signature}`, {
+      const response = await fetch(`/api/posts/${postId}`, {
         headers: {
-          'Authorization': 'Bearer service',
+          'Authorization': `tg-init-data ${initData}`,
         },
       });
 
@@ -155,23 +146,20 @@ export default function App() {
   };
 
   const handleSavePost = async () => {
-    if (!user) return;
     try {
-      const signature = await signUserId(user.id);
+      const initData = getInitData();
 
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer service',
+          'Authorization': `tg-init-data ${initData}`,
         },
         body: JSON.stringify({
           title: post.title,
           body: post.body,
           hashtags: post.hashtags,
           source_item_id: post.source_item_id,
-          user_id: user.id,
-          user_signature: signature,
         }),
       });
 
@@ -188,15 +176,14 @@ export default function App() {
   };
 
   const handlePublishPost = async () => {
-    if (!user) return;
     try {
-      const signature = await signUserId(user.id);
+      const initData = getInitData();
 
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer service',
+          'Authorization': `tg-init-data ${initData}`,
         },
         body: JSON.stringify({
           title: post.title,
@@ -204,8 +191,6 @@ export default function App() {
           hashtags: post.hashtags,
           source_item_id: post.source_item_id,
           status: 'published',
-          user_id: user.id,
-          user_signature: signature,
         }),
       });
 
@@ -224,21 +209,19 @@ export default function App() {
   const handleQuickReplace = async (replaceFrom: string, replaceTo: string) => {
     if (!user) return;
     try {
-      const signature = await signUserId(user.id);
+      const initData = getInitData();
 
       const response = await fetch('/api/ai/rewrite', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer service',
+          'Authorization': `tg-init-data ${initData}`,
         },
         body: JSON.stringify({
           text: post.body,
           style: 'neutral',
           replace_from: replaceFrom,
           replace_to: replaceTo,
-          user_id: user.id,
-          user_signature: signature,
         }),
       });
 
