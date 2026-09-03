@@ -93,26 +93,15 @@ async def create_channel(
 @router.get("/{channel_id}")
 async def get_channel(
     channel_id: int,
-    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Get a specific channel."""
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id required")
-
     result = await db.execute(select(Channel).where(Channel.id == channel_id))
     channel = result.scalar_one_or_none()
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    if channel.user_id != user_id:
+    if channel.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     return ChannelResponse.from_orm(channel)
 
@@ -121,26 +110,15 @@ async def get_channel(
 async def update_channel(
     channel_id: int,
     updates: ChannelUpdate,
-    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Update a channel."""
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id required")
-
     result = await db.execute(select(Channel).where(Channel.id == channel_id))
     channel = result.scalar_one_or_none()
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    if channel.user_id != user_id:
+    if channel.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
     # Only update whitelisted fields
