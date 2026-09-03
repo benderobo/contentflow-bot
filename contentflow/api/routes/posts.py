@@ -186,9 +186,14 @@ async def update_post(
     return PostResponse.from_orm(post)
 
 
+class RewriteRequest(BaseModel):
+    style: str = "neutral"
+
+
 @router.post("/{post_id}/rewrite")
 async def rewrite_post(
     post_id: int,
+    request: RewriteRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -200,8 +205,70 @@ async def rewrite_post(
     if post.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
-    # TODO: Implement AI rewrite
-    return {"message": "Rewrite queued"}
+    # Get AI service
+    from services.ai import AIService, OpenAIProvider, MockProvider
+    from core.config import get_settings
+
+    settings = get_settings()
+
+    # Choose AI provider based on configuration
+    if settings.openai_api_key:
+        provider = OpenAIProvider(settings.openai_api_key, settings.ai_model)
+    else:
+        provider = MockProvider()
+
+    ai_service = AIService(provider)
+
+    # Rewrite content
+    text_to_rewrite = post.body or post.title or ""
+    try:
+        rewritten = await ai_service.rewrite_content(text_to_rewrite, style=request.style)
+
+        # Save rewritten content
+        post.rewrite_candidate = rewritten
+        db.add(post)
+        await db.commit()
+
+        return {
+            "message": "Post rewritten successfully",
+            "post_id": post_id,
+            "rewritten_content": rewritten,
+            "style": request.style
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rewrite failed: {str(e)}")
+
+
+@router.post("/{post_id}/use-rewrite")
+async def use_rewrite(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Apply rewritten content to post body."""
+    result = await db.execute(select(Post).where(Post.id == post_id))
+    post = result.scalar_one_or_none()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if post.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
+    # Check if rewritten content exists
+    if not post.rewrite_candidate:
+        raise HTTPException(status_code=400, detail="No rewritten content available")
+
+    # Save original as rewrite_original for reference, apply candidate as body
+    post.rewrite_original = post.body
+    post.body = post.rewrite_candidate
+    post.rewrite_candidate = None  # Clear candidate after use
+    db.add(post)
+    await db.commit()
+
+    return {
+        "message": "Rewritten content applied",
+        "post_id": post_id,
+        "new_body": post.body
+    }
 
 
 @router.post("/{post_id}/approve")
