@@ -1393,4 +1393,189 @@ def register_handlers(dp: Dispatcher):
 
         await callback.answer()
 
+    # Source management handlers
+    @router.callback_query(F.data == "source_list")
+    async def handle_source_list(callback: CallbackQuery):
+        """Show list of user's sources."""
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                "/api/sources",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                sources = response.json()
+                if not sources:
+                    text = "📥 **Мои источники**\n\nНет источников. Добавьте новый для начала парсинга."
+                    markup = [[InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")]]
+                else:
+                    text = f"📥 **Мои источники** ({len(sources)})\n\n"
+                    markup = []
+                    for source in sources:
+                        text += f"📰 {source['name']} ({source['type']})\n"
+                        source_id = source['id']
+                        markup.append([InlineKeyboardButton(
+                            text=f"⚙️ {source['name'][:20]}",
+                            callback_data=f"source_edit_{source_id}"
+                        )])
+            else:
+                text = "📥 **Мои источники**\n\n❌ Ошибка при загрузке"
+                markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="source_list")]]
+        except Exception as e:
+            text = f"📥 **Мои источники**\n\n❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="🔄 Обновить", callback_data="source_list")]]
+
+        markup.append([InlineKeyboardButton(text="➕ Добавить", callback_data="source_add")])
+        markup.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")])
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup))
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("source_edit_"))
+    async def handle_source_edit(callback: CallbackQuery):
+        """Edit source settings."""
+        source_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/sources/{source_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                source = response.json()
+                text = f"⚙️ <b>Редактирование источника</b>\n\n"
+                text += f"📰 Имя: <b>{source['name']}</b>\n"
+                text += f"🔗 Тип: <b>{source['type']}</b>\n"
+                text += f"📍 URL: {source.get('url', 'N/A')}\n"
+                text += f"✅ Статус: {'Включен' if source.get('enabled') else 'Отключен'}\n"
+                if source.get('last_check'):
+                    text += f"🕐 Последняя проверка: {source['last_check'][:16]}\n"
+                if source.get('last_success'):
+                    text += f"✓ Последний успех: {source['last_success'][:16]}\n"
+
+                markup = [
+                    [InlineKeyboardButton(
+                        text="⏸️ Отключить" if source.get('enabled') else "▶️ Включить",
+                        callback_data=f"source_toggle_{source_id}"
+                    )],
+                    [InlineKeyboardButton(text="🗑️ Удалить", callback_data=f"source_delete_{source_id}")],
+                    [InlineKeyboardButton(text="◀️ Назад", callback_data="source_list")]
+                ]
+            else:
+                text = "❌ Источник не найден"
+                markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="source_list")]]
+        except Exception as e:
+            text = f"❌ Ошибка: {str(e)}"
+            markup = [[InlineKeyboardButton(text="◀️ Назад", callback_data="source_list")]]
+
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=markup), parse_mode="HTML")
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("source_toggle_"))
+    async def handle_source_toggle(callback: CallbackQuery):
+        """Enable/disable source."""
+        source_id = int(callback.data.split("_")[-1])
+        try:
+            # Get current state
+            response = await make_authenticated_request(
+                "GET",
+                f"/api/sources/{source_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                source = response.json()
+                new_state = not source.get('enabled', False)
+
+                # Update source
+                update_response = await make_authenticated_request(
+                    "PATCH",
+                    f"/api/sources/{source_id}",
+                    user_id=callback.from_user.id,
+                    json={"enabled": new_state}
+                )
+
+                if update_response and update_response.status_code == 200:
+                    status_text = "✅ Включен" if new_state else "⏸️ Отключен"
+                    await callback.message.edit_text(
+                        f"Источник {status_text}"
+                    )
+                else:
+                    await callback.message.edit_text("❌ Ошибка при обновлении источника")
+            else:
+                await callback.message.edit_text("❌ Источник не найден")
+        except Exception as e:
+            await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("source_delete_"))
+    async def handle_source_delete(callback: CallbackQuery):
+        """Delete source."""
+        source_id = int(callback.data.split("_")[-1])
+        try:
+            response = await make_authenticated_request(
+                "DELETE",
+                f"/api/sources/{source_id}",
+                user_id=callback.from_user.id
+            )
+
+            if response and response.status_code == 200:
+                await callback.message.edit_text(
+                    "✅ Источник удален"
+                )
+            else:
+                await callback.message.edit_text("❌ Ошибка при удалении источника")
+        except Exception as e:
+            await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
+
+        await callback.answer()
+
+    @router.callback_query(F.data == "source_add")
+    async def handle_source_add(callback: CallbackQuery):
+        """Show source type selection."""
+        text = """➕ <b>Добавить новый источник</b>
+
+Выберите тип источника для парсинга:"""
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📰 RSS Feed", callback_data="source_type_rss")],
+                [InlineKeyboardButton(text="🌐 Веб-сайт", callback_data="source_type_website")],
+                [InlineKeyboardButton(text="💬 Telegram", callback_data="source_type_telegram")],
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_sources")]
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+        await callback.answer()
+
+    @router.callback_query(F.data.startswith("source_type_"))
+    async def handle_source_type(callback: CallbackQuery):
+        """Show source creation form."""
+        source_type = callback.data.split("_")[-1]
+
+        type_names = {
+            "rss": "RSS Feed",
+            "website": "Веб-сайт",
+            "telegram": "Telegram"
+        }
+
+        text = f"""📝 <b>Новый источник: {type_names.get(source_type, source_type)}</b>
+
+Для завершения настройки отправьте:
+1. Имя источника
+2. URL для парсинга
+
+Формат: <code>Имя|URL</code>
+
+Пример: <code>HackerNews|https://news.ycombinator.com</code>"""
+
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="source_add")]
+            ]
+        )
+        await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+        await callback.answer()
+
     dp.include_router(router)
