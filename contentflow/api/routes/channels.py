@@ -6,7 +6,8 @@ from typing import Optional
 
 from core.database import get_db
 from models.channel import Channel
-from api.dependencies import verify_service_auth
+from models.user import User
+from api.dependencies import verify_service_auth, get_current_user
 
 router = APIRouter()
 
@@ -42,23 +43,12 @@ class ChannelResponse(BaseModel):
 
 @router.get("/")
 async def list_channels(
-    request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
-    """List channels for a user."""
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id required")
-
+    """List channels for current user."""
     result = await db.execute(
-        select(Channel).where(Channel.user_id == user_id).order_by(Channel.created_at.desc())
+        select(Channel).where(Channel.user_id == current_user.id).order_by(Channel.created_at.desc())
     )
     channels = result.scalars().all()
     return [ChannelResponse.from_orm(c) for c in channels]
