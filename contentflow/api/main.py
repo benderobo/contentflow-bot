@@ -72,6 +72,14 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/api/sign")
+async def sign_user_id(user_id: int):
+    """Sign user_id for API requests."""
+    from bot.auth import sign_user_id as sign_id
+    signature = sign_id(user_id)
+    return {"user_id": user_id, "user_signature": signature}
+
+
 # Include routers
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(sources.router, prefix="/api/sources", tags=["sources"])

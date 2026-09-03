@@ -27,6 +27,20 @@ const ALLOWED_USER_IDS = [
   // You can find it with @userinfobot in Telegram
 ];
 
+// Get signature from server
+async function signUserId(userId: number): Promise<string> {
+  try {
+    const response = await fetch(`/api/sign?user_id=${userId}`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.user_signature;
+    }
+  } catch (err) {
+    console.error('Failed to get signature:', err);
+  }
+  return '';
+}
+
 export default function App() {
   const [user, setUser] = useState<TelegramUser | null>(null);
   const [post, setPost] = useState<Post>({
@@ -83,14 +97,14 @@ export default function App() {
     }
   }, []);
 
-  const loadSourceItem = async (itemId: number, _userId: number) => {
+  const loadSourceItem = async (itemId: number, userId: number) => {
     try {
-      const TelegramAPI = (window as any).Telegram?.WebApp;
-      const initData = TelegramAPI?.initData || '';
+      // Create signature for user_id
+      const signature = await signUserId(userId);
 
-      const response = await fetch(`/api/sources/items/${itemId}`, {
+      const response = await fetch(`/api/sources/items/${itemId}?user_id=${userId}&user_signature=${signature}`, {
         headers: {
-          'Authorization': `tg-init-data ${initData}`,
+          'Authorization': 'Bearer service',
         },
       });
 
@@ -112,14 +126,13 @@ export default function App() {
     }
   };
 
-  const loadPost = async (postId: number, _userId: number) => {
+  const loadPost = async (postId: number, userId: number) => {
     try {
-      const TelegramAPI = (window as any).Telegram?.WebApp;
-      const initData = TelegramAPI?.initData || '';
+      const signature = await signUserId(userId);
 
-      const response = await fetch(`/api/posts/${postId}`, {
+      const response = await fetch(`/api/posts/${postId}?user_id=${userId}&user_signature=${signature}`, {
         headers: {
-          'Authorization': `tg-init-data ${initData}`,
+          'Authorization': 'Bearer service',
         },
       });
 
@@ -142,21 +155,23 @@ export default function App() {
   };
 
   const handleSavePost = async () => {
+    if (!user) return;
     try {
-      const TelegramAPI = (window as any).Telegram?.WebApp;
-      const initData = TelegramAPI?.initData || '';
+      const signature = await signUserId(user.id);
 
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `tg-init-data ${initData}`,
+          'Authorization': 'Bearer service',
         },
         body: JSON.stringify({
           title: post.title,
           body: post.body,
           hashtags: post.hashtags,
           source_item_id: post.source_item_id,
+          user_id: user.id,
+          user_signature: signature,
         }),
       });
 
@@ -173,15 +188,15 @@ export default function App() {
   };
 
   const handlePublishPost = async () => {
+    if (!user) return;
     try {
-      const TelegramAPI = (window as any).Telegram?.WebApp;
-      const initData = TelegramAPI?.initData || '';
+      const signature = await signUserId(user.id);
 
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `tg-init-data ${initData}`,
+          'Authorization': 'Bearer service',
         },
         body: JSON.stringify({
           title: post.title,
@@ -189,6 +204,8 @@ export default function App() {
           hashtags: post.hashtags,
           source_item_id: post.source_item_id,
           status: 'published',
+          user_id: user.id,
+          user_signature: signature,
         }),
       });
 
@@ -205,23 +222,23 @@ export default function App() {
   };
 
   const handleQuickReplace = async (replaceFrom: string, replaceTo: string) => {
+    if (!user) return;
     try {
-      if (!user) return;
-
-      const TelegramAPI = (window as any).Telegram?.WebApp;
-      const initData = TelegramAPI?.initData || '';
+      const signature = await signUserId(user.id);
 
       const response = await fetch('/api/ai/rewrite', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `tg-init-data ${initData}`,
+          'Authorization': 'Bearer service',
         },
         body: JSON.stringify({
           text: post.body,
           style: 'neutral',
           replace_from: replaceFrom,
           replace_to: replaceTo,
+          user_id: user.id,
+          user_signature: signature,
         }),
       });
 
