@@ -196,7 +196,13 @@ async def _analyze_content_async(source_item_id: int):
 @celery_app.task(name="publish_post", bind=True, autoretry_for=(Exception,), max_retries=5)
 def publish_post(self, post_id: int, channel_id: int):
     """Publish a post to a Telegram channel."""
-    asyncio.run(_publish_post_async(post_id, channel_id, self.request.retries))
+    # Create a fresh event loop for this task
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(_publish_post_async(post_id, channel_id, self.request.retries))
+    finally:
+        loop.close()
 
 
 async def _publish_post_async(post_id: int, channel_id: int, retry_attempt: int = 0):

@@ -353,6 +353,17 @@ async def publish_post(
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
 
+    # Create publish job record
+    publish_job = PublishJob(
+        post_id=post_id,
+        channel_id=channel_id,
+        scheduled_at=datetime.utcnow(),
+        status="pending"
+    )
+    db.add(publish_job)
+    await db.commit()
+    await db.refresh(publish_job)
+
     # Queue publish task
     from workers.tasks import publish_post as publish_task
     publish_task.delay(post_id, channel_id)

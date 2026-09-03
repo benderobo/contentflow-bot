@@ -51,7 +51,8 @@ async def run_scheduler():
                     else:
                         # Check if enough time has passed since last check
                         elapsed = (datetime.utcnow() - source.last_check).total_seconds()
-                        if elapsed >= source.parse_interval:
+                        parse_interval = source.parse_interval or 3600  # Default 1 hour
+                        if elapsed >= parse_interval:
                             should_parse = True
 
                     if should_parse:
