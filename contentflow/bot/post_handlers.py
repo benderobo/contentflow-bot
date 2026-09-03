@@ -1,11 +1,12 @@
 import logging
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message, WebAppInfo
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 import os
 from datetime import datetime
 from bot.auth import make_authenticated_request
+from core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -275,7 +276,9 @@ async def handle_view_post(callback: CallbackQuery, state: FSMContext):
             status = post.get('status', '')
 
             if status == 'draft':
-                keyboard.append([InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"edit_post_{post_id}")])
+                settings = get_settings()
+                editor_url = f"{settings.webapp_url}?post_id={post_id}"
+                keyboard.append([InlineKeyboardButton(text="✏️ Редактировать", web_app=WebAppInfo(url=editor_url))])
                 keyboard.append([InlineKeyboardButton(text="🤖 Переписать", callback_data=f"ai_select_post_{post_id}")])
                 keyboard.append([InlineKeyboardButton(text="📢 Опубликовать", callback_data=f"post_publish_{post_id}")])
             elif status in ['approved', 'published']:

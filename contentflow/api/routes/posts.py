@@ -9,9 +9,8 @@ from core.database import get_db
 from models.post import Post
 from models.publish_job import PublishJob
 from models.user import User
-from api.dependencies import get_current_user
+from api.dependencies import get_current_user, verify_service_auth
 from models.channel import Channel
-from api.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -21,6 +20,7 @@ class PostCreate(BaseModel):
     title: str
     body: str
     hashtags: list = []
+    status: Optional[str] = "draft"
 
     class Config:
         extra = "forbid"  # Reject unknown fields
@@ -50,31 +50,68 @@ class PostResponse(BaseModel):
 async def list_posts(
     request: Request,
     status: Optional[str] = None,
+    user_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    """List posts for current user."""
-    user_id = current_user.id
+    """List posts for current user or by user_id."""
+    auth_header = request.headers.get("Authorization", "")
 
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Could not determine user ID")
+    # Try to get user_id from JWT token first
+    if auth_header.startswith("Bearer "):
+        try:
+            current_user = await get_current_user(request, db)
+            user_id = current_user.id
+        except HTTPException:
+            # If JWT fails, try to verify service auth
+            try:
+                await verify_service_auth(request)
+                # Service auth requires explicit user_id parameter
+                if not user_id:
+                    raise HTTPException(status_code=400, detail="user_id required for service auth")
+            except HTTPException:
+                raise HTTPException(status_code=401, detail="Unauthorized")
+    else:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid request body")
+    query = select(Post).where(Post.user_id == user_id)
 
-    # Validate through Pydantic model, exclude user_id, user_signature, media, status
-    try:
-        post_input = PostCreate(**{k: v for k, v in body.items()
-                                   if k not in ["user_id", "user_signature", "media", "status"]})
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    if status:
+        query = query.where(Post.status == status)
 
-    # Extract status if provided (defaults to 'draft')
-    post_status = body.get("status", "draft")
+    result = await db.execute(query)
+    posts = result.scalars().all()
 
-    db_post = Post(**post_input.dict(), user_id=user_id, status=post_status)
+    return [PostResponse.from_orm(post) for post in posts]
+
+
+@router.post("/")
+async def create_post(
+    request: Request,
+    post_data: PostCreate,
+    user_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new post."""
+    auth_header = request.headers.get("Authorization", "")
+
+    # Try to get user_id from JWT token first
+    if auth_header.startswith("Bearer "):
+        try:
+            current_user = await get_current_user(request, db)
+            user_id = current_user.id
+        except HTTPException:
+            # If JWT fails, try to verify service auth
+            try:
+                await verify_service_auth(request)
+                # Service auth requires explicit user_id parameter
+                if not user_id:
+                    raise HTTPException(status_code=400, detail="user_id required for service auth")
+            except HTTPException:
+                raise HTTPException(status_code=401, detail="Unauthorized")
+    else:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db_post = Post(**post_data.dict(), user_id=user_id)
     db.add(db_post)
     await db.commit()
     await db.refresh(db_post)

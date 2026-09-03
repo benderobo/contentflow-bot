@@ -728,7 +728,8 @@ def register_handlers(dp: Dispatcher):
         try:
             response = await make_authenticated_request(
                 "GET",
-                f"/api/posts?status=needs_review&user_id={callback.from_user.id}"
+                f"/api/posts?status=needs_review",
+                user_id=callback.from_user.id
             )
 
             if response and response.status_code == 200:

@@ -53,11 +53,14 @@ export default function App() {
         // Check if user is authorized
         if (userData.id) {
           setAuthorized(true);
-          // Load source item if item_id is in URL
+          // Load source item if item_id is in URL, or post if post_id is in URL
           const params = new URLSearchParams(window.location.search);
           const itemId = params.get('item_id');
+          const postId = params.get('post_id');
           if (itemId) {
             loadSourceItem(parseInt(itemId), userData.id);
+          } else if (postId) {
+            loadPost(parseInt(postId), userData.id);
           }
         } else {
           setError('Unauthorized user');
@@ -105,6 +108,35 @@ export default function App() {
       }
     } catch (err) {
       setError('Error loading article');
+      console.error(err);
+    }
+  };
+
+  const loadPost = async (postId: number, _userId: number) => {
+    try {
+      const TelegramAPI = (window as any).Telegram?.WebApp;
+      const initData = TelegramAPI?.initData || '';
+
+      const response = await fetch(`/api/posts/${postId}`, {
+        headers: {
+          'Authorization': `tg-init-data ${initData}`,
+        },
+      });
+
+      if (response.ok) {
+        const post = await response.json();
+        setPost({
+          id: postId,
+          title: post.title || '',
+          body: post.body || '',
+          hashtags: post.hashtags || [],
+          media: [],
+        });
+      } else {
+        setError('Failed to load post');
+      }
+    } catch (err) {
+      setError('Error loading post');
       console.error(err);
     }
   };
