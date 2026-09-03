@@ -23,10 +23,15 @@ async def make_authenticated_request(
 
     # If user_id is provided, add HMAC signature (in json body or query params)
     if user_id:
+        signature = sign_user_id(user_id)
         if "json" in kwargs:
-            kwargs["json"]["user_signature"] = sign_user_id(user_id)
+            kwargs["json"]["user_signature"] = signature
         elif "params" in kwargs:
-            kwargs["params"]["user_signature"] = sign_user_id(user_id)
+            kwargs["params"]["user_signature"] = signature
+        else:
+            # If no params dict yet, add user_id to endpoint URL
+            separator = "&" if "?" in endpoint else "?"
+            endpoint = f"{endpoint}{separator}user_id={user_id}&user_signature={signature}"
 
     try:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:

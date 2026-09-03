@@ -66,16 +66,13 @@ async def list_posts(
             user_id = current_user.id
         except HTTPException:
             # If JWT fails, try to verify service auth
-            try:
-                await verify_service_auth(request)
-                # Service auth requires explicit user_id and signature
-                if not user_id or not user_signature:
-                    raise HTTPException(status_code=400, detail="user_id and user_signature required for service auth")
-                # Verify signature to prevent privilege escalation
-                if not verify_user_id(int(user_id), user_signature):
-                    raise HTTPException(status_code=403, detail="Invalid user signature")
-            except HTTPException:
-                raise HTTPException(status_code=401, detail="Unauthorized")
+            await verify_service_auth(request)
+            # Service auth requires explicit user_id and signature
+            if not user_id or not user_signature:
+                raise HTTPException(status_code=400, detail="user_id and user_signature required for service auth")
+            # Verify signature to prevent privilege escalation
+            if not verify_user_id(int(user_id), user_signature):
+                raise HTTPException(status_code=403, detail="Invalid user signature")
     else:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -110,16 +107,13 @@ async def create_post(
             user_id = current_user.id
         except HTTPException:
             # If JWT fails, try to verify service auth
-            try:
-                await verify_service_auth(request)
-                # Service auth requires explicit user_id and signature
-                if not user_id or not user_signature:
-                    raise HTTPException(status_code=400, detail="user_id and user_signature required for service auth")
-                # Verify signature to prevent privilege escalation
-                if not verify_user_id(int(user_id), user_signature):
-                    raise HTTPException(status_code=403, detail="Invalid user signature")
-            except HTTPException:
-                raise HTTPException(status_code=401, detail="Unauthorized")
+            await verify_service_auth(request)
+            # Service auth requires explicit user_id and signature
+            if not user_id or not user_signature:
+                raise HTTPException(status_code=400, detail="user_id and user_signature required for service auth")
+            # Verify signature to prevent privilege escalation
+            if not verify_user_id(int(user_id), user_signature):
+                raise HTTPException(status_code=403, detail="Invalid user signature")
     else:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
