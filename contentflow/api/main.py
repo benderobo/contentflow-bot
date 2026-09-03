@@ -3,6 +3,7 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from core.config import get_settings
@@ -78,6 +79,12 @@ app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 app.include_router(channels.router, prefix="/api/channels", tags=["channels"])
 app.include_router(ai.router, prefix="/api/ai", tags=["ai"])
 app.include_router(stats.router, prefix="/api/stats", tags=["stats"])
+
+
+@app.get("/app")
+async def serve_app_root():
+    """Serve web app."""
+    return HTMLResponse("<h1>📝 ContentFlow Editor</h1><p>Веб-редактор для постов</p>")
 
 # Mount web app - serve from ../web/build
 web_build_path = os.path.join(os.path.dirname(__file__), "..", "web", "build")
