@@ -57,27 +57,45 @@ async def list_posts(
 ):
     """List posts for current user or by user_id."""
     from utils.auth import verify_user_id
+    from utils.webapp_auth import verify_webapp_init_data
+    from core.config import get_settings
 
     auth_header = request.headers.get("Authorization", "")
+    settings = get_settings()
+    extracted_user_id = None
 
-    # Try to get user_id from JWT token first
-    if auth_header.startswith("Bearer "):
+    # Try tg-init-data auth first (for miniapp)
+    if auth_header.startswith("tg-init-data "):
+        init_data = auth_header.replace("tg-init-data ", "", 1)
+        user_data = verify_webapp_init_data(init_data, settings.bot_token)
+        if user_data and "user" in user_data:
+            extracted_user_id = user_data["user"].get("id")
+
+    # Try JWT token
+    elif auth_header.startswith("Bearer "):
         try:
             current_user = await get_current_user(request, db)
-            user_id = current_user.id
+            extracted_user_id = current_user.id
         except HTTPException:
             # If JWT fails, try to verify service auth
-            await verify_service_auth(request)
-            # Service auth requires explicit user_id and signature
-            if not user_id or not user_signature:
-                raise HTTPException(status_code=400, detail="user_id and user_signature required for service auth")
-            # Verify signature to prevent privilege escalation
-            if not verify_user_id(int(user_id), user_signature):
-                raise HTTPException(status_code=403, detail="Invalid user signature")
+            try:
+                await verify_service_auth(request)
+                # Service auth requires explicit user_id and signature
+                if not user_id or not user_signature:
+                    raise HTTPException(status_code=400, detail="user_id and user_signature required for service auth")
+                # Verify signature to prevent privilege escalation
+                if not verify_user_id(int(user_id), user_signature):
+                    raise HTTPException(status_code=403, detail="Invalid user signature")
+                extracted_user_id = int(user_id)
+            except HTTPException:
+                raise HTTPException(status_code=401, detail="Unauthorized")
     else:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    query = select(Post).where(Post.user_id == user_id)
+    if not extracted_user_id:
+        raise HTTPException(status_code=401, detail="Could not extract user ID")
+
+    query = select(Post).where(Post.user_id == extracted_user_id)
 
     if status:
         query = query.where(Post.status == status)
@@ -99,27 +117,45 @@ async def create_post(
 ):
     """Create a new post."""
     from utils.auth import verify_user_id
+    from utils.webapp_auth import verify_webapp_init_data
+    from core.config import get_settings
 
     auth_header = request.headers.get("Authorization", "")
+    settings = get_settings()
+    extracted_user_id = None
 
-    # Try to get user_id from JWT token first
-    if auth_header.startswith("Bearer "):
+    # Try tg-init-data auth first (for miniapp)
+    if auth_header.startswith("tg-init-data "):
+        init_data = auth_header.replace("tg-init-data ", "", 1)
+        user_data = verify_webapp_init_data(init_data, settings.bot_token)
+        if user_data and "user" in user_data:
+            extracted_user_id = user_data["user"].get("id")
+
+    # Try JWT token
+    elif auth_header.startswith("Bearer "):
         try:
             current_user = await get_current_user(request, db)
-            user_id = current_user.id
+            extracted_user_id = current_user.id
         except HTTPException:
             # If JWT fails, try to verify service auth
-            await verify_service_auth(request)
-            # Service auth requires explicit user_id and signature
-            if not user_id or not user_signature:
-                raise HTTPException(status_code=400, detail="user_id and user_signature required for service auth")
-            # Verify signature to prevent privilege escalation
-            if not verify_user_id(int(user_id), user_signature):
-                raise HTTPException(status_code=403, detail="Invalid user signature")
+            try:
+                await verify_service_auth(request)
+                # Service auth requires explicit user_id and signature
+                if not user_id or not user_signature:
+                    raise HTTPException(status_code=400, detail="user_id and user_signature required for service auth")
+                # Verify signature to prevent privilege escalation
+                if not verify_user_id(int(user_id), user_signature):
+                    raise HTTPException(status_code=403, detail="Invalid user signature")
+                extracted_user_id = int(user_id)
+            except HTTPException:
+                raise HTTPException(status_code=401, detail="Unauthorized")
     else:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    db_post = Post(**post_data.dict(), user_id=user_id)
+    if not extracted_user_id:
+        raise HTTPException(status_code=401, detail="Could not extract user ID")
+
+    db_post = Post(**post_data.dict(), user_id=extracted_user_id)
     db.add(db_post)
     await db.commit()
     await db.refresh(db_post)
@@ -136,19 +172,34 @@ async def get_post(
 ):
     """Get a single post by ID."""
     from utils.auth import verify_user_id
+    from utils.webapp_auth import verify_webapp_init_data
+    from core.config import get_settings
 
     auth_header = request.headers.get("Authorization", "")
+    settings = get_settings()
+    extracted_user_id = None
 
-    if not auth_header.startswith("Bearer "):
+    # Try tg-init-data auth first (for miniapp)
+    if auth_header.startswith("tg-init-data "):
+        init_data = auth_header.replace("tg-init-data ", "", 1)
+        user_data = verify_webapp_init_data(init_data, settings.bot_token)
+        if user_data and "user" in user_data:
+            extracted_user_id = user_data["user"].get("id")
+
+    # Try Bearer token auth
+    elif auth_header.startswith("Bearer "):
+        try:
+            await verify_service_auth(request)
+            if not user_id or not user_signature:
+                raise HTTPException(status_code=400, detail="user_id and user_signature required")
+            if not verify_user_id(user_id, user_signature):
+                raise HTTPException(status_code=403, detail="Invalid signature")
+            extracted_user_id = int(user_id)
+        except HTTPException:
+            raise
+
+    if not extracted_user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
-
-    await verify_service_auth(request)
-
-    if not user_id or not user_signature:
-        raise HTTPException(status_code=400, detail="user_id and user_signature required")
-
-    if not verify_user_id(user_id, user_signature):
-        raise HTTPException(status_code=403, detail="Invalid signature")
 
     result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
@@ -156,7 +207,7 @@ async def get_post(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    if post.user_id != user_id:
+    if post.user_id != extracted_user_id:
         raise HTTPException(status_code=403, detail="Access denied")
 
     return PostResponse.from_orm(post)

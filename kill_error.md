@@ -388,14 +388,14 @@ python3 -c "from dotenv import load_dotenv; load_dotenv('.env'); import config; 
 ### Error #1: BOT_TOKEN Compromised in Git History ✅
 **Symptom:** Bot couldn't authenticate - "Conflict: terminated by other getUpdates request"
 
-**Root Cause:** `BOT_TOKEN=8660988275:AAHxamyem5NALsqAUcVRTohpwT7b3KUSgeA` was hardcoded and committed to git
+**Root Cause:** Previous BOT_TOKEN was hardcoded and committed to git
 - Token exposed in public repository history
 - Telegram API detected multiple connections from same token (bot + processes using exposed token)
 - 409 Conflict errors due to token being used elsewhere
 
 **Solution:**
 1. ✅ Rotated BOT_TOKEN via @BotFather in Telegram
-2. ✅ Updated `.env` with new token: `8660988275:AAEsItHyTNsdr9gyvayR9Hddz1oi5k8J1oo`
+2. ✅ Updated `.env` with new token (stored in .env, not in git)
 3. ✅ Verified `.env` in `.gitignore` (prevent re-exposure)
 4. ✅ Restarted bot container with new token
 

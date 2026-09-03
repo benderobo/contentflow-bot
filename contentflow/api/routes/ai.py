@@ -40,34 +40,25 @@ async def get_ai_stats(
     """Get AI usage statistics summary for a user."""
     user_id = current_user.id
 
-    # Get post
-    result = await db.execute(select(Post).where(Post.id == post_id))
-    post = result.scalar_one_or_none()
+    # Get AI requests for this user
+    result = await db.execute(
+        select(AIRequest)
+        .where(AIRequest.user_id == user_id)
+        .order_by(AIRequest.created_at.desc())
+        .limit(100)
+    )
+    requests = result.scalars().all()
 
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+    total_tokens = sum(r.total_tokens for r in requests if r.total_tokens)
+    estimated_cost = total_tokens * 0.00001  # Rough estimate
 
-    if post.user_id != int(user_id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
-
-    try:
-        ai_service = get_ai_provider()
-        rewritten = await ai_service.rewrite_content(post.body, style=style)
-
-        # Store original for comparison
-        post.rewrite_original = post.body
-        post.rewrite_candidate = rewritten
-        db.add(post)
-        await db.commit()
-
-        return {
-            "id": post.id,
-            "original_content": post.body,
-            "rewritten_content": rewritten,
-            "style": style
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
+    return {
+        "requests": len(requests),
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": total_tokens,
+        "estimated_cost": estimated_cost
+    }
 
 
 @router.post("/posts/{post_id}/use-rewrite")
@@ -118,14 +109,26 @@ async def use_rewrite_post(
     return {"message": "Rewritten content applied", "post_id": post.id}
 
 
+def get_ai_provider():
+    """Get AI provider based on settings."""
+    if settings.openai_api_key:
+        return OpenAIProvider(settings.openai_api_key, settings.ai_model)
+    elif settings.anthropic_api_key:
+        return AnthropicProvider(settings.anthropic_api_key, settings.ai_model)
+    elif settings.ollama_url:
+        return OllamaProvider(settings.ollama_url, settings.ollama_model)
+    else:
+        return MockProvider()
+
+
 @router.post("/rewrite")
 async def rewrite_content(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """Rewrite content using AI (supports bot API and WebApp auth)."""
-    from api.dependencies import verify_user_id_signature
     from utils.webapp_auth import verify_webapp_init_data
+    from api.dependencies import verify_service_auth
 
     user_id = None
 
@@ -141,8 +144,11 @@ async def rewrite_content(
     if not user_id:
         try:
             await verify_service_auth(request)
-            user_id = await verify_user_id_signature(request)
-        except HTTPException:
+            body = await request.json()
+            user_id = body.get("user_id")
+            if user_id:
+                user_id = int(user_id)
+        except (HTTPException, Exception):
             raise HTTPException(status_code=401, detail="Unauthorized")
 
     if not user_id:
