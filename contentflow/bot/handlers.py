@@ -315,14 +315,19 @@ def register_handlers(dp: Dispatcher):
 
     @router.message(F.text == "✨ Редактор")
     async def handle_editor_button(message: Message):
-        """Handle editor button."""
+        """Handle editor button - open web app."""
         settings = get_settings()
         markup = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="🔗 Открыть редактор", web_app=WebAppInfo(url=settings.webapp_url))]
+                [InlineKeyboardButton(text="✏️ Открыть редактор", web_app=WebAppInfo(url=settings.webapp_url))]
             ]
         )
-        await message.answer("✨ Редактор контента\n\nНажмите кнопку для открытия редактора:", reply_markup=markup)
+        await message.answer(
+            "📝 **ContentFlow Web Editor**\n\n"
+            "Нажмите кнопку ниже чтобы открыть веб-редактор в миниприложении Telegram.",
+            reply_markup=markup,
+            parse_mode="Markdown"
+        )
 
     @router.callback_query(F.data == "menu_main")
     async def handle_menu_main(callback: CallbackQuery):

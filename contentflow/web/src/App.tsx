@@ -47,38 +47,56 @@ export default function App() {
 
   useEffect(() => {
     // Initialize Telegram Web App
+    console.log('Initializing ContentFlow Web App...');
+    console.log('Telegram available:', !!(window as any).Telegram);
+
     if (typeof window !== 'undefined' && (window as any).Telegram) {
-      const TelegramAPI = (window as any).Telegram.WebApp;
-      TelegramAPI.ready();
+      try {
+        const TelegramAPI = (window as any).Telegram.WebApp;
+        console.log('TelegramAPI ready, calling ready()');
+        TelegramAPI.ready();
 
-      const initData = TelegramAPI.initDataUnsafe;
-      if (initData?.user) {
-        const userData = initData.user as TelegramUser;
-        setUser(userData);
+        const initData = TelegramAPI.initDataUnsafe;
+        console.log('initDataUnsafe:', initData);
 
-        // Check if user is authorized
-        if (userData.id) {
-          setAuthorized(true);
-          // Load source item if item_id is in URL, or post if post_id is in URL
-          const params = new URLSearchParams(window.location.search);
-          const itemId = params.get('item_id');
-          const postId = params.get('post_id');
-          if (itemId) {
-            loadSourceItem(parseInt(itemId), userData.id);
-          } else if (postId) {
-            loadPost(parseInt(postId), userData.id);
+        if (initData?.user) {
+          const userData = initData.user as TelegramUser;
+          console.log('User data received:', userData.id, userData.first_name);
+          setUser(userData);
+
+          // Check if user is authorized
+          if (userData.id) {
+            setAuthorized(true);
+            // Load source item if item_id is in URL, or post if post_id is in URL
+            const params = new URLSearchParams(window.location.search);
+            const itemId = params.get('item_id');
+            const postId = params.get('post_id');
+            if (itemId) {
+              loadSourceItem(parseInt(itemId), userData.id);
+            } else if (postId) {
+              loadPost(parseInt(postId), userData.id);
+            }
+          } else {
+            setError('Unauthorized user');
+            setAuthorized(false);
+          }
+
+          // Expand app to full screen
+          try {
+            TelegramAPI.expand();
+          } catch (e) {
+            console.error('Error expanding app:', e);
           }
         } else {
-          setError('Unauthorized user');
-          setAuthorized(false);
+          console.warn('No user data in initDataUnsafe');
+          setError('Could not retrieve user data from Telegram');
         }
-
-        // Expand app to full screen
-        TelegramAPI.expand();
-      } else {
-        setError('Could not retrieve user data');
+      } catch (e) {
+        console.error('Error initializing Telegram WebApp:', e);
+        setError('Error: ' + String(e));
       }
     } else {
+      console.log('Telegram WebApp API not available - using fallback');
       // Fallback for development/testing
       setAuthorized(true);
       setUser({
