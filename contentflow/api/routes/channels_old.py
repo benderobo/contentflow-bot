@@ -7,7 +7,7 @@ from typing import Optional
 from core.database import get_db
 from models.channel import Channel
 from models.user import User
-from api.dependencies import verify_service_auth
+from api.dependencies import verify_service_auth, get_current_user
 from utils.auth import verify_user_id
 
 router = APIRouter()
@@ -50,7 +50,7 @@ async def list_channels(
     user_signature: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """List channels for user with service auth."""
+    """List channels for user."""
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -71,13 +71,10 @@ async def list_channels(
 async def create_channel(
     request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Create a new channel with service auth."""
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-    await verify_service_auth(request)
+    """Create a new channel."""
+    from utils.auth import verify_user_id
 
     try:
         body = await request.json()
@@ -109,66 +106,39 @@ async def create_channel(
 @router.get("/{channel_id}")
 async def get_channel(
     channel_id: int,
-    request: Request,
-    user_id: int,
-    user_signature: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Get a channel by ID with service auth."""
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-    await verify_service_auth(request)
-
-    if not verify_user_id(user_id, user_signature):
-        raise HTTPException(status_code=403, detail="Invalid signature")
-
+    """Get a specific channel."""
     result = await db.execute(select(Channel).where(Channel.id == channel_id))
     channel = result.scalar_one_or_none()
-
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-
-    if channel.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-
+    if channel.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     return ChannelResponse.from_orm(channel)
 
 
 @router.patch("/{channel_id}")
 async def update_channel(
     channel_id: int,
-    channel_update: ChannelUpdate,
-    request: Request,
-    user_id: int,
-    user_signature: str,
+    updates: ChannelUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Update a channel with service auth."""
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-    await verify_service_auth(request)
-
-    if not verify_user_id(user_id, user_signature):
-        raise HTTPException(status_code=403, detail="Invalid signature")
-
+    """Update a channel."""
     result = await db.execute(select(Channel).where(Channel.id == channel_id))
     channel = result.scalar_one_or_none()
-
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
+    if channel.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
-    if channel.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    update_data = channel_update.dict(exclude_unset=True)
+    # Only update whitelisted fields
+    update_data = updates.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(channel, field, value)
 
     db.add(channel)
     await db.commit()
-    await db.refresh(channel)
     return ChannelResponse.from_orm(channel)
