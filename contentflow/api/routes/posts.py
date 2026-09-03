@@ -46,7 +46,8 @@ class PostResponse(BaseModel):
         from_attributes = True
 
 
-@router.get("/")
+@router.get("/", name="list_posts_slash")
+@router.get("", name="list_posts_no_slash")
 async def list_posts(
     request: Request,
     status: Optional[str] = None,
@@ -87,7 +88,8 @@ async def list_posts(
     return [PostResponse.from_orm(post) for post in posts]
 
 
-@router.post("/")
+@router.post("/", name="create_post_slash")
+@router.post("", name="create_post_no_slash")
 async def create_post(
     request: Request,
     post_data: PostCreate,
