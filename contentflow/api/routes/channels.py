@@ -7,7 +7,7 @@ from typing import Optional
 from core.database import get_db
 from models.channel import Channel
 from models.user import User
-from api.dependencies import verify_service_auth, get_current_user
+from api.dependencies import get_current_user, get_current_user
 
 router = APIRouter()
 
@@ -58,7 +58,7 @@ async def list_channels(
 async def create_channel(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Create a new channel."""
     from utils.auth import verify_user_id
@@ -95,7 +95,7 @@ async def get_channel(
     channel_id: int,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a specific channel."""
     user_id_str = request.query_params.get("user_id")
@@ -123,7 +123,7 @@ async def update_channel(
     updates: ChannelUpdate,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Update a channel."""
     user_id_str = request.query_params.get("user_id")

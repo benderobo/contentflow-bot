@@ -7,7 +7,7 @@ from typing import Optional
 
 from core.database import get_db
 from models.user import User
-from api.dependencies import verify_service_auth
+from api.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -34,7 +34,7 @@ class UserResponse(BaseModel):
 async def create_or_get_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Create user if doesn't exist, or return existing."""
     from utils.auth import verify_user_id
@@ -95,7 +95,7 @@ async def get_user(
     user_id: int,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Get user by telegram_id."""
     result = await db.execute(select(User).where(User.telegram_id == user_id))
@@ -112,7 +112,7 @@ async def update_user(
     user_id: int,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Update user by telegram_id."""
     import logging

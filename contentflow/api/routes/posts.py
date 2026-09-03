@@ -11,7 +11,7 @@ from models.publish_job import PublishJob
 from models.user import User
 from api.dependencies import get_current_user
 from models.channel import Channel
-from api.dependencies import verify_service_auth
+from api.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -51,84 +51,10 @@ async def list_posts(
     request: Request,
     status: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """List posts for current user."""
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-
-    query = select(Post).where(Post.user_id == user_id)
-    if status:
-        query = query.where(Post.status == status)
-    query = query.order_by(Post.created_at.desc())
-
-    result = await db.execute(query)
-    posts = result.scalars().all()
-    return [PostResponse.from_orm(p) for p in posts]
-
-
-@router.get("/{post_id}")
-async def get_post(
-    post_id: int,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get a specific post."""
-    result = await db.execute(select(Post).where(Post.id == post_id))
-    post = result.scalar_one_or_none()
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-    if post.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-    return PostResponse.from_orm(post)
-
-
-@router.post("/")
-async def create_post(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    """Create a new post (supports both WebApp auth and service auth)."""
-    from utils.auth import verify_user_id
-    from utils.webapp_auth import verify_webapp_init_data
-    from core.config import get_settings
-
-    user_id = None
-
-    # Try WebApp initData auth first (for miniapp)
-    auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("tg-init-data "):
-        init_data = auth_header.replace("tg-init-data ", "", 1)
-        settings = get_settings()
-        user_data = verify_webapp_init_data(init_data, settings.bot_token)
-        if user_data and "user" in user_data:
-            user_id = user_data["user"].get("id")
-
-    # Fall back to service auth (for bot handlers)
-    if not user_id:
-        try:
-            await verify_service_auth(request)
-        except HTTPException:
-            raise HTTPException(status_code=401, detail="Unauthorized")
-
-        try:
-            body = await request.json()
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid request body")
-
-        user_id = body.get("user_id")
-        user_signature = body.get("user_signature")
-
-        if not user_id or not user_signature:
-            raise HTTPException(status_code=400, detail="user_id and user_signature required")
-
-        if not verify_user_id(int(user_id), user_signature):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+    user_id = current_user.id
 
     if not user_id:
         raise HTTPException(status_code=401, detail="Could not determine user ID")
@@ -338,7 +264,7 @@ class PublishScheduleRequest(BaseModel):
 async def publish_now(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Publish post immediately."""
     from utils.auth import verify_user_id
@@ -394,7 +320,7 @@ async def publish_now(
 async def schedule_publish(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Schedule post for later publishing."""
     from utils.auth import verify_user_id
@@ -456,25 +382,12 @@ async def schedule_publish(
 async def get_scheduled_posts(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Get scheduled posts for user."""
     from utils.auth import verify_user_id
 
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-    user_signature = request.query_params.get("user_signature")
-
-    if not user_id or not user_signature:
-        raise HTTPException(status_code=400, detail="user_id and user_signature required")
-
-    if not verify_user_id(int(user_id), user_signature):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+    user_id = current_user.id
 
     # Get user's channels
     channels_result = await db.execute(
@@ -517,7 +430,7 @@ async def cancel_publish_job(
     job_id: int,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Cancel scheduled publish job."""
     from utils.auth import verify_user_id

@@ -4,10 +4,11 @@ from sqlalchemy import select
 from typing import Optional
 
 from core.database import get_db
+from models.user import User
 from models.source import Source
 from models.source_item import SourceItem
 from pydantic import BaseModel
-from api.dependencies import verify_service_auth
+from api.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -50,75 +51,11 @@ class SourceResponse(BaseModel):
 async def list_sources(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """List all sources for a user."""
     # Get user_id from query params
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-
-    result = await db.execute(
-        select(Source).where(Source.user_id == user_id).order_by(Source.created_at.desc())
-    )
-    sources = result.scalars().all()
-    return [SourceResponse.from_orm(s) for s in sources]
-
-
-@router.get("/{source_id}")
-async def get_source(
-    source_id: int,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
-):
-    """Get a specific source."""
-    user_id_str = request.query_params.get("user_id")
-    if not user_id_str:
-        raise HTTPException(status_code=400, detail="user_id required")
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id must be an integer")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id required")
-
-    result = await db.execute(select(Source).where(Source.id == source_id))
-    source = result.scalar_one_or_none()
-    if not source:
-        raise HTTPException(status_code=404, detail="Source not found")
-    if source.user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-    return SourceResponse.from_orm(source)
-
-
-@router.post("/")
-async def create_source(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
-):
-    """Create a new source."""
-    from utils.auth import verify_user_id
-
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid request body")
-
-    user_id = body.get("user_id")
-    user_signature = body.get("user_signature")
-
-    if not user_id or not user_signature:
-        raise HTTPException(status_code=400, detail="user_id and user_signature required")
-
-    if not verify_user_id(int(user_id), user_signature):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid user signature")
+    user_id = current_user.id
 
     # Validate through Pydantic model
     try:
@@ -139,7 +76,7 @@ async def update_source(
     source_update: SourceUpdate,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Update a source."""
     user_id_str = request.query_params.get("user_id")
@@ -174,7 +111,7 @@ async def delete_source(
     source_id: int,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a source."""
     user_id_str = request.query_params.get("user_id")
@@ -203,7 +140,7 @@ async def delete_source(
 async def get_unanalyzed_items(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Get unanalyzed source items for a user."""
     user_id_str = request.query_params.get("user_id")
@@ -326,7 +263,7 @@ async def get_source_item(
 async def parse_all_sources(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(verify_service_auth),
+    current_user: User = Depends(get_current_user),
 ):
     """Parse all enabled sources for a user."""
     from services.parser import ParserFactory
