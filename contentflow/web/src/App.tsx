@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import './App.css';
-import Editor from './components/Editor';
-import Preview from './components/Preview';
-import Toolbar from './components/Toolbar';
+import Editor from './components/Editor.tsx';
+import Preview from './components/Preview.tsx';
+import Toolbar from './components/Toolbar.tsx';
 
 interface TelegramUser {
   id: number;
