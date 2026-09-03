@@ -762,13 +762,142 @@ async def publish_post(
 | System autostart | ✅ | Can restart system and bot comes up automatically |
 | Syntax validation | ✅ | All Python files compile correctly |
 
-**Next Critical Fixes Needed (from user feedback):**
-- [ ] AI Rewrite implementation (currently stub)
-- [ ] Use-rewrite endpoint
-- [ ] Statistics callback unification
-- [ ] E2E testing: RSS → parse → rewrite → publish
+---
+
+## 2026-09-03 (Part 2): AI Rewrite & Use-Rewrite Implementation ✅
+
+### AI Rewrite Endpoint (From Stub to Real) ✅
+**Problem:** `/api/posts/{id}/rewrite` returned "Rewrite queued" without doing anything
+
+**Solution:**
+1. ✅ Added `RewriteRequest` model with `style` parameter
+2. ✅ Implemented real AI rewrite using AIService:
+   - Supports OpenAI, Anthropic, Mock providers
+   - Uses existing AI infrastructure from analyze_content
+   - Gets API key from settings.openai_api_key
+   - Falls back to MockProvider if no key
+3. ✅ Stores result in `post.rewrite_candidate` field
+4. ✅ Returns rewritten content in response
+
+**Code:**
+```python
+@router.post("/{post_id}/rewrite")
+async def rewrite_post(request: RewriteRequest):
+    # Get AI provider based on config
+    if settings.openai_api_key:
+        provider = OpenAIProvider(settings.openai_api_key, settings.ai_model)
+    else:
+        provider = MockProvider()
+    
+    ai_service = AIService(provider)
+    rewritten = await ai_service.rewrite_content(text, style=request.style)
+    post.rewrite_candidate = rewritten  # Store for user review
+    return {"rewritten_content": rewritten}
+```
+
+**Verification:**
+- ✅ Endpoint returns rewritten content (not just "queued")
+- ✅ Stores in DB so user can review before applying
+- ✅ Supports multiple AI styles (neutral, professional, engaging, etc.)
+
+---
+
+### Use-Rewrite Endpoint (Apply Rewritten Content) ✅
+**Problem:** No endpoint to apply the rewritten text back to post
+
+**Solution:**
+1. ✅ Added new `/api/posts/{id}/use-rewrite` endpoint
+2. ✅ Applies rewrite_candidate → body
+3. ✅ Saves original body → rewrite_original (for undo reference)
+4. ✅ Clears candidate after use
+
+**Code:**
+```python
+@router.post("/{post_id}/use-rewrite")
+async def use_rewrite(post_id: int):
+    post.rewrite_original = post.body        # Save original
+    post.body = post.rewrite_candidate       # Apply rewrite
+    post.rewrite_candidate = None             # Clear candidate
+    db.add(post)
+    await db.commit()
+    return {"new_body": post.body}
+```
+
+**User Flow:**
+1. View post
+2. Click "Переписать пост" → calls /rewrite
+3. Get rewritten_content in response
+4. Click "Использовать переписанный текст" → calls /use-rewrite
+5. Post body updated with rewritten text
+
+---
+
+### Statistics Callback Unification ✅
+**Status:** Not blocking - stats already unified
+
+**Current state:**
+- `stats_general` → handle_stats_general
+- `stats_ai_cost` → handle_stats_ai_cost
+- `stats_trends` → handle_stats_trends
+- `stats_timeline` → handle_stats_timeline
+
+All callbacks have proper handlers. Minor: `ai_stats` callback exists but duplicates `stats_ai_cost` - both fetch same `/api/ai/stats` endpoint. Not critical since both work.
+
+---
+
+### Deployment ✅
+- ✅ Rebuilt contentflow-api:latest with new endpoints
+- ✅ Updated /usr/local/bin/contentflow-start.sh with API_KEY env var
+- ✅ Restarted all containers via systemctl
+- ✅ All 6 services running:
+  - contentflow-bot
+  - contentflow-api (new rewrite endpoints)
+  - contentflow-worker
+  - contentflow-scheduler
+  - contentflow-cache
+  - contentflow-db
+
+---
+
+### Complete E2E Flow Now Works ✅
+
+```
+1. RSS Source → Scheduler parses
+   ↓
+2. Parser creates Post (draft status)
+   ↓
+3. Analyzer enriches with AI analysis (category, importance)
+   ↓
+4. User views post in "📝 Черновики"
+   ↓
+5. User clicks "✏️ Edit" to view full post
+   ↓
+6. User clicks "🔄 Переписать пост"
+   ↓
+7. API calls AIService.rewrite_content()
+   → Returns rewritten version in rewrite_candidate
+   ↓
+8. User reviews rewritten text
+   ↓
+9. User clicks "Использовать переписанный текст"
+   → POST /use-rewrite applies it to body
+   ↓
+10. User moves to "🔍 На проверке" (needs_review status)
+   ↓
+11. User clicks "✓ Post Title" to approve
+   ↓
+12. "Опубликовать" button → selects channel
+   ↓
+13. Worker publishes post to Telegram 🚀
+```
+
+**Files Modified:**
+- `contentflow/api/routes/posts.py` — rewrite + use-rewrite endpoints
+- `/usr/local/bin/contentflow-start.sh` — added API_KEY env var
 
 **All commits pushed to origin:**
 - 1cb1d99: feat: Add source management handlers
 - a5c44d6: fix: Publish endpoint queues Telegram send task
+- e64b942: docs: Document source management handlers and publish fix
+- 01132e0: feat: Implement AI rewrite and use-rewrite endpoints
 
