@@ -1,6 +1,8 @@
 import logging
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from core.config import get_settings
@@ -76,6 +78,14 @@ app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 app.include_router(channels.router, prefix="/api/channels", tags=["channels"])
 app.include_router(ai.router, prefix="/api/ai", tags=["ai"])
 app.include_router(stats.router, prefix="/api/stats", tags=["stats"])
+
+# Mount web app - serve from ../web/build or fallback to creating a placeholder
+web_build_path = os.path.join(os.path.dirname(__file__), "..", "web", "build")
+if os.path.exists(web_build_path) and os.listdir(web_build_path):
+    app.mount("/app", StaticFiles(directory=web_build_path, html=True), name="web")
+    logger.info(f"Mounted web app at /app from {web_build_path}")
+else:
+    logger.warning(f"Web app build not found at {web_build_path}, web miniapp will not be available")
 
 
 if __name__ == "__main__":
