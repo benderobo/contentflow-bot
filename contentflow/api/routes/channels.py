@@ -67,7 +67,8 @@ async def list_channels(
     return [ChannelResponse.from_orm(c) for c in channels]
 
 
-@router.post("/")
+@router.post("/", name="create_channel_slash")
+@router.post("", name="create_channel_no_slash")
 async def create_channel(
     request: Request,
     db: AsyncSession = Depends(get_db),
