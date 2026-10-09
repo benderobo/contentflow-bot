@@ -81,21 +81,20 @@ app.include_router(ai.router, prefix="/api/ai", tags=["ai"])
 app.include_router(stats.router, prefix="/api/stats", tags=["stats"])
 
 
-@app.get("/app")
-async def serve_app_root():
-    """Serve web app."""
-    return HTMLResponse("<h1>📝 ContentFlow Editor</h1><p>Веб-редактор для постов</p>")
-
-# Mount web app - serve from ../web/build
+# Serve web app from ../web/build. Must be registered after the API routers.
+# A single Mount handles /app, /app/ and /app?post_id=... (an explicit
+# @app.get("/app") route would shadow the mount for the bot's URLs).
 web_build_path = os.path.join(os.path.dirname(__file__), "..", "web", "build")
-try:
-    if os.path.exists(web_build_path) and os.listdir(web_build_path):
-        app.mount("/app", StaticFiles(directory=web_build_path, html=True), name="web")
-        logger.info(f"✅ Mounted web app at /app from {web_build_path}")
-    else:
-        logger.warning(f"⚠️ Web app build not found at {web_build_path}")
-except Exception as e:
-    logger.error(f"❌ Error mounting web app: {e}")
+if os.path.isdir(web_build_path) and os.listdir(web_build_path):
+    app.mount("/app", StaticFiles(directory=web_build_path, html=True), name="web")
+    logger.info(f"Mounted web app at /app from {web_build_path}")
+else:
+    logger.warning(f"Web app build not found at {web_build_path}, serving placeholder")
+
+    @app.get("/app")
+    async def serve_app_placeholder():
+        """Fallback when the React build is missing."""
+        return HTMLResponse("<h1>📝 ContentFlow Editor</h1><p>Веб-редактор для постов</p>")
 
 
 if __name__ == "__main__":
