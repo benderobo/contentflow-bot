@@ -1,7 +1,0 @@
-api_server.py
-*.py
-*.pyc
-__pycache__/
-.env
-.env.local
-.env.*.local
