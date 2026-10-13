@@ -359,7 +359,7 @@ Create Post (зависит от парсинга)
 
 ### .env
 ```
-BOT_TOKEN=8660988275:AAHxamyem5NALsqAUcVRTohpwT7b3KUSgeA  ⚠️ РЕАЛЬНЫЙ ТОКЕН В ГИТЕ!
+BOT_TOKEN=<REDACTED_BOT_TOKEN>  ⚠️ РЕАЛЬНЫЙ ТОКЕН В ГИТЕ!
 DATABASE_URL=postgresql://contentflow:contentflow@postgres:5432/contentflow
 REDIS_URL=redis://redis:6379/0
 AI_PROVIDER=openrouter

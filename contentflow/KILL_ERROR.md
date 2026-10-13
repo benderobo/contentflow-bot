@@ -141,7 +141,7 @@
 
 ```env
 # Telegram Bot
-BOT_TOKEN=8660988275:AAHxamyem5NALsqAUcVRTohpwT7b3KUSgeA
+BOT_TOKEN=<REDACTED_BOT_TOKEN>
 API_KEY=internal-bot-key-production-change-this
 API_URL=http://contentflow-api:8000
 
