@@ -34,6 +34,7 @@ DB_CONTAINER="${DB_CONTAINER:-contentflow-db}"
 WEB_CONTAINER="${WEB_CONTAINER:-contentflow-web}"
 REMOTE_NAME="${DEPLOY_REMOTE:-origin}"
 REPO_URL="${DEPLOY_REPO_URL:-}"
+WEB_NGINX_CONF="${WEB_NGINX_CONF:-$REPO_DIR/contentflow/web/nginx.conf}"   # override when the checkout is older than the script
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
 fail() { echo "::error::$*" >&2; exit 1; }
@@ -180,7 +181,8 @@ sync_web() {
   [ -f "$tmp/index.html" ] || fail "the API image has no web build; refusing to sync the web container"
   docker cp "$tmp/." "$WEB_CONTAINER:/usr/share/nginx/html/"
   rm -rf "$tmp"
-  docker cp "$REPO_DIR/contentflow/web/nginx.conf" "$WEB_CONTAINER:/etc/nginx/conf.d/default.conf"
+  [ -f "$WEB_NGINX_CONF" ] || fail "nginx config not found: $WEB_NGINX_CONF"
+  docker cp "$WEB_NGINX_CONF" "$WEB_CONTAINER:/etc/nginx/conf.d/default.conf"
   docker exec "$WEB_CONTAINER" nginx -t
   docker exec "$WEB_CONTAINER" nginx -s reload
 }
