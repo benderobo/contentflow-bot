@@ -9,6 +9,7 @@ name: Deploy ContentFlow (manual)
 #   secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS, DEPLOY_PATH
 #   DEPLOY_PATH  = repo root on the server (the folder that contains contentflow/)
 #   DEPLOY_KNOWN_HOSTS = output of `ssh-keyscan -t ed25519 <host>` taken from a trusted machine
+# The script deploys the branch the server checkout is on (it must be pushed to origin).
 # Tip: add "Required reviewers" to the production environment to approve every deploy.
 on:
   workflow_dispatch:
@@ -48,5 +49,5 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
               -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
               "$DEPLOY_USER@$DEPLOY_HOST" \
-              "bash -s -- $(printf '%q' "$DEPLOY_PATH") main" \
+              "bash -s -- $(printf '%q' "$DEPLOY_PATH")" \
               < contentflow/deploy/remote-deploy.sh
