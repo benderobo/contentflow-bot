@@ -1,0 +1,6 @@
+#!/bin/bash
+# Forced command of the cfdeploy SSH key (installed as /usr/local/bin/cf-ssh-entry).
+# Runs as the unprivileged cfdeploy user: it only logs the request and hands the
+# client's command to the root gate, which accepts a short whitelist and nothing else.
+logger -t cf-ssh-entry -- "from ${SSH_CLIENT%% *}: ${SSH_ORIGINAL_COMMAND:-<none>}" 2>/dev/null || true
+exec sudo -n /usr/local/bin/cf-ssh-gate "${SSH_ORIGINAL_COMMAND:-}"

@@ -5,17 +5,24 @@
 # Two run modes, auto-detected (override with DEPLOY_MODE=systemd|compose):
 #   systemd  containers are started by a systemd unit ($SERVICE, default contentflow-bot)
 #            with `docker run`; the app code is baked into the images, so images are
-#            rebuilt from the checkout and the unit is restarted.
+#            rebuilt from the checkout and the unit is restarted. The nginx "web"
+#            container (contentflow-web), if present, is synced with the new build.
 #   compose  containers are managed by docker compose in <repo>/contentflow.
 #
-# Safe by design: refuses to touch a checkout that has diverged from origin or has
-# uncommitted edits, backs up the database first, builds every image before replacing
-# any, verifies the API and the web app afterwards, and restores the previous code and
-# images if anything fails. (The database itself is not rolled back; use the backup.)
+# Where the code comes from: the git remote $DEPLOY_REMOTE (default origin) or, when the
+# checkout has no such remote, the URL in $DEPLOY_REPO_URL.
+#
+# Safe by design: refuses to touch a checkout that has diverged or has uncommitted
+# edits, backs up the database first, builds every image before replacing any, verifies
+# the API, the web container and (optionally) the public URL afterwards, and restores
+# the previous code, images and web files if anything fails. (The database itself is
+# not rolled back; use the backup.)
 set -euo pipefail
 
 REPO_DIR="${1:?usage: remote-deploy.sh /path/to/repo [branch]}"
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8000}"
+WEB_URL="${WEB_URL:-http://127.0.0.1:3000}"
+PUBLIC_URL="${PUBLIC_URL:-}"          # e.g. https://parsr.benderhost.org/app/ ; empty = skip
 BACKUP_DIR="${BACKUP_DIR:-$HOME/contentflow-backups}"
 KEEP_BACKUPS="${KEEP_BACKUPS:-14}"
 HEALTH_TRIES="${HEALTH_TRIES:-30}"
@@ -23,6 +30,10 @@ HEALTH_DELAY="${HEALTH_DELAY:-2}"
 SERVICE="${SERVICE:-contentflow-bot}"
 DEPLOY_MODE="${DEPLOY_MODE:-auto}"
 DB_CONTAINER="${DB_CONTAINER:-contentflow-db}"
+WEB_CONTAINER="${WEB_CONTAINER:-contentflow-web}"
+REMOTE_NAME="${DEPLOY_REMOTE:-origin}"
+REPO_URL="${DEPLOY_REPO_URL:-}"
+STAMP="$(date +%Y%m%d-%H%M%S)"
 
 fail() { echo "::error::$*" >&2; exit 1; }
 
@@ -49,14 +60,24 @@ case "$DEPLOY_MODE" in systemd|compose) ;; *) fail "unknown DEPLOY_MODE '$DEPLOY
 echo "Mode: $DEPLOY_MODE, branch: $BRANCH"
 
 PREV="$(git rev-parse HEAD)"
-git fetch origin "$BRANCH"
-git merge --ff-only "origin/$BRANCH" \
-  || fail "server branch has commits that are not in origin/$BRANCH; push and merge them first"
+if git remote get-url "$REMOTE_NAME" >/dev/null 2>&1; then
+  git fetch "$REMOTE_NAME" "$BRANCH"
+  UPSTREAM="$REMOTE_NAME/$BRANCH"
+elif [ -n "$REPO_URL" ]; then
+  git fetch "$REPO_URL" "$BRANCH"
+  UPSTREAM="FETCH_HEAD"
+else
+  fail "no git remote '$REMOTE_NAME' in this checkout; set DEPLOY_REPO_URL or add the remote"
+fi
+git merge --ff-only "$UPSTREAM" \
+  || fail "server branch has commits that are not upstream; push and merge them first"
 echo "Deploying $PREV -> $(git rev-parse HEAD)"
 
 SWAP_IMAGES=()
 SWAPPED=0
 RESTARTED=0
+WEB_SYNCED=0
+WEB_BACKUP_DIR=""
 
 restart_services() {
   if [ "$DEPLOY_MODE" = systemd ]; then
@@ -66,6 +87,13 @@ restart_services() {
   fi
 }
 
+restore_web() {
+  [ -n "$WEB_BACKUP_DIR" ] || return 0
+  docker cp "$WEB_BACKUP_DIR/html/." "$WEB_CONTAINER:/usr/share/nginx/html/" || true
+  docker cp "$WEB_BACKUP_DIR/default.conf" "$WEB_CONTAINER:/etc/nginx/conf.d/default.conf" || true
+  docker exec "$WEB_CONTAINER" nginx -s reload || true
+}
+
 restore() {
   cd "$REPO_DIR"
   git reset --keep "$PREV" || echo "WARNING: could not reset the code to $PREV" >&2
@@ -73,6 +101,7 @@ restore() {
     for img in "${SWAP_IMAGES[@]}"; do docker tag "$img-rollback" "$img" || true; done
   fi
   if [ "$RESTARTED" = 1 ]; then restart_services || echo "WARNING: restart after restore failed" >&2; fi
+  if [ "$WEB_SYNCED" = 1 ]; then restore_web; fi
   echo "Restored $PREV. The database is unchanged by the restore; backup: ${BACKUP:-none}" >&2
 }
 
@@ -97,7 +126,7 @@ db_dump() {
 }
 
 mkdir -p "$BACKUP_DIR"
-BACKUP="$BACKUP_DIR/db-$(date +%Y%m%d-%H%M%S).sql.gz"
+BACKUP="$BACKUP_DIR/db-$STAMP.sql.gz"
 db_dump | gzip > "$BACKUP"
 [ "$(gzip -dc "$BACKUP" | wc -c)" -gt 0 ] || fail "database backup is empty, aborting before any change"
 echo "Database backup: $BACKUP"
@@ -126,16 +155,59 @@ fi
 RESTARTED=1
 restart_services
 
+HAS_WEB=0
+if [ "$DEPLOY_MODE" = systemd ] && docker inspect "$WEB_CONTAINER" >/dev/null 2>&1; then
+  HAS_WEB=1
+fi
+
+# The nginx web container is not part of the unit and has no baked-in release, so it is
+# updated in place: new build (taken from the freshly built API image) and nginx.conf.
+sync_web() {
+  WEB_BACKUP_DIR="$BACKUP_DIR/web-$STAMP"
+  mkdir -p "$WEB_BACKUP_DIR"
+  docker cp "$WEB_CONTAINER:/usr/share/nginx/html" "$WEB_BACKUP_DIR/html"
+  docker cp "$WEB_CONTAINER:/etc/nginx/conf.d/default.conf" "$WEB_BACKUP_DIR/default.conf"
+  WEB_SYNCED=1
+  local tmp; tmp="$(mktemp -d)"
+  docker cp contentflow-api:/app/web/build/. "$tmp"
+  [ -f "$tmp/index.html" ] || fail "the API image has no web build; refusing to sync the web container"
+  docker cp "$tmp/." "$WEB_CONTAINER:/usr/share/nginx/html/"
+  rm -rf "$tmp"
+  docker cp "$REPO_DIR/contentflow/web/nginx.conf" "$WEB_CONTAINER:/etc/nginx/conf.d/default.conf"
+  docker exec "$WEB_CONTAINER" nginx -t
+  docker exec "$WEB_CONTAINER" nginx -s reload
+}
+
+if [ "$HAS_WEB" = 1 ]; then
+  sync_web
+else
+  echo "No $WEB_CONTAINER container: skipping web sync"
+fi
+
+bundle_of() { { curl -fsS -m 5 "$1" || true; } | grep -o 'main\.[a-z0-9]*\.js' | head -1 || true; }
+
 healthy() {
   curl -fsS -m 5 "$HEALTH_URL/health" >/dev/null || return 1
   local page
   page="$(curl -fsS -m 5 "$HEALTH_URL/app/")" || return 1
-  grep -q 'id="root"' <<<"$page"
+  grep -q 'id="root"' <<<"$page" || return 1
+  # Every place that serves the web app must serve the bundle the API just shipped.
+  local want got
+  want="$(bundle_of "$HEALTH_URL/app/")"
+  [ -n "$want" ] || return 1
+  if [ "$HAS_WEB" = 1 ]; then
+    got="$(bundle_of "$WEB_URL/")"
+    [ "$got" = "$want" ] || { echo "web container serves '$got', expected '$want'" >&2; return 1; }
+  fi
+  if [ -n "$PUBLIC_URL" ]; then
+    got="$(bundle_of "$PUBLIC_URL")"
+    [ "$got" = "$want" ] || { echo "$PUBLIC_URL serves '$got', expected '$want'" >&2; return 1; }
+  fi
 }
 
 for _ in $(seq 1 "$HEALTH_TRIES"); do
   if healthy; then
-    echo "Deploy OK: API healthy and web app served at /app/"
+    echo "Deploy OK: API healthy; web app consistent everywhere it is served"
     exit 0
   fi
   sleep "$HEALTH_DELAY"

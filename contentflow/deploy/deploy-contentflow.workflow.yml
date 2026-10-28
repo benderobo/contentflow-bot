@@ -6,10 +6,11 @@ name: Deploy ContentFlow (manual)
 # Run it from Actions -> "Deploy ContentFlow (manual)" -> Run workflow (branch: main).
 #
 # Required in the "production" environment (Settings -> Environments -> production):
-#   secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS, DEPLOY_PATH
-#   DEPLOY_PATH  = repo root on the server (the folder that contains contentflow/)
+#   secrets: DEPLOY_HOST, DEPLOY_USER (cfdeploy), DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS
+#   DEPLOY_SSH_KEY     = private key whose public half was given to deploy/ssh-gate/install-gate.sh
 #   DEPLOY_KNOWN_HOSTS = output of `ssh-keyscan -t ed25519 <host>` taken from a trusted machine
-# The script deploys the branch the server checkout is on (it must be pushed to origin).
+# The key can only run `status`, `logs <svc> [n]` and `deploy` on the server (forced command);
+# the repo path and options live in /etc/contentflow-deploy.env on the server.
 # Tip: add "Required reviewers" to the production environment to approve every deploy.
 on:
   workflow_dispatch:
@@ -44,10 +45,7 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           ssh -i ~/.ssh/deploy_key \
               -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
-              "$DEPLOY_USER@$DEPLOY_HOST" \
-              "bash -s -- $(printf '%q' "$DEPLOY_PATH")" \
-              < contentflow/deploy/remote-deploy.sh
+              "$DEPLOY_USER@$DEPLOY_HOST" deploy

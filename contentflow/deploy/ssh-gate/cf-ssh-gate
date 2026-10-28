@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Root-side whitelist for the cfdeploy SSH key (installed as /usr/local/bin/cf-ssh-gate).
+# Accepted requests (one line, lowercase words only):
+#   status                 containers, image ages, health, which bundle each place serves
+#   logs <svc> [lines]     svc = api|bot|worker|scheduler|web|db, lines = 1..500 (default 100)
+#   deploy                 run remote-deploy.sh from the repo checkout (one at a time)
+# Anything else is refused. There is no shell, no file access and no port forwarding.
+set -euo pipefail
+CONF="${CF_CONF:-/etc/contentflow-deploy.env}"
+# shellcheck disable=SC1090
+if [ -r "$CONF" ]; then set -a; . "$CONF"; set +a; fi   # exported: remote-deploy.sh reads them
+: "${REPO_DIR:?REPO_DIR is not set in $CONF}"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8000}"
+WEB_URL="${WEB_URL:-http://127.0.0.1:3000}"
+export BACKUP_DIR="${BACKUP_DIR:-/root/contentflow-backups}"   # do not depend on $HOME under sudo
+
+deny() { echo "cf-ssh-gate: not allowed: ${1:-}" >&2; exit 126; }
+
+set -f                      # no globbing while splitting the client's words
+# shellcheck disable=SC2086
+set -- ${1:-}
+set +f
+[ "$#" -ge 1 ] && [ "$#" -le 3 ] || deny "usage: status | logs <svc> [lines] | deploy"
+for w in "$@"; do [[ "$w" =~ ^[a-z0-9]+$ ]] || deny "bad characters"; done
+verb="$1"; arg="${2:-}"; lines="${3:-}"
+
+bundle_of() { { curl -fsS -m 5 "$1" || true; } | grep -o 'main\.[a-z0-9]*\.js' | head -1 || true; }
+
+case "$verb" in
+  status)
+    [ "$#" -eq 1 ] || deny "status takes no arguments"
+    echo "== containers"
+    docker ps -a --format '{{.Names}}\t{{.Image}}\t{{.Status}}' | grep -i contentflow || true
+    echo "== images"
+    docker images --format '{{.Repository}}:{{.Tag}}\t{{.CreatedSince}}' | grep -i contentflow || true
+    echo "== code"
+    git -C "$REPO_DIR" log --oneline -1 || true
+    git -C "$REPO_DIR" status -sb | head -3 || true
+    echo "== health"
+    curl -s -m 5 -o /dev/null -w "api /health: %{http_code}\n" "$HEALTH_URL/health" || echo "api /health: unreachable"
+    echo "api   serves: $(bundle_of "$HEALTH_URL/app/")"
+    echo "web   serves: $(bundle_of "$WEB_URL/")"
+    [ -z "${PUBLIC_URL:-}" ] || echo "public serves: $(bundle_of "$PUBLIC_URL")"
+    ;;
+  logs)
+    case "$arg" in
+      api|bot|worker|scheduler|web) container="contentflow-$arg" ;;
+      db) container="contentflow-db" ;;
+      *) deny "unknown service" ;;
+    esac
+    n="${lines:-100}"
+    [[ "$n" =~ ^[0-9]+$ ]] && [ "$n" -ge 1 ] && [ "$n" -le 500 ] || deny "lines must be 1..500"
+    exec docker logs --tail "$n" "$container" 2>&1
+    ;;
+  deploy)
+    [ "$#" -eq 1 ] || deny "deploy takes no arguments"
+    src="$REPO_DIR/contentflow/deploy/remote-deploy.sh"
+    [ -r "$src" ] || src="${CF_LIB:-/usr/local/lib/contentflow}/remote-deploy.sh"   # installed copy
+    [ -r "$src" ] || deny "deploy script not found"
+    # Run a private copy: the deploy updates the checkout, and bash must not read a
+    # script file that changes underneath it.
+    tmp="$(mktemp /run/cf-remote-deploy.XXXXXX)"
+    trap 'rm -f "$tmp"' EXIT
+    cp "$src" "$tmp"
+    exec 9>/run/contentflow-deploy.lock
+    flock -n 9 || deny "another deploy is already running"
+    bash "$tmp" "$REPO_DIR"
+    ;;
+  *) deny "unknown command" ;;
+esac
