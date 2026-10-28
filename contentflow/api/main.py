@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from core.config import get_settings
 from core.database import init_db, close_db, get_db
-from api.routes import sources, posts, channels, ai, stats, users
+from api.routes import sources, posts, post_media, channels, ai, stats, users
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -76,6 +76,7 @@ async def health():
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(sources.router, prefix="/api/sources", tags=["sources"])
 app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+app.include_router(post_media.router, prefix="/api/posts", tags=["post-media"])
 app.include_router(channels.router, prefix="/api/channels", tags=["channels"])
 app.include_router(ai.router, prefix="/api/ai", tags=["ai"])
 app.include_router(stats.router, prefix="/api/stats", tags=["stats"])

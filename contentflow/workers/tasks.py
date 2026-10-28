@@ -193,6 +193,67 @@ async def _analyze_content_async(source_item_id: int):
             logger.error(f"Error analyzing content {source_item_id}: {e}")
 
 
+TELEGRAM_CAPTION_LIMIT = 1024
+
+
+async def _send_post_to_channel(db, bot, chat_id, post_id: int, message_text: str):
+    """Send a post, with its images if it has any.
+
+    A short text becomes the caption of the first image. Telegram limits captions
+    to 1024 characters, so a longer text is sent as a separate message after the images.
+    """
+    from aiogram.types import FSInputFile, InputMediaPhoto
+    from core.config import get_settings
+    from models.post_media import PostMedia
+    from utils.media import resolve_media_path
+
+    media_root = get_settings().media_storage_path
+    media_result = await db.execute(
+        select(PostMedia)
+        .where(PostMedia.post_id == post_id, PostMedia.media_type == "image")
+        .order_by(PostMedia.order, PostMedia.id)
+    )
+
+    files = []
+    for media in media_result.scalars().all():
+        try:
+            path = resolve_media_path(media_root, media.file_path)
+        except ValueError:
+            logger.error(f"Skipping media {media.id} of post {post_id}: invalid path")
+            continue
+        if not path.is_file():
+            logger.error(f"Skipping media {media.id} of post {post_id}: file missing")
+            continue
+        files.append(path)
+
+    if not files:
+        await bot.send_message(chat_id=chat_id, text=message_text, parse_mode="HTML")
+        return
+
+    caption = message_text if len(message_text) <= TELEGRAM_CAPTION_LIMIT else None
+
+    if len(files) == 1:
+        await bot.send_photo(
+            chat_id=chat_id,
+            photo=FSInputFile(files[0]),
+            caption=caption,
+            parse_mode="HTML" if caption else None,
+        )
+    else:
+        group = [
+            InputMediaPhoto(
+                media=FSInputFile(path),
+                caption=caption if i == 0 else None,
+                parse_mode="HTML" if (i == 0 and caption) else None,
+            )
+            for i, path in enumerate(files)
+        ]
+        await bot.send_media_group(chat_id=chat_id, media=group)
+
+    if caption is None:
+        await bot.send_message(chat_id=chat_id, text=message_text, parse_mode="HTML")
+
+
 @celery_app.task(name="publish_post", bind=True, autoretry_for=(Exception,), max_retries=5)
 def publish_post(self, post_id: int, channel_id: int):
     """Publish a post to a Telegram channel."""
@@ -229,11 +290,7 @@ async def _publish_post_async(post_id: int, channel_id: int, retry_attempt: int 
             if post.original_url:
                 message_text += f"\n\n🔗 <a href='{post.original_url}'>Источник</a>"
 
-            await bot.send_message(
-                chat_id=channel.telegram_id,
-                text=message_text,
-                parse_mode="HTML"
-            )
+            await _send_post_to_channel(db, bot, channel.telegram_id, post_id, message_text)
 
             post.status = "published"
             post.published_at = datetime.utcnow()

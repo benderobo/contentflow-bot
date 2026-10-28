@@ -1,5 +1,6 @@
 import React from 'react';
 import './Preview.css';
+import { MediaItem } from '../mediaApi';
 
 // Safe HTML escaping
 const escapeHtml = (text: string): string => {
@@ -17,7 +18,7 @@ interface Post {
   title: string;
   body: string;
   hashtags: string[];
-  media?: string[];
+  media: MediaItem[];
 }
 
 interface PreviewProps {
@@ -49,6 +50,14 @@ export default function Preview({ post }: PreviewProps) {
 
         <div className="phone-content">
           <article className="post-preview">
+            {post.media.length > 0 && (
+              <div className={`post-media post-media-${Math.min(post.media.length, 4)}`}>
+                {post.media.map((item) => (
+                  <img key={item.key} src={item.previewUrl} alt="" />
+                ))}
+              </div>
+            )}
+
             {post.title && <h2 className="post-title">{post.title}</h2>}
 
             {post.body && (
@@ -91,6 +100,10 @@ export default function Preview({ post }: PreviewProps) {
           <div className="info-item">
             <span className="info-label">Length</span>
             <span className="info-value">{post.body.length} chars</span>
+          </div>
+          <div className="info-item">
+            <span className="info-label">Images</span>
+            <span className="info-value">{post.media.length}</span>
           </div>
           <div className="info-item">
             <span className="info-label">Hashtags</span>
