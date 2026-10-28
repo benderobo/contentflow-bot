@@ -1,0 +1,52 @@
+# TEMPLATE: copy to .github/workflows/deploy-contentflow.yml (the Claude session token cannot push workflow files).
+#   mkdir -p .github/workflows && cp contentflow/deploy/deploy-contentflow.workflow.yml .github/workflows/deploy-contentflow.yml
+name: Deploy ContentFlow (manual)
+
+# Manual only: merging to main never deploys by itself.
+# Run it from Actions -> "Deploy ContentFlow (manual)" -> Run workflow (branch: main).
+#
+# Required in the "production" environment (Settings -> Environments -> production):
+#   secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS, DEPLOY_PATH
+#   DEPLOY_PATH  = repo root on the server (the folder that contains contentflow/)
+#   DEPLOY_KNOWN_HOSTS = output of `ssh-keyscan -t ed25519 <host>` taken from a trusted machine
+# Tip: add "Required reviewers" to the production environment to approve every deploy.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-contentflow
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+              "$DEPLOY_USER@$DEPLOY_HOST" \
+              "bash -s -- $(printf '%q' "$DEPLOY_PATH") main" \
+              < contentflow/deploy/remote-deploy.sh
