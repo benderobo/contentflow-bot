@@ -10,7 +10,8 @@
 #   compose  containers are managed by docker compose in <repo>/contentflow.
 #
 # Where the code comes from: the git remote $DEPLOY_REMOTE (default origin) or, when the
-# checkout has no such remote, the URL in $DEPLOY_REPO_URL.
+# checkout has no such remote, the URL in $DEPLOY_REPO_URL. With DEPLOY_LOCAL=1 nothing is
+# fetched: the committed local HEAD is deployed as it is.
 #
 # Safe by design: refuses to touch a checkout that has diverged or has uncommitted
 # edits, backs up the database first, builds every image before replacing any, verifies
@@ -60,7 +61,11 @@ case "$DEPLOY_MODE" in systemd|compose) ;; *) fail "unknown DEPLOY_MODE '$DEPLOY
 echo "Mode: $DEPLOY_MODE, branch: $BRANCH"
 
 PREV="$(git rev-parse HEAD)"
-if git remote get-url "$REMOTE_NAME" >/dev/null 2>&1; then
+if [ "${DEPLOY_LOCAL:-0}" = 1 ]; then
+  # Deploy exactly what is committed in this checkout, without touching the network.
+  # The clean-tree and branch checks above still apply.
+  echo "DEPLOY_LOCAL=1: deploying the local commit $PREV (no fetch)"
+elif git remote get-url "$REMOTE_NAME" >/dev/null 2>&1; then
   git fetch "$REMOTE_NAME" "$BRANCH"
   UPSTREAM="$REMOTE_NAME/$BRANCH"
 elif [ -n "$REPO_URL" ]; then
@@ -69,8 +74,10 @@ elif [ -n "$REPO_URL" ]; then
 else
   fail "no git remote '$REMOTE_NAME' in this checkout; set DEPLOY_REPO_URL or add the remote"
 fi
-git merge --ff-only "$UPSTREAM" \
-  || fail "server branch has commits that are not upstream; push and merge them first"
+if [ "${DEPLOY_LOCAL:-0}" != 1 ]; then
+  git merge --ff-only "$UPSTREAM" \
+    || fail "server branch has commits that are not upstream; push and merge them first (or set DEPLOY_LOCAL=1 to deploy the local commit)"
+fi
 echo "Deploying $PREV -> $(git rev-parse HEAD)"
 
 SWAP_IMAGES=()

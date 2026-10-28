@@ -20,7 +20,8 @@ A `git pull` + restart changes nothing; images must be rebuilt.
 images under candidate tags, swap, restart the unit, sync the nginx `web` container with the
 new build and `nginx.conf`, verify that the API, the web container and (optionally) `PUBLIC_URL`
 all serve the same bundle, and restore code, images and web files if anything fails.
-Without an `origin` remote set `DEPLOY_REPO_URL`. Tested by simulation (69 checks).
+Without an `origin` remote set `DEPLOY_REPO_URL` (the repo is public). With `DEPLOY_LOCAL=1` nothing is
+fetched and the committed local HEAD is deployed as it is (clean tree still required). Tested by simulation (78 checks).
 
 ## SSH access with least privilege (`ssh-gate/`)
 

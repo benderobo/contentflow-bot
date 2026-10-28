@@ -33,6 +33,7 @@ if [ ! -e "$CONF" ]; then
 REPO_DIR=$REPO_DIR
 # PUBLIC_URL=https://parsr.benderhost.org/app/
 # DEPLOY_REPO_URL=https://github.com/benderobo/contentflow-bot.git
+# DEPLOY_LOCAL=1   # deploy the committed local HEAD without fetching (no origin / unpushed commits)
 CONFEOF
   chmod 0644 "$CONF"
 fi
