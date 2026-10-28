@@ -9,7 +9,7 @@ from core.database import get_db
 from models.post import Post
 from models.publish_job import PublishJob
 from models.user import User
-from api.dependencies import get_current_user, verify_service_auth
+from api.dependencies import get_current_user, get_current_user_webapp_or_jwt, verify_service_auth
 from models.channel import Channel
 
 router = APIRouter()
@@ -102,8 +102,12 @@ async def create_post(
 
     auth_header = request.headers.get("Authorization", "")
 
+    if auth_header.startswith("tg-init-data "):
+        # Telegram miniapp: user is taken from the signed initData, never from the request
+        current_user = await get_current_user_webapp_or_jwt(request, db)
+        user_id = current_user.id
     # Try to get user_id from JWT token first
-    if auth_header.startswith("Bearer "):
+    elif auth_header.startswith("Bearer "):
         try:
             current_user = await get_current_user(request, db)
             user_id = current_user.id
@@ -126,11 +130,34 @@ async def create_post(
     return PostResponse.from_orm(db_post)
 
 
+@router.get("/{post_id}")
+async def get_post(
+    post_id: int,
+    current_user: User = Depends(get_current_user_webapp_or_jwt),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a single post owned by the current user (used by the miniapp editor)."""
+    result = await db.execute(select(Post).where(Post.id == post_id))
+    post = result.scalar_one_or_none()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if post.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return {
+        "id": post.id,
+        "title": post.title,
+        "body": post.body,
+        "hashtags": post.hashtags or [],
+        "status": post.status,
+        "source_item_id": post.source_item_id,
+    }
+
+
 @router.patch("/{post_id}")
 async def update_post(
     post_id: int,
     post_update: PostUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_webapp_or_jwt),
     db: AsyncSession = Depends(get_db),
 ):
     """Update a post."""

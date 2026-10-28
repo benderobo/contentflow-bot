@@ -3,6 +3,16 @@ import './App.css';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
 import Toolbar from './components/Toolbar';
+import {
+  MediaItem,
+  authHeaders,
+  deleteImage,
+  loadPostImages,
+  makePendingItem,
+  revokePreview,
+  uploadImage,
+  validateImage,
+} from './mediaApi';
 
 interface TelegramUser {
   id: number;
@@ -14,12 +24,12 @@ interface TelegramUser {
 }
 
 interface Post {
-  id?: string;
+  id?: number;
   source_item_id?: number;
   title: string;
   body: string;
   hashtags: string[];
-  media?: string[];
+  media: MediaItem[];
 }
 
 const ALLOWED_USER_IDS = [
@@ -125,12 +135,19 @@ export default function App() {
 
       if (response.ok) {
         const post = await response.json();
+        let media: MediaItem[] = [];
+        try {
+          media = await loadPostImages(postId);
+        } catch (err) {
+          console.error(err);
+          setError('Post loaded, but its images could not be loaded');
+        }
         setPost({
           id: postId,
           title: post.title || '',
           body: post.body || '',
           hashtags: post.hashtags || [],
-          media: [],
+          media,
         });
       } else {
         setError('Failed to load post');
@@ -141,67 +158,144 @@ export default function App() {
     }
   };
 
+  const resetPost = () => {
+    post.media.forEach(revokePreview);
+    setPost({ title: '', body: '', hashtags: [], media: [] });
+  };
+
+  /**
+   * Create or update the post, then upload queued images.
+   * The status is applied last: published posts are locked against media changes.
+   */
+  const persistPost = async (status?: string): Promise<boolean> => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...authHeaders(),
+    };
+    const fields = { title: post.title, body: post.body, hashtags: post.hashtags };
+
+    let postId = post.id;
+    if (postId) {
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(fields),
+      });
+      if (!response.ok) throw new Error('Failed to save post');
+    } else {
+      const response = await fetch('/api/posts/', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...fields, source_item_id: post.source_item_id }),
+      });
+      if (!response.ok) throw new Error('Failed to save post');
+      postId = (await response.json()).id as number;
+      // Remember the id right away: a later failure must not make the next save create a duplicate.
+      setPost((p) => ({ ...p, id: postId }));
+    }
+
+    const failed: { item: MediaItem; reason: string }[] = [];
+    const uploaded = new Map<string, number>();
+    for (const item of post.media) {
+      if (!item.file || item.id) continue;
+      try {
+        uploaded.set(item.key, await uploadImage(postId, item.file));
+      } catch (err) {
+        failed.push({ item, reason: err instanceof Error ? err.message : 'Upload failed' });
+      }
+    }
+
+    if (failed.length > 0) {
+      // Keep the post id so the next save updates this post instead of creating a duplicate.
+      setPost((p) => ({
+        ...p,
+        id: postId,
+        media: p.media.map((m) => (uploaded.has(m.key) ? { ...m, id: uploaded.get(m.key), file: undefined } : m)),
+      }));
+      setError(`${failed.length} image(s) not uploaded: ${failed[0].reason}`);
+      return false;
+    }
+
+    if (status) {
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) throw new Error('Failed to update post status');
+    }
+    return true;
+  };
+
   const handleSavePost = async () => {
     try {
-      const TelegramAPI = (window as any).Telegram?.WebApp;
-      const initData = TelegramAPI?.initData || '';
-
-      const response = await fetch('/api/posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `tg-init-data ${initData}`,
-        },
-        body: JSON.stringify({
-          title: post.title,
-          body: post.body,
-          hashtags: post.hashtags,
-          source_item_id: post.source_item_id,
-        }),
-      });
-
-      if (response.ok) {
+      if (await persistPost()) {
         alert('Post saved successfully!');
-        setPost({ title: '', body: '', hashtags: [], media: [] });
-      } else {
-        setError('Failed to save post');
+        resetPost();
       }
     } catch (err) {
-      setError('Error saving post');
+      setError(err instanceof Error ? err.message : 'Error saving post');
       console.error(err);
     }
   };
 
   const handlePublishPost = async () => {
     try {
-      const TelegramAPI = (window as any).Telegram?.WebApp;
-      const initData = TelegramAPI?.initData || '';
-
-      const response = await fetch('/api/posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `tg-init-data ${initData}`,
-        },
-        body: JSON.stringify({
-          title: post.title,
-          body: post.body,
-          hashtags: post.hashtags,
-          source_item_id: post.source_item_id,
-          status: 'published',
-        }),
-      });
-
-      if (response.ok) {
+      if (await persistPost('published')) {
         alert('Post published successfully!');
-        setPost({ title: '', body: '', hashtags: [], media: [] });
-      } else {
-        setError('Failed to publish post');
+        resetPost();
       }
     } catch (err) {
-      setError('Error publishing post');
+      setError(err instanceof Error ? err.message : 'Error publishing post');
       console.error(err);
     }
+  };
+
+  const handleAddImages = async (files: File[]) => {
+    const accepted: MediaItem[] = [];
+    let count = post.media.length;
+    for (const file of files) {
+      const problem = validateImage(file, count);
+      if (problem) {
+        setError(`${file.name}: ${problem}`);
+        continue;
+      }
+      accepted.push(makePendingItem(file));
+      count += 1;
+    }
+    if (accepted.length === 0) return;
+
+    const postId = post.id;
+    // New posts have no id yet: images wait locally and are uploaded on save.
+    setPost((p) => ({ ...p, media: [...p.media, ...accepted.map((m) => ({ ...m, uploading: !!postId }))] }));
+    if (!postId) return;
+
+    for (const item of accepted) {
+      try {
+        const id = await uploadImage(postId, item.file as File);
+        setPost((p) => ({
+          ...p,
+          media: p.media.map((m) => (m.key === item.key ? { ...m, id, file: undefined, uploading: false } : m)),
+        }));
+      } catch (err) {
+        revokePreview(item);
+        setPost((p) => ({ ...p, media: p.media.filter((m) => m.key !== item.key) }));
+        setError(`${(item.file as File).name}: ${err instanceof Error ? err.message : 'Upload failed'}`);
+      }
+    }
+  };
+
+  const handleRemoveImage = async (item: MediaItem) => {
+    if (item.id && post.id) {
+      try {
+        await deleteImage(post.id, item.id);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to remove image');
+        return;
+      }
+    }
+    revokePreview(item);
+    setPost((p) => ({ ...p, media: p.media.filter((m) => m.key !== item.key) }));
   };
 
   const handleQuickReplace = async (replaceFrom: string, replaceTo: string) => {
@@ -271,7 +365,12 @@ export default function App() {
             {showPreview ? (
               <Preview post={post} />
             ) : (
-              <Editor post={post} setPost={setPost} />
+              <Editor
+                post={post}
+                setPost={setPost}
+                onAddImages={handleAddImages}
+                onRemoveImage={handleRemoveImage}
+              />
             )}
           </div>
         </div>

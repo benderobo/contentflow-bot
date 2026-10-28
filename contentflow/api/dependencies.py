@@ -58,6 +58,34 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_webapp_or_jwt(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Authenticate via Telegram WebApp initData (miniapp) or fall back to JWT."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("tg-init-data "):
+        return await get_current_user(request, db)
+
+    from utils.webapp_auth import verify_webapp_init_data
+
+    init_data = auth_header.replace("tg-init-data ", "", 1)
+    user_data = verify_webapp_init_data(init_data, settings.bot_token)
+    if not user_data or "user" not in user_data:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired initData")
+
+    telegram_id = user_data["user"].get("id")
+    if not telegram_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID not found in initData")
+
+    result = await db.execute(select(User).where(User.telegram_id == telegram_id))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    return user
+
+
 async def verify_user_id_signature(request: Request) -> int:
     """Verify user_id and its HMAC signature from request body."""
     from utils.auth import verify_user_id

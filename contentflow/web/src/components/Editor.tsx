@@ -1,19 +1,28 @@
 import React from 'react';
 import './Editor.css';
+import { MAX_IMAGES, MediaItem } from '../mediaApi';
 
 interface Post {
   title: string;
   body: string;
   hashtags: string[];
-  media?: string[];
+  media: MediaItem[];
 }
 
 interface EditorProps {
   post: Post;
   setPost: (post: Post) => void;
+  onAddImages: (files: File[]) => void;
+  onRemoveImage: (item: MediaItem) => void;
 }
 
-export default function Editor({ post, setPost }: EditorProps) {
+export default function Editor({ post, setPost, onAddImages, onRemoveImage }: EditorProps) {
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = ''; // allow picking the same file again
+    if (files.length > 0) onAddImages(files);
+  };
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPost({ ...post, title: e.target.value });
   };
@@ -128,6 +137,44 @@ export default function Editor({ post, setPost }: EditorProps) {
           rows={12}
         />
         <span className="char-count">{post.body.length}/4000</span>
+      </div>
+
+      <div className="editor-field">
+        <label>
+          🖼️ Images ({post.media.length}/{MAX_IMAGES})
+        </label>
+        <div className="media-grid">
+          {post.media.map((item) => (
+            <div key={item.key} className={`media-thumb${item.uploading ? ' uploading' : ''}`}>
+              <img src={item.previewUrl} alt="" />
+              {item.uploading && <span className="media-badge">Uploading…</span>}
+              {!item.uploading && !item.id && <span className="media-badge">Not saved yet</span>}
+              <button
+                type="button"
+                className="media-remove"
+                aria-label="Remove image"
+                disabled={item.uploading}
+                onClick={() => onRemoveImage(item)}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          {post.media.length < MAX_IMAGES && (
+            <label className="media-add">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                hidden
+                onChange={handleFilesPicked}
+              />
+              <span aria-hidden="true">＋</span>
+              <span>Add image</span>
+            </label>
+          )}
+        </div>
+        <span className="char-count">JPEG, PNG or WEBP, up to 10 MB each</span>
       </div>
 
       <div className="editor-field">
